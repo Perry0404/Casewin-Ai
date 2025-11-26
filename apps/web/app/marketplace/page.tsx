@@ -26,6 +26,18 @@ export default function MarketplacePage() {
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [maxRate, setMaxRate] = useState(50000);
 
+  // Navigation component
+  const Navigation = () => (
+    <nav className="flex gap-6">
+      <Link href="/" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+        AI Tools
+      </Link>
+      <Link href="/marketplace" className="text-white hover:text-indigo-200 transition-colors font-semibold underline">
+        Hire Lawyers
+      </Link>
+    </nav>
+  );
+
   const specializations = [
     'Criminal Law',
     'Corporate Law',
@@ -99,13 +111,21 @@ export default function MarketplacePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header with Navigation */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <h1 className="text-4xl font-bold mb-4">🇳🇬 Hire a Nigerian Lawyer</h1>
-          <p className="text-xl text-indigo-100">
-            Browse verified lawyers, compare rates, book consultations
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-6 border-b border-indigo-400">
+            <div>
+              <h1 className="text-2xl font-bold">⚖️ CaseWin-NG</h1>
+            </div>
+            <Navigation />
+          </div>
+          <div className="py-12">
+            <h2 className="text-4xl font-bold mb-4">🇳🇬 Hire a Nigerian Lawyer</h2>
+            <p className="text-xl text-indigo-100">
+              Browse verified lawyers, compare rates, book consultations
+            </p>
+          </div>
         </div>
       </div>
 

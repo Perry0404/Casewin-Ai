@@ -37,6 +37,18 @@ export default function LawyerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [showBookingModal, setShowBookingModal] = useState(false);
 
+  // Navigation component
+  const Navigation = () => (
+    <nav className="flex gap-6">
+      <Link href="/" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+        AI Tools
+      </Link>
+      <Link href="/marketplace" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+        Hire Lawyers
+      </Link>
+    </nav>
+  );
+
   // Booking form
   const [bookingDate, setBookingDate] = useState('');
   const [bookingTime, setBookingTime] = useState('');
@@ -149,12 +161,20 @@ export default function LawyerProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header with Navigation */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Link href="/marketplace" className="text-indigo-100 hover:text-white mb-4 inline-block">
-            ← Back to marketplace
-          </Link>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-6 border-b border-indigo-400">
+            <div>
+              <h1 className="text-2xl font-bold">⚖️ CaseWin-NG</h1>
+            </div>
+            <Navigation />
+          </div>
+          <div className="py-6">
+            <Link href="/marketplace" className="text-indigo-100 hover:text-white inline-flex items-center gap-2">
+              ← Back to marketplace
+            </Link>
+          </div>
         </div>
       </div>
 
