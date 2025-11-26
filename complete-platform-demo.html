@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaseWin-NG - Complete Platform Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+        }
+        
+        /* Header Navigation */
+        .header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 80px;
+        }
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .nav {
+            display: flex;
+            gap: 30px;
+        }
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .nav-link.active {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        /* Page Sections */
+        .page-section {
+            display: none;
+        }
+        .page-section.active {
+            display: block;
+        }
+        
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .hero h1 {
+            font-size: 3rem;
+            color: #111827;
+            margin-bottom: 20px;
+        }
+        .hero p {
+            font-size: 1.3rem;
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+        .hero-badge {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #fbbf24;
+            color: #111827;
+            border-radius: 50px;
+            font-weight: bold;
+        }
+        
+        /* AI Tools Grid */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        .tool-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+        .tool-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        .tool-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #10b981;
+            margin-bottom: 10px;
+        }
+        .tool-desc {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .tool-price {
+            font-weight: bold;
+            color: #10b981;
+            font-size: 1.1rem;
+        }
+        .tool-btn {
+            width: 100%;
+            padding: 12px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s ease;
+        }
+        .tool-btn:hover {
+            background: #059669;
+        }
+        
+        /* Marketplace Section */
+        .marketplace-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 16px;
+            padding: 50px;
+            color: white;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .marketplace-banner h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        .marketplace-banner p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        .marketplace-stats {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+        .stat-box {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        .cta-btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #6366f1;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        .cta-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        
+        /* How It Works */
+        .how-it-works {
+            background: white;
+            border-radius: 16px;
+            padding: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .how-it-works h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #111827;
+            margin-bottom: 50px;
+        }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+        .step {
+            text-align: center;
+        }
+        .step-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: #10b981;
+            color: white;
+            border-radius: 50%;
+            line-height: 40px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .step-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #10b981;
+            margin-bottom: 10px;
+        }
+        .step-desc {
+            color: #6b7280;
+            line-height: 1.6;
+        }
+        
+        /* Lawyer Cards */
+        .lawyers-section {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 2rem;
+            color: #111827;
+        }
+        .view-all-btn {
+            padding: 10px 24px;
+            background: #6366f1;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .lawyers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        .lawyer-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .lawyer-card:hover {
+            border-color: #6366f1;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+        .lawyer-header {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .lawyer-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .lawyer-info h3 {
+            font-size: 1.2rem;
+            color: #111827;
+            margin-bottom: 5px;
+        }
+        .lawyer-specialty {
+            color: #6366f1;
+            font-weight: 600;
+        }
+        .lawyer-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+        .lawyer-rate {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #10b981;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #111827;
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-top: 60px;
+        }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        .footer-link {
+            color: #9ca3af;
+            text-decoration: none;
+        }
+        .footer-link:hover {
+            color: white;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tab.active {
+            color: #6366f1;
+            border-bottom-color: #6366f1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">⚖️ CaseWin-NG</div>
+            <nav class="nav">
+                <a href="#" class="nav-link active" onclick="showPage('home')">AI Tools</a>
+                <a href="#" class="nav-link" onclick="showPage('marketplace')">Hire Lawyers</a>
+                <a href="https://github.com/Perry0404/Casewin-Ai" class="nav-link" target="_blank">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- HOME PAGE - AI Tools -->
+    <div id="home" class="page-section active">
+        <div class="container">
+            <!-- Hero Section -->
+            <div class="hero">
+                <h1>🇳🇬 Nigerian Legal AI Platform</h1>
+                <p>8 AI-Powered Legal Tools + Verified Lawyer Marketplace</p>
+                <span class="hero-badge">₦2,500/month | Try Free for 7 Days</span>
+            </div>
+
+            <!-- AI Tools Grid -->
+            <h2 style="font-size: 2rem; margin-bottom: 30px; color: #111827;">🤖 AI-Powered Legal Tools</h2>
+            <div class="tools-grid">
+                <div class="tool-card">
+                    <div class="tool-icon">📝</div>
+                    <div class="tool-title">Document Drafting</div>
+                    <div class="tool-desc">Generate Writs, Affidavits, Motions, Defence in Nigerian court format</div>
+                    <div class="tool-price">₦500 per draft</div>
+                    <button class="tool-btn" onclick="alert('Would open drafting interface with document type selector')">Try Now</button>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon">🔮</div>
+                    <div class="tool-title">Case Prediction</div>
+                    <div class="tool-desc">Predict outcomes using 8,427 real Nigerian cases with AI analysis</div>
+                    <div class="tool-price">₦1,000 per prediction</div>
+                    <button class="tool-btn" onclick="alert('Would open prediction form with case facts input')">Try Now</button>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon">🔍</div>
+                    <div class="tool-title">Legal Research</div>
+                    <div class="tool-desc">Answer questions with citations from Nigerian case law and statutes</div>
+                    <div class="tool-price">FREE</div>
+                    <button class="tool-btn" onclick="alert('Would open research interface with question input')">Try Now</button>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon">📄</div>
+                    <div class="tool-title">Contract Analysis</div>
+                    <div class="tool-desc">Analyze contracts for risks, compliance, and unfair clauses</div>
+                    <div class="tool-price">₦1,500 per analysis</div>
+                    <button class="tool-btn" onclick="alert('Would open file upload for contract analysis')">Try Now</button>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon">📋</div>
+                    <div class="tool-title">Case Summarization</div>
+                    <div class="tool-desc">Condense lengthy judgments with ratio decidendi extraction</div>
+                    <div class="tool-price">₦750 per summary</div>
+                    <button class="tool-btn" onclick="alert('Would open judgment text input area')">Try Now</button>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon">🌍</div>
+                    <div class="tool-title">Legal Translation</div>
+                    <div class="tool-desc">Translate between English, Yoruba, Hausa, and Igbo</div>
+                    <div class="tool-price">FREE</div>
+                    <button class="tool-btn" onclick="alert('Would open translation interface with language selector')">Try Now</button>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon">⚖️</div>
+                    <div class="tool-title">Argument Generator</div>
+                    <div class="tool-desc">Generate persuasive arguments for and against any position</div>
+                    <div class="tool-price">₦800 per set</div>
+                    <button class="tool-btn" onclick="alert('Would open argument generation form')">Try Now</button>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon">✅</div>
+                    <div class="tool-title">Compliance Checker</div>
+                    <div class="tool-desc">Verify compliance with CAMA, Labour, Tax, Data Protection laws</div>
+                    <div class="tool-price">₦1,200 per check</div>
+                    <button class="tool-btn" onclick="alert('Would open compliance check interface')">Try Now</button>
+                </div>
+            </div>
+
+            <!-- Marketplace Banner -->
+            <div class="marketplace-banner">
+                <h2>👥 Need Expert Help? Hire a Nigerian Lawyer</h2>
+                <p>Browse verified lawyers across Corporate, Criminal, Family, Real Estate, IP, and Labour Law. Filter by location, specialty, and hourly rate.</p>
+                <div class="marketplace-stats">
+                    <div class="stat-box">
+                        <div class="stat-number">6+</div>
+                        <div class="stat-label">Verified Lawyers</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">4.8★</div>
+                        <div class="stat-label">Average Rating</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">₦15-30K</div>
+                        <div class="stat-label">Per Hour</div>
+                    </div>
+                </div>
+                <a href="#" class="cta-btn" onclick="showPage('marketplace'); return false;">Browse Lawyers →</a>
+            </div>
+
+            <!-- How It Works -->
+            <div class="how-it-works">
+                <h2>Complete Legal Solution in One Platform</h2>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-icon">🤖</div>
+                        <div class="step-number">1</div>
+                        <div class="step-title">Use AI Tools</div>
+                        <div class="step-desc">Draft documents, predict outcomes, research cases, analyze contracts with 8 AI-powered tools</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">👨‍⚖️</div>
+                        <div class="step-number">2</div>
+                        <div class="step-title">Hire a Lawyer</div>
+                        <div class="step-desc">Need expert help? Browse verified lawyers, compare rates, check reviews, book consultations</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">💰</div>
+                        <div class="step-number">3</div>
+                        <div class="step-title">Secure Payment</div>
+                        <div class="step-desc">Pay via Paystack (NGN) with Solana escrow protection for disputed cases</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MARKETPLACE PAGE - Hire Lawyers -->
+    <div id="marketplace" class="page-section">
+        <div class="container">
+            <!-- Page Header -->
+            <div class="hero">
+                <h1>🇳🇬 Hire a Nigerian Lawyer</h1>
+                <p>Browse verified lawyers, compare rates, book consultations instantly</p>
+            </div>
+
+            <!-- Featured Lawyers -->
+            <div class="lawyers-section">
+                <div class="section-header">
+                    <h2 class="section-title">Featured Lawyers</h2>
+                    <span style="color: #6b7280;">6 verified lawyers available</span>
+                </div>
+
+                <div class="lawyers-grid">
+                    <div class="lawyer-card" onclick="alert('Would navigate to Adebayo Okonkwo full profile with booking system')">
+                        <div class="lawyer-header">
+                            <div class="lawyer-avatar">A</div>
+                            <div class="lawyer-info">
+                                <h3>Adebayo Okonkwo</h3>
+                                <div class="lawyer-specialty">Corporate Law</div>
+                            </div>
+                        </div>
+                        <div class="lawyer-meta">
+                            <span>📍 Lagos</span>
+                            <span>⭐ 4.9 (47)</span>
+                            <span>💼 12 years</span>
+                        </div>
+                        <p style="color: #6b7280; margin-bottom: 15px; line-height: 1.6;">
+                            Experienced corporate lawyer specializing in M&A, company formation, and regulatory compliance. Advised over 100 Nigerian startups.
+                        </p>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="lawyer-rate">₦25,000/hr</div>
+                            <button class="tool-btn" style="width: auto; margin-top: 0; padding: 10px 20px;">View Profile</button>
+                        </div>
+                    </div>
+
+                    <div class="lawyer-card" onclick="alert('Would navigate to Amina Bello full profile')">
+                        <div class="lawyer-header">
+                            <div class="lawyer-avatar">A</div>
+                            <div class="lawyer-info">
+                                <h3>Amina Bello</h3>
+                                <div class="lawyer-specialty">Family Law</div>
+                            </div>
+                        </div>
+                        <div class="lawyer-meta">
+                            <span>📍 Abuja</span>
+                            <span>⭐ 4.8 (32)</span>
+                            <span>💼 8 years</span>
+                        </div>
+                        <p style="color: #6b7280; margin-bottom: 15px; line-height: 1.6;">
+                            Compassionate family law attorney handling divorce, custody, adoption. Known for achieving amicable settlements.
+                        </p>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="lawyer-rate">₦18,000/hr</div>
+                            <button class="tool-btn" style="width: auto; margin-top: 0; padding: 10px 20px;">View Profile</button>
+                        </div>
+                    </div>
+
+                    <div class="lawyer-card" onclick="alert('Would navigate to Chukwudi Eze full profile')">
+                        <div class="lawyer-header">
+                            <div class="lawyer-avatar">C</div>
+                            <div class="lawyer-info">
+                                <h3>Chukwudi Eze</h3>
+                                <div class="lawyer-specialty">Criminal Law</div>
+                            </div>
+                        </div>
+                        <div class="lawyer-meta">
+                            <span>📍 Port Harcourt</span>
+                            <span>⭐ 4.7 (68)</span>
+                            <span>💼 15 years</span>
+                        </div>
+                        <p style="color: #6b7280; margin-bottom: 15px; line-height: 1.6;">
+                            Veteran criminal defense attorney. Successfully defended 200+ cases including fraud, robbery, cybercrime.
+                        </p>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="lawyer-rate">₦22,000/hr</div>
+                            <button class="tool-btn" style="width: auto; margin-top: 0; padding: 10px 20px;">View Profile</button>
+                        </div>
+                    </div>
+
+                    <div class="lawyer-card" onclick="alert('Would navigate to Fatima Mohammed full profile')">
+                        <div class="lawyer-header">
+                            <div class="lawyer-avatar">F</div>
+                            <div class="lawyer-info">
+                                <h3>Fatima Mohammed</h3>
+                                <div class="lawyer-specialty">Real Estate</div>
+                            </div>
+                        </div>
+                        <div class="lawyer-meta">
+                            <span>📍 Kano</span>
+                            <span>⭐ 4.6 (24)</span>
+                            <span>💼 6 years</span>
+                        </div>
+                        <p style="color: #6b7280; margin-bottom: 15px; line-height: 1.6;">
+                            Real estate lawyer specializing in property transactions, land disputes, title verification across Northern Nigeria.
+                        </p>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="lawyer-rate">₦15,000/hr</div>
+                            <button class="tool-btn" style="width: auto; margin-top: 0; padding: 10px 20px;">View Profile</button>
+                        </div>
+                    </div>
+
+                    <div class="lawyer-card" onclick="alert('Would navigate to Oluwaseun Adeyemi full profile')">
+                        <div class="lawyer-header">
+                            <div class="lawyer-avatar">O</div>
+                            <div class="lawyer-info">
+                                <h3>Oluwaseun Adeyemi</h3>
+                                <div class="lawyer-specialty">Intellectual Property</div>
+                            </div>
+                        </div>
+                        <div class="lawyer-meta">
+                            <span>📍 Lagos</span>
+                            <span>⭐ 4.9 (41)</span>
+                            <span>💼 10 years</span>
+                        </div>
+                        <p style="color: #6b7280; margin-bottom: 15px; line-height: 1.6;">
+                            IP lawyer protecting trademarks, patents, copyrights. Represent tech startups and content creators.
+                        </p>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="lawyer-rate">₦30,000/hr</div>
+                            <button class="tool-btn" style="width: auto; margin-top: 0; padding: 10px 20px;">View Profile</button>
+                        </div>
+                    </div>
+
+                    <div class="lawyer-card" onclick="alert('Would navigate to Ibrahim Yusuf full profile')">
+                        <div class="lawyer-header">
+                            <div class="lawyer-avatar">I</div>
+                            <div class="lawyer-info">
+                                <h3>Ibrahim Yusuf</h3>
+                                <div class="lawyer-specialty">Labour Law</div>
+                            </div>
+                        </div>
+                        <div class="lawyer-meta">
+                            <span>📍 Kaduna</span>
+                            <span>⭐ 4.7 (29)</span>
+                            <span>💼 9 years</span>
+                        </div>
+                        <p style="color: #6b7280; margin-bottom: 15px; line-height: 1.6;">
+                            Employment lawyer handling wrongful termination, discrimination, contract negotiations, union disputes.
+                        </p>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="lawyer-rate">₦16,000/hr</div>
+                            <button class="tool-btn" style="width: auto; margin-top: 0; padding: 10px 20px;">View Profile</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Back to AI Tools -->
+            <div style="text-align: center; margin-top: 40px;">
+                <p style="color: #6b7280; margin-bottom: 15px; font-size: 1.1rem;">
+                    Want to try AI tools first before hiring a lawyer?
+                </p>
+                <a href="#" class="cta-btn" onclick="showPage('home'); return false;" style="background: #10b981; color: white;">
+                    ← Back to AI Tools
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="#" class="footer-link" onclick="showPage('home')">AI Tools</a>
+            <a href="#" class="footer-link" onclick="showPage('marketplace')">Hire Lawyers</a>
+            <a href="https://github.com/Perry0404/Casewin-Ai" class="footer-link" target="_blank">GitHub</a>
+            <a href="#" class="footer-link">About</a>
+            <a href="#" class="footer-link">Contact</a>
+        </div>
+        <p style="color: #9ca3af; margin-bottom: 10px;">Built with 🇳🇬 for Nigerian lawyers</p>
+        <p style="color: #6b7280; font-size: 0.9rem;">
+            Powered by Ollama (Llama 3.2) | Qdrant | Supabase | Solana | Paystack
+        </p>
+    </footer>
+
+    <script>
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page-section').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId).classList.add('active');
+            
+            // Highlight active nav link
+            if (pageId === 'home') {
+                document.querySelectorAll('.nav-link')[0].classList.add('active');
+            } else if (pageId === 'marketplace') {
+                document.querySelectorAll('.nav-link')[1].classList.add('active');
+            }
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
