@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaseWin-NG Marketplace - E-Commerce Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 3rem;
+        }
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 1.3rem;
+        }
+        
+        /* Navigation */
+        .nav {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 40px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .nav-btn {
+            padding: 12px 24px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        /* Content Sections */
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        
+        /* Marketplace Grid */
+        .marketplace-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        /* Filters Sidebar */
+        .filters {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            height: fit-content;
+        }
+        .filter-group {
+            margin-bottom: 20px;
+        }
+        .filter-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .filter-group select, .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        /* Lawyer Cards */
+        .lawyers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        .lawyer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .lawyer-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .lawyer-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .lawyer-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .lawyer-info h3 {
+            color: #333;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        .lawyer-specialty {
+            color: #667eea;
+            font-weight: 600;
+        }
+        .lawyer-meta {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .lawyer-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .lawyer-bio {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+        .lawyer-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .lawyer-rate {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #10b981;
+        }
+        .view-profile-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .view-profile-btn:hover {
+            background: #5568d3;
+        }
+        
+        /* Profile View */
+        .profile-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+        .profile-main, .profile-sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+        }
+        .profile-header {
+            display: flex;
+            gap: 20px;
+            align-items: start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        .profile-details h2 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .profile-specialty {
+            color: #667eea;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .profile-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .credentials-grid {
+            display: grid;
+            gap: 15px;
+        }
+        .credential-item h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .credential-item p {
+            color: #666;
+        }
+        .languages {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .language-tag {
+            padding: 6px 12px;
+            background: #e0e7ff;
+            color: #667eea;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .review {
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .review-author {
+            font-weight: bold;
+            color: #333;
+        }
+        .review-stars {
+            color: #fbbf24;
+        }
+        .booking-box {
+            background: #f0f9ff;
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .booking-rate {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .book-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .book-btn:hover {
+            opacity: 0.9;
+        }
+        .benefits {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+        .benefits h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .benefit-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .benefit-item span:first-child {
+            color: #10b981;
+        }
+        
+        .stats {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        .stat {
+            text-align: center;
+            color: white;
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🇳🇬 CaseWin-NG Marketplace</h1>
+        <div class="subtitle">Complete E-Commerce Platform for Hiring Nigerian Lawyers</div>
+        
+        <div class="nav">
+            <button class="nav-btn active" onclick="showSection('browse')">Browse Lawyers</button>
+            <button class="nav-btn" onclick="showSection('profile')">View Profile Example</button>
+            <button class="nav-btn" onclick="window.location.href='https://github.com/Perry0404/Casewin-Ai'">GitHub Repo</button>
+        </div>
+
+        <!-- Browse Lawyers Section -->
+        <div id="browse" class="section active">
+            <div class="marketplace-grid">
+                <!-- Filters Sidebar -->
+                <aside class="filters">
+                    <h3 style="margin-bottom: 20px;">Filters</h3>
+                    
+                    <div class="filter-group">
+                        <label>Specialization</label>
+                        <select>
+                            <option>All Specializations</option>
+                            <option>Corporate Law</option>
+                            <option>Criminal Law</option>
+                            <option>Family Law</option>
+                            <option>Real Estate</option>
+                            <option>Intellectual Property</option>
+                            <option>Labour Law</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Location</label>
+                        <select>
+                            <option>All Locations</option>
+                            <option>Lagos</option>
+                            <option>Abuja</option>
+                            <option>Port Harcourt</option>
+                            <option>Kano</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Max Rate: ₦50,000</label>
+                        <input type="range" min="5000" max="50000" value="50000">
+                    </div>
+                    
+                    <button style="width:100%; padding:10px; background:#667eea; color:white; border:none; border-radius:6px; cursor:pointer; margin-top:10px;">
+                        Reset Filters
+                    </button>
+                </aside>
+
+                <!-- Lawyers Grid -->
+                <main>
+                    <p style="color:white; margin-bottom:20px; font-size:1.1rem;">6 lawyers found</p>
+                    
+                    <div class="lawyers-grid">
+                        <div class="lawyer-card" onclick="showSection('profile')">
+                            <div class="lawyer-header">
+                                <div class="lawyer-avatar">A</div>
+                                <div class="lawyer-info">
+                                    <h3>Adebayo Okonkwo</h3>
+                                    <div class="lawyer-specialty">Corporate Law</div>
+                                </div>
+                            </div>
+                            <div class="lawyer-meta">
+                                <span>📍 Lagos</span>
+                                <span>⭐ 4.9 (47)</span>
+                                <span>💼 12 years</span>
+                            </div>
+                            <p class="lawyer-bio">
+                                Experienced corporate lawyer specializing in M&A, company formation, and regulatory compliance. Advised over 100 Nigerian startups.
+                            </p>
+                            <div class="lawyer-footer">
+                                <div class="lawyer-rate">₦25,000/hr</div>
+                                <button class="view-profile-btn">View Profile</button>
+                            </div>
+                        </div>
+
+                        <div class="lawyer-card">
+                            <div class="lawyer-header">
+                                <div class="lawyer-avatar">A</div>
+                                <div class="lawyer-info">
+                                    <h3>Amina Bello</h3>
+                                    <div class="lawyer-specialty">Family Law</div>
+                                </div>
+                            </div>
+                            <div class="lawyer-meta">
+                                <span>📍 Abuja</span>
+                                <span>⭐ 4.8 (32)</span>
+                                <span>💼 8 years</span>
+                            </div>
+                            <p class="lawyer-bio">
+                                Compassionate family law attorney handling divorce, custody, adoption. Known for achieving amicable settlements.
+                            </p>
+                            <div class="lawyer-footer">
+                                <div class="lawyer-rate">₦18,000/hr</div>
+                                <button class="view-profile-btn">View Profile</button>
+                            </div>
+                        </div>
+
+                        <div class="lawyer-card">
+                            <div class="lawyer-header">
+                                <div class="lawyer-avatar">C</div>
+                                <div class="lawyer-info">
+                                    <h3>Chukwudi Eze</h3>
+                                    <div class="lawyer-specialty">Criminal Law</div>
+                                </div>
+                            </div>
+                            <div class="lawyer-meta">
+                                <span>📍 Port Harcourt</span>
+                                <span>⭐ 4.7 (68)</span>
+                                <span>💼 15 years</span>
+                            </div>
+                            <p class="lawyer-bio">
+                                Veteran criminal defense attorney. Successfully defended 200+ cases including fraud, robbery, cybercrime.
+                            </p>
+                            <div class="lawyer-footer">
+                                <div class="lawyer-rate">₦22,000/hr</div>
+                                <button class="view-profile-btn">View Profile</button>
+                            </div>
+                        </div>
+
+                        <div class="lawyer-card">
+                            <div class="lawyer-header">
+                                <div class="lawyer-avatar">F</div>
+                                <div class="lawyer-info">
+                                    <h3>Fatima Mohammed</h3>
+                                    <div class="lawyer-specialty">Real Estate</div>
+                                </div>
+                            </div>
+                            <div class="lawyer-meta">
+                                <span>📍 Kano</span>
+                                <span>⭐ 4.6 (24)</span>
+                                <span>💼 6 years</span>
+                            </div>
+                            <p class="lawyer-bio">
+                                Real estate lawyer specializing in property transactions, land disputes, title verification across Northern Nigeria.
+                            </p>
+                            <div class="lawyer-footer">
+                                <div class="lawyer-rate">₦15,000/hr</div>
+                                <button class="view-profile-btn">View Profile</button>
+                            </div>
+                        </div>
+
+                        <div class="lawyer-card">
+                            <div class="lawyer-header">
+                                <div class="lawyer-avatar">O</div>
+                                <div class="lawyer-info">
+                                    <h3>Oluwaseun Adeyemi</h3>
+                                    <div class="lawyer-specialty">Intellectual Property</div>
+                                </div>
+                            </div>
+                            <div class="lawyer-meta">
+                                <span>📍 Lagos</span>
+                                <span>⭐ 4.9 (41)</span>
+                                <span>💼 10 years</span>
+                            </div>
+                            <p class="lawyer-bio">
+                                IP lawyer protecting trademarks, patents, copyrights. Represent tech startups and content creators.
+                            </p>
+                            <div class="lawyer-footer">
+                                <div class="lawyer-rate">₦30,000/hr</div>
+                                <button class="view-profile-btn">View Profile</button>
+                            </div>
+                        </div>
+
+                        <div class="lawyer-card">
+                            <div class="lawyer-header">
+                                <div class="lawyer-avatar">I</div>
+                                <div class="lawyer-info">
+                                    <h3>Ibrahim Yusuf</h3>
+                                    <div class="lawyer-specialty">Labour Law</div>
+                                </div>
+                            </div>
+                            <div class="lawyer-meta">
+                                <span>📍 Kaduna</span>
+                                <span>⭐ 4.7 (29)</span>
+                                <span>💼 9 years</span>
+                            </div>
+                            <p class="lawyer-bio">
+                                Employment lawyer handling wrongful termination, discrimination, contract negotiations, union disputes.
+                            </p>
+                            <div class="lawyer-footer">
+                                <div class="lawyer-rate">₦16,000/hr</div>
+                                <button class="view-profile-btn">View Profile</button>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- Profile View Section -->
+        <div id="profile" class="section">
+            <a href="#" class="back-btn" onclick="showSection('browse'); return false;">← Back to Marketplace</a>
+            
+            <div class="profile-container">
+                <div class="profile-main">
+                    <div class="profile-header">
+                        <div class="profile-avatar">A</div>
+                        <div class="profile-details">
+                            <h2>Adebayo Okonkwo</h2>
+                            <div class="profile-specialty">Corporate Law</div>
+                            <div class="profile-stats">
+                                <span>📍 Lagos</span>
+                                <span>⭐ 4.9 (47 reviews)</span>
+                                <span>💼 12 years experience</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 30px;">
+                        <h3 class="section-title">About</h3>
+                        <p style="color:#666; line-height:1.8;">
+                            Experienced corporate lawyer specializing in mergers & acquisitions, company formation, and regulatory compliance. 
+                            Advised over 100 Nigerian startups and SMEs. Former legal counsel at GTBank with expertise in banking regulations, 
+                            fintech compliance, and corporate governance.
+                        </p>
+                    </div>
+
+                    <div style="margin-bottom: 30px;">
+                        <h3 class="section-title">Credentials</h3>
+                        <div class="credentials-grid">
+                            <div class="credential-item">
+                                <h4>Bar Enrollment</h4>
+                                <p>SCN/123456/2010</p>
+                            </div>
+                            <div class="credential-item">
+                                <h4>Education</h4>
+                                <p>LL.B University of Lagos, BL Nigerian Law School, LL.M Harvard Law School</p>
+                            </div>
+                            <div class="credential-item">
+                                <h4>Languages</h4>
+                                <div class="languages">
+                                    <span class="language-tag">English</span>
+                                    <span class="language-tag">Yoruba</span>
+                                    <span class="language-tag">Igbo</span>
+                                </div>
+                            </div>
+                            <div class="credential-item">
+                                <h4>Courts of Practice</h4>
+                                <ul style="margin-left:20px; color:#666;">
+                                    <li>Supreme Court of Nigeria</li>
+                                    <li>Court of Appeal</li>
+                                    <li>Federal High Court</li>
+                                    <li>Lagos State High Court</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="section-title">Client Reviews</h3>
+                        <div class="review">
+                            <div class="review-header">
+                                <span class="review-author">Adebayo O.</span>
+                                <span class="review-stars">⭐⭐⭐⭐⭐</span>
+                            </div>
+                            <p style="color:#666;">
+                                Excellent lawyer! Very knowledgeable and responsive. Helped me with my property case. 
+                                Highly professional and got great results.
+                            </p>
+                            <p style="font-size:0.85rem; color:#999; margin-top:10px;">1 week ago</p>
+                        </div>
+                        <div class="review">
+                            <div class="review-header">
+                                <span class="review-author">Chioma N.</span>
+                                <span class="review-stars">⭐⭐⭐⭐⭐</span>
+                            </div>
+                            <p style="color:#666;">
+                                Professional service. Won my case in court. Very thorough in preparation and excellent in court presentation. 
+                                Highly recommended!
+                            </p>
+                            <p style="font-size:0.85rem; color:#999; margin-top:10px;">2 weeks ago</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-sidebar">
+                    <div class="booking-box">
+                        <div class="booking-rate">₦25,000/hr</div>
+                        <button class="book-btn" onclick="alert('Booking modal would open here with date/time picker, duration selector, and Paystack payment integration!')">
+                            Book Consultation
+                        </button>
+                    </div>
+
+                    <div class="benefits">
+                        <h4>Why book with us?</h4>
+                        <div class="benefit-item">
+                            <span>✓</span>
+                            <span>Verified Nigerian lawyers</span>
+                        </div>
+                        <div class="benefit-item">
+                            <span>✓</span>
+                            <span>Secure Paystack payments</span>
+                        </div>
+                        <div class="benefit-item">
+                            <span>✓</span>
+                            <span>Solana escrow protection</span>
+                        </div>
+                        <div class="benefit-item">
+                            <span>✓</span>
+                            <span>24/7 customer support</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-number">6</span>
+                <span class="stat-label">Verified Lawyers</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">7</span>
+                <span class="stat-label">Specializations</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">₦15K-₦30K</span>
+                <span class="stat-label">Hourly Rates</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">100%</span>
+                <span class="stat-label">Secure Payments</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
