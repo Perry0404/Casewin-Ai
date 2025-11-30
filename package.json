@@ -1,17 +1,21 @@
 ﻿{
-  "name": "casewin-ng-real",
-  "version": "1.0.0",
-  "private": true,
-  "workspaces": ["apps/*"],
-  "scripts": {
-    "dev": "cd apps/web && npm run dev",
-    "build": "cd apps/web && npm run build",
-    "start": "cd apps/web && npm run start",
-    "whatsapp": "cd apps/whatsapp-bot && npm run dev",
-    "index-cases": "tsx scripts/index-cases.ts"
-  },
-  "dependencies": {},
-  "devDependencies": {
-    "tsx": "^4.7.0"
-  }
+    "name":  "casewin-ng-real",
+    "version":  "1.0.0",
+    "private":  true,
+    "workspaces":  [
+                       "apps/*"
+                   ],
+    "scripts":  {
+                    "dev":  "cd apps/web \u0026\u0026 npm run dev",
+                    "build":  "cd apps/web \u0026\u0026 npm run build",
+                    "start":  "cd apps/web \u0026\u0026 npm run start",
+                    "whatsapp":  "cd apps/whatsapp-bot \u0026\u0026 npm run dev",
+                    "index-cases":  "tsx scripts/index-cases.ts"
+                },
+    "dependencies":  {
+
+                     },
+    "devDependencies":  {
+                            "tsx":  "^4.7.0"
+                        }
 }
