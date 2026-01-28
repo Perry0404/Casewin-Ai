@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { QdrantClient } from '@qdrant/js-client-rest'
-import Ollama from 'ollama'
+import { Ollama } from 'ollama'
 
 const qdrant = new QdrantClient({ url: process.env.QDRANT_URL || 'http://localhost:6333' })
 const ollama = new Ollama({ host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434' })

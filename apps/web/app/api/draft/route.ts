@@ -1,42 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
-import Ollama from 'ollama'
-
-const ollama = new Ollama({ host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434' })
+﻿import { NextRequest, NextResponse } from 'next/server'
+import axios from 'axios'
 
 export async function POST(req: NextRequest) {
   try {
-    const { documentType, parties, clauses, jurisdiction } = await req.json()
-
-    const prompt = `You are a legal document drafting assistant specializing in Nigerian law.
-
-Draft a ${documentType} with the following details:
-- Parties: ${JSON.stringify(parties)}
-- Clauses: ${JSON.stringify(clauses)}
-- Jurisdiction: ${jurisdiction || 'Federal Republic of Nigeria'}
-
-Use formal legal language, proper formatting, and ensure compliance with Nigerian law.
-Include all necessary clauses (force majeure, dispute resolution, governing law, etc.).`
-
-    const response = await ollama.generate({
+    const body = await req.json()
+    const prompt = 'Draft a ' + body.documentType + ' for ' + body.parties
+    
+    const res = await axios.post('http://localhost:11434/api/generate', {
       model: 'llama3.2:3b',
-      prompt,
-      stream: false,
+      prompt: prompt,
+      stream: false
     })
-
-    return NextResponse.json({
-      success: true,
-      document: response.response,
-      metadata: {
-        documentType,
-        jurisdiction,
-        generatedAt: new Date().toISOString(),
-      }
-    })
+    
+    return NextResponse.json({ success: true, document: res.data.response })
   } catch (error: any) {
-    console.error('Document drafting error:', error)
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

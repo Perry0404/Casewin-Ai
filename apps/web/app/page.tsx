@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import Link from 'next/link'
@@ -9,70 +9,99 @@ export default function Home() {
   const features = [
     {
       id: 'draft',
-      title: '📝 Document Drafting',
+      title: 'Document Drafting',
+      icon: '📝',
       description: 'Generate contracts, letters, and pleadings',
+      color: 'from-blue-500 to-cyan-500',
       endpoint: '/api/draft'
     },
     {
       id: 'predict',
-      title: '🔮 Case Prediction',
+      title: 'Case Prediction',
+      icon: '🔮',
       description: 'Predict outcomes based on Nigerian case law',
+      color: 'from-purple-500 to-pink-500',
       endpoint: '/api/predict'
     },
     {
       id: 'research',
-      title: '🔍 Legal Research',
+      title: 'Legal Research',
+      icon: '🔍',
       description: 'Search 10,000+ Nigerian judgments',
+      color: 'from-green-500 to-emerald-500',
       endpoint: '/api/research'
     },
     {
       id: 'analyze',
-      title: '📄 Contract Analysis',
+      title: 'Contract Analysis',
+      icon: '📄',
       description: 'Identify risks and unfair terms',
+      color: 'from-orange-500 to-red-500',
       endpoint: '/api/analyze-contract'
     },
     {
       id: 'summarize',
-      title: '📋 Judgment Summarization',
+      title: 'Judgment Summarization',
+      icon: '📋',
       description: 'Summarize lengthy court judgments',
+      color: 'from-indigo-500 to-blue-500',
       endpoint: '/api/summarize'
     },
     {
       id: 'translate',
-      title: '🌍 Translation',
+      title: 'Translation',
+      icon: '🌍',
       description: 'Translate to Yoruba, Igbo, Hausa',
+      color: 'from-teal-500 to-green-500',
       endpoint: '/api/translate'
     },
     {
       id: 'arguments',
-      title: '⚖️ Argument Generation',
+      title: 'Argument Generation',
+      icon: '⚖️',
       description: 'Generate persuasive legal arguments',
+      color: 'from-yellow-500 to-orange-500',
       endpoint: '/api/generate-arguments'
     },
     {
       id: 'compliance',
-      title: '✅ Compliance Check',
+      title: 'Compliance Check',
+      icon: '✅',
       description: 'Check against Nigerian regulations',
+      color: 'from-pink-500 to-rose-500',
       endpoint: '/api/compliance-check'
     }
   ]
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-green-50 to-green-100">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+      </div>
+
       {/* Header with Navigation */}
-      <header className="bg-primary text-white shadow-lg">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-4xl font-bold">⚖️ CaseWin-NG</h1>
-              <p className="text-green-200 mt-2">AI-Powered Legal Platform for Nigerian Lawyers</p>
-            </div>
+      <header className="relative bg-black/30 backdrop-blur-xl border-b border-white/10">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="text-4xl">⚖️</div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">CaseWin-NG</h1>
+                <p className="text-sm text-purple-300">AI-Powered Legal Platform</p>
+              </div>
+            </Link>
             <nav className="flex gap-6">
-              <Link href="/" className="text-white hover:text-accent transition-colors font-semibold">
+              <Link href="/" className="text-white hover:text-purple-300 transition-colors font-semibold border-b-2 border-purple-400">
                 AI Tools
               </Link>
-              <Link href="/marketplace" className="text-white hover:text-accent transition-colors font-semibold">
+              <Link href="/marketplace" className="text-gray-300 hover:text-white transition-colors font-semibold">
                 Hire Lawyers
+              </Link>
+              <Link href="/predictions" className="text-gray-300 hover:text-white transition-colors font-semibold">
+                Predictions
               </Link>
             </nav>
           </div>
@@ -80,17 +109,27 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-primary mb-4">
-            8 AI-Powered Legal Tools
+      <section className="relative container mx-auto px-4 py-16">
+        <div className="text-center mb-16">
+          <div className="inline-block mb-6">
+            <span className="bg-gradient-to-r from-green-400 to-blue-400 text-white px-6 py-2 rounded-full text-sm font-bold animate-pulse">
+              ✨ POWERED BY LLAMA 3.2 AI
+            </span>
+          </div>
+          <h2 className="text-5xl md:text-7xl font-bold text-white mb-6">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-blue-400 to-purple-400">
+              8 AI-Powered Legal Tools
+            </span>
           </h2>
-          <p className="text-gray-700 max-w-2xl mx-auto">
-            Powered by Llama 3.2, Qdrant Vector Search, and 10,000+ Nigerian case law database
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
+            Transform your legal practice with cutting-edge AI. Research cases, draft documents, predict outcomes, and more - all powered by 10,000+ Nigerian case law database.
           </p>
-          <div className="mt-6">
-            <span className="bg-accent text-primary px-4 py-2 rounded-full font-semibold">
-              ₦2,500/month | Try Free for 7 Days
+          <div className="flex justify-center gap-4 flex-wrap">
+            <span className="bg-white/10 backdrop-blur-lg text-white px-6 py-3 rounded-full font-semibold border border-white/20">
+              ₦2,500/month
+            </span>
+            <span className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-6 py-3 rounded-full font-semibold shadow-lg shadow-green-500/50">
+              🎉 Try Free for 7 Days
             </span>
           </div>
         </div>
@@ -100,117 +139,132 @@ export default function Home() {
           {features.map((feature) => (
             <div
               key={feature.id}
-              className="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition-shadow cursor-pointer"
+              className="group relative bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/30 transition-all duration-300 cursor-pointer overflow-hidden hover:shadow-2xl hover:shadow-purple-500/20 hover:scale-105"
               onClick={() => setActiveFeature(feature.id)}
             >
-              <h3 className="text-xl font-bold text-primary mb-2">
-                {feature.title}
-              </h3>
-              <p className="text-gray-600 text-sm">{feature.description}</p>
-              <button className="mt-4 bg-primary text-white px-4 py-2 rounded-md hover:bg-secondary transition-colors w-full">
-                Try Now
-              </button>
+              {/* Gradient Background on Hover */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
+              
+              {/* Content */}
+              <div className="relative z-10">
+                <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  {feature.description}
+                </p>
+                <button className="w-full py-2 px-4 rounded-lg font-semibold transition-all duration-300 bg-white/10 text-white hover:bg-white/20">
+                  Try Now →
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Marketplace Section */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-xl p-8 text-white">
+      {/* Prediction Market Promo */}
+      <section className="relative container mx-auto px-4 py-12">
+        <div className="bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-blue-600/20 backdrop-blur-xl rounded-3xl border border-white/20 p-12 hover:border-purple-500/50 transition-all">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
-              <h2 className="text-3xl font-bold mb-4">
-                👥 Need a Lawyer? Hire from Our Marketplace
+              <div className="inline-block mb-4">
+                <span className="bg-gradient-to-r from-purple-400 to-pink-400 text-white px-4 py-2 rounded-full text-sm font-bold">
+                  🔥 NEW FEATURE
+                </span>
+              </div>
+              <h2 className="text-4xl font-bold text-white mb-4">
+                Legal Prediction Markets
               </h2>
-              <p className="text-indigo-100 mb-6 text-lg">
-                Browse 6+ verified Nigerian lawyers across Corporate, Criminal, Family, Real Estate, IP, and Labour Law. 
-                Filter by location, specialty, and hourly rate. Secure payments via Paystack and Solana escrow protection.
+              <p className="text-gray-300 mb-6 text-lg">
+                Predict outcomes of major Nigerian legal cases and legislative changes. Trade on your legal knowledge and earn rewards.
               </p>
-              <div className="flex gap-4 mb-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold">6+</div>
-                  <div className="text-sm text-indigo-200">Verified Lawyers</div>
+              <div className="flex gap-6 mb-6">
+                <div>
+                  <div className="text-3xl font-bold text-purple-400">₦2.2M</div>
+                  <div className="text-sm text-gray-400">Trading Volume</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">4.8★</div>
-                  <div className="text-sm text-indigo-200">Average Rating</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">₦15-30K</div>
-                  <div className="text-sm text-indigo-200">Per Hour</div>
+                <div>
+                  <div className="text-3xl font-bold text-pink-400">1,247</div>
+                  <div className="text-sm text-gray-400">Active Traders</div>
                 </div>
               </div>
               <Link
-                href="/marketplace"
-                className="bg-white text-indigo-600 px-8 py-4 rounded-lg font-bold hover:shadow-lg transition-shadow inline-block text-lg"
+                href="/predictions"
+                className="inline-block bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-4 rounded-xl font-bold hover:shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-105"
               >
-                Browse Lawyers →
+                Start Trading →
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <div className="text-3xl mb-2">🏢</div>
-                <div className="font-semibold">Corporate Law</div>
-                <div className="text-sm text-indigo-200">M&A, Compliance</div>
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <div className="text-green-400 text-2xl font-bold mb-2">73%</div>
+                <div className="text-white font-semibold text-sm mb-1">Supreme Court Electoral Reform</div>
+                <div className="text-gray-400 text-xs">5 days left</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <div className="text-3xl mb-2">⚖️</div>
-                <div className="font-semibold">Criminal Law</div>
-                <div className="text-sm text-indigo-200">Defense, Litigation</div>
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <div className="text-red-400 text-2xl font-bold mb-2">45%</div>
+                <div className="text-white font-semibold text-sm mb-1">Land Use Act Amendment</div>
+                <div className="text-gray-400 text-xs">180 days left</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <div className="text-3xl mb-2">🏠</div>
-                <div className="font-semibold">Real Estate</div>
-                <div className="text-sm text-indigo-200">Property, Titles</div>
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <div className="text-blue-400 text-2xl font-bold mb-2">82%</div>
+                <div className="text-white font-semibold text-sm mb-1">CBN Crypto Regulations</div>
+                <div className="text-gray-400 text-xs">80 days left</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-                <div className="text-3xl mb-2">💼</div>
-                <div className="font-semibold">Labour Law</div>
-                <div className="text-sm text-indigo-200">Employment</div>
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+                <div className="text-yellow-400 text-2xl font-bold mb-2">67%</div>
+                <div className="text-white font-semibold text-sm mb-1">EFCC Appeal Case</div>
+                <div className="text-gray-400 text-xs">115 days left</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="container mx-auto px-4 py-12">
-        <h2 className="text-3xl font-bold text-center text-primary mb-12">
-          Complete Legal Solution in One Platform
-        </h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="text-5xl mb-4">🤖</div>
-            <h3 className="text-xl font-bold text-primary mb-3">1. Use AI Tools</h3>
-            <p className="text-gray-600">
-              Draft documents, predict outcomes, research cases, analyze contracts with our 8 AI-powered tools
-            </p>
+      {/* Stats Section */}
+      <section className="relative container mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-4 gap-6 text-center">
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
+            <div className="text-5xl font-bold text-green-400 mb-2">10,000+</div>
+            <div className="text-gray-400">Nigerian Cases</div>
           </div>
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="text-5xl mb-4">👨‍⚖️</div>
-            <h3 className="text-xl font-bold text-primary mb-3">2. Hire a Lawyer</h3>
-            <p className="text-gray-600">
-              Need expert help? Browse verified lawyers, compare rates, check reviews, and book consultations
-            </p>
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
+            <div className="text-5xl font-bold text-blue-400 mb-2">8</div>
+            <div className="text-gray-400">AI Tools</div>
           </div>
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="text-5xl mb-4">💰</div>
-            <h3 className="text-xl font-bold text-primary mb-3">3. Secure Payment</h3>
-            <p className="text-gray-600">
-              Pay via Paystack (NGN) with Solana escrow protection for disputed cases
-            </p>
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
+            <div className="text-5xl font-bold text-purple-400 mb-2">1,500+</div>
+            <div className="text-gray-400">Active Users</div>
+          </div>
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
+            <div className="text-5xl font-bold text-pink-400 mb-2">99.2%</div>
+            <div className="text-gray-400">Accuracy Rate</div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-primary text-white py-8 mt-12">
-        <div className="container mx-auto px-4 text-center">
-          <p className="mb-2">Built with 🇳🇬 by Nigerian developers</p>
-          <p className="text-green-200 text-sm">
-            Powered by Ollama (Llama 3.2) | Qdrant | Supabase | Solana
-          </p>
+      <footer className="relative bg-black/30 backdrop-blur-xl border-t border-white/10 py-12 mt-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="text-3xl">⚖️</div>
+              <h3 className="text-2xl font-bold text-white">CaseWin-NG</h3>
+            </div>
+            <p className="text-gray-400 mb-6">
+              Built with 🇳🇬 for Nigerian law students and professionals
+            </p>
+            <div className="flex justify-center gap-8 text-sm text-gray-500">
+              <span>Powered by Llama 3.2</span>
+              <span>•</span>
+              <span>Qdrant Vector Search</span>
+              <span>•</span>
+              <span>Supabase</span>
+            </div>
+          </div>
         </div>
       </footer>
     </main>
