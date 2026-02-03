@@ -41,3 +41,4 @@ next-env.d.ts
 target/
 **/*.rs.bk
 test-ledger/
+.env*.local
