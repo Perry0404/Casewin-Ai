@@ -1,11 +1,12 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Providers } from './providers'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'CaseWin-NG | AI-Powered Legal Platform for Nigerian Lawyers',
+  title: 'CaseWin AI | AI-Powered Legal Platform for Nigerian Lawyers',
   description: 'AI legal assistant with document drafting, case prediction, research, contract analysis, and more.',
 }
 
@@ -16,7 +17,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   )
 }

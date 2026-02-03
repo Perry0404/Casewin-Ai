@@ -1,125 +1,86 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      lawyer_id,
-      booking_date,
-      booking_time,
-      duration_hours,
-      case_description,
-      total_amount
-    } = body;
+    const body = await request.json()
+    const { lawyer_id, client_id, booking_type, amount, scheduled_at, notes } = body
 
-    // Validate required fields
-    if (!lawyer_id || !booking_date || !booking_time || !duration_hours || !case_description) {
+    if (!lawyer_id || !client_id || !booking_type || !amount) {
       return NextResponse.json({
-        success: false,
-        message: 'Missing required fields'
-      }, { status: 400 });
+        error: 'Missing required fields'
+      }, { status: 400 })
     }
 
-    // Mock client ID (in production, get from auth session)
-    const client_id = 'mock-client-' + Math.random().toString(36).substr(2, 9);
+    const { data, error } = await supabase
+      .from('lawyer_bookings')
+      .insert([{
+        client_id,
+        lawyer_id,
+        booking_type,
+        scheduled_at: scheduled_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        amount,
+        notes,
+        status: 'pending'
+      }])
+      .select()
+      .single()
 
-    // Try to insert into database
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert([
-          {
-            client_id,
-            lawyer_id,
-            booking_date,
-            booking_time,
-            duration_hours,
-            case_description,
-            total_amount,
-            status: 'pending'
-          }
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase error:', error);
-        // Continue with mock response if DB not set up
-      }
-    } catch (dbError) {
-      console.error('Database error:', dbError);
-      // Continue with mock response
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
-
-    // Generate Paystack payment link (mock for now)
-    const paymentLink = `https://paystack.com/pay/booking-${Date.now()}`;
 
     return NextResponse.json({
       success: true,
       message: 'Booking created successfully',
-      booking: {
-        id: 'booking-' + Date.now(),
-        client_id,
-        lawyer_id,
-        booking_date,
-        booking_time,
-        duration_hours,
-        case_description,
-        total_amount,
-        status: 'pending',
-        payment_link: paymentLink
-      }
-    });
+      booking: data
+    })
   } catch (error) {
-    console.error('Error creating booking:', error);
+    console.error('Error creating booking:', error)
     return NextResponse.json({
-      success: false,
-      message: 'Failed to create booking'
-    }, { status: 500 });
+      error: 'Failed to create booking'
+    }, { status: 500 })
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const clientId = searchParams.get('client_id');
-    const lawyerId = searchParams.get('lawyer_id');
+    const { searchParams } = new URL(request.url)
+    const clientId = searchParams.get('client_id')
+    const lawyerId = searchParams.get('lawyer_id')
 
-    let query = supabase.from('bookings').select('*');
+    let query = supabase
+      .from('lawyer_bookings')
+      .select(`
+        *,
+        client:client_id (full_name, email),
+        lawyer:lawyer_id (full_name, email)
+      `)
+      .order('scheduled_at', { ascending: false })
 
     if (clientId) {
-      query = query.eq('client_id', clientId);
+      query = query.eq('client_id', clientId)
     }
 
     if (lawyerId) {
-      query = query.eq('lawyer_id', lawyerId);
+      query = query.eq('lawyer_id', lawyerId)
     }
 
-    const { data: bookings, error } = await query;
+    const { data: bookings, error } = await query
 
     if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json({
-        success: true,
-        bookings: []
-      });
+      console.error('Supabase error:', error)
+      return NextResponse.json({ bookings: [] })
     }
 
-    return NextResponse.json({
-      success: true,
-      bookings: bookings || []
-    });
+    return NextResponse.json({ bookings: bookings || [] })
   } catch (error) {
-    console.error('Error fetching bookings:', error);
-    return NextResponse.json({
-      success: true,
-      bookings: []
-    });
+    console.error('Error fetching bookings:', error)
+    return NextResponse.json({ bookings: [] })
   }
 }
