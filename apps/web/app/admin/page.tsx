@@ -43,13 +43,23 @@ export default function AdminPage() {
     closes_at: ''
   })
   const [creating, setCreating] = useState(false)
+  const ADMIN_EMAIL = 'perrypaschal0404@gmail.com'
 
   useEffect(() => {
-    // Simple admin check - you can make this more sophisticated
-    if (user) {
-      fetchData()
+    // Admin protection - only allow specific email
+    if (!user) {
+      router.push('/auth/login')
+      return
     }
-  }, [user])
+    
+    if (user.email !== ADMIN_EMAIL) {
+      alert('Access denied. Admin only.')
+      router.push('/dashboard')
+      return
+    }
+    
+    fetchData()
+  }, [user, router])
 
   const fetchData = async () => {
     setLoading(true)
@@ -432,3 +442,4 @@ export default function AdminPage() {
     </div>
   )
 }
+
