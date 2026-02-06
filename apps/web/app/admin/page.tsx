@@ -2,12 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bsyjtubllnffymvwyemq.supabase.co',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeWp0dWJsbG5mZnltdnd5ZW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg3NTY4NzcsImV4cCI6MjA1NDMzMjg3N30.gDTPdMKfwNlF7l0YH67ArKPxnZwNpFLrb0YO57SZkmw'
-)
 
 interface Market {
   id: string
@@ -29,12 +23,12 @@ interface Lawyer {
   specializations: string[]
 }
 
-const ADMIN_EMAIL = 'perrypaschal0404@gmail.com'
+const ADMIN_PASSWORD = 'casewin2024admin'
 
 export default function AdminPage() {
-  const [user, setUser] = useState<any>(null)
-  const [authLoading, setAuthLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
   
   const [activeTab, setActiveTab] = useState<'markets' | 'lawyers' | 'create'>('markets')
   const [markets, setMarkets] = useState<Market[]>([])
@@ -53,26 +47,25 @@ export default function AdminPage() {
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
-    checkAuth()
+    // Check if already authenticated in this session
+    const auth = sessionStorage.getItem('admin_auth')
+    if (auth === 'true') {
+      setIsAuthenticated(true)
+      fetchData()
+    } else {
+      setLoading(false)
+    }
   }, [])
 
-  const checkAuth = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      
-      if (user && user.email === ADMIN_EMAIL) {
-        setIsAdmin(true)
-        fetchData()
-      } else {
-        setIsAdmin(false)
-        setLoading(false)
-      }
-    } catch (error) {
-      console.error('Auth error:', error)
-      setIsAdmin(false)
-    } finally {
-      setAuthLoading(false)
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password === ADMIN_PASSWORD) {
+      sessionStorage.setItem('admin_auth', 'true')
+      setIsAuthenticated(true)
+      setError('')
+      fetchData()
+    } else {
+      setError('Invalid password')
     }
   }
 
@@ -177,43 +170,39 @@ export default function AdminPage() {
     }
   }
 
-  // Loading state
-  if (authLoading) {
+  // Login screen
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-white mt-4">Checking authorization...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Not logged in
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center bg-gray-800 p-8 rounded-xl max-w-md">
-          <h1 className="text-2xl font-bold text-white mb-4">🔐 Admin Access Required</h1>
-          <p className="text-gray-400 mb-6">Please login with admin credentials to access this page.</p>
-          <Link href="/auth/login" className="bg-green-600 text-white px-6 py-3 rounded-lg inline-block hover:bg-green-700">
-            Login to Continue
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  // Logged in but not admin
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center bg-gray-800 p-8 rounded-xl max-w-md">
-          <h1 className="text-2xl font-bold text-red-400 mb-4">⛔ Access Denied</h1>
-          <p className="text-gray-400 mb-2">You are logged in as:</p>
-          <p className="text-white font-mono bg-gray-700 px-4 py-2 rounded mb-6">{user.email}</p>
-          <p className="text-gray-400 mb-6">This page is restricted to administrators only.</p>
-          <Link href="/" className="bg-gray-600 text-white px-6 py-3 rounded-lg inline-block hover:bg-gray-700">
+        <div className="text-center bg-gray-800 p-8 rounded-xl max-w-md w-full mx-4">
+          <h1 className="text-2xl font-bold text-white mb-2">🔐 Admin Panel</h1>
+          <p className="text-gray-400 mb-6">Enter admin password to continue</p>
+          
+          <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <div className="bg-red-500/20 text-red-400 px-4 py-2 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter admin password"
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+              autoFocus
+            />
+            
+            <button
+              type="submit"
+              className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700"
+            >
+              Access Admin Panel
+            </button>
+          </form>
+          
+          <Link href="/" className="inline-block mt-4 text-gray-400 hover:text-white text-sm">
             ← Back to Home
           </Link>
         </div>
@@ -237,7 +226,15 @@ export default function AdminPage() {
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-gray-400 text-sm">{user.email}</span>
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem('admin_auth')
+                  setIsAuthenticated(false)
+                }}
+                className="text-gray-400 hover:text-white text-sm"
+              >
+                Logout
+              </button>
               <Link href="/" className="text-gray-300 hover:text-white">
                 ← Back to Site
               </Link>
@@ -248,7 +245,7 @@ export default function AdminPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Tabs */}
-        <div className="flex gap-2 mb-8">
+        <div className="flex gap-2 mb-8 flex-wrap">
           <button
             onClick={() => setActiveTab('markets')}
             className={`px-6 py-3 rounded-lg font-semibold transition ${
@@ -284,6 +281,7 @@ export default function AdminPage() {
         {loading ? (
           <div className="text-center py-20">
             <div className="inline-block w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-400 mt-4">Loading data...</p>
           </div>
         ) : (
           <>
@@ -319,7 +317,7 @@ export default function AdminPage() {
                       <h3 className="text-xl font-bold text-white mb-2">{market.title}</h3>
                       <p className="text-gray-400 text-sm mb-4">{market.description}</p>
 
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex gap-4 text-sm">
                           <span className="text-green-400">
                             YES: {market.outcome_options?.yes_votes || 0}
@@ -366,7 +364,7 @@ export default function AdminPage() {
                 ) : (
                   lawyers.map(lawyer => (
                     <div key={lawyer.id} className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center flex-wrap gap-4">
                         <div>
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className="text-lg font-bold text-white">{lawyer.full_name || 'Unknown'}</h3>
@@ -425,7 +423,7 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-gray-300 mb-2">Case Reference</label>
                       <input
@@ -448,7 +446,7 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-gray-300 mb-2">Category *</label>
                       <select
