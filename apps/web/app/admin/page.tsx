@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bsyjtubllnffymvwyemq.supabase.co',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzeWp0dWJsbG5mZnltdnd5ZW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg3NTY4NzcsImV4cCI6MjA1NDMzMjg3N30.gDTPdMKfwNlF7l0YH67ArKPxnZwNpFLrb0YO57SZkmw'
+)
 
 interface Market {
   id: string
@@ -25,9 +29,13 @@ interface Lawyer {
   specializations: string[]
 }
 
+const ADMIN_EMAIL = 'perrypaschal0404@gmail.com'
+
 export default function AdminPage() {
-  const { user, profile } = useAuth()
-  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
+  
   const [activeTab, setActiveTab] = useState<'markets' | 'lawyers' | 'create'>('markets')
   const [markets, setMarkets] = useState<Market[]>([])
   const [lawyers, setLawyers] = useState<Lawyer[]>([])
@@ -43,23 +51,30 @@ export default function AdminPage() {
     closes_at: ''
   })
   const [creating, setCreating] = useState(false)
-  const ADMIN_EMAIL = 'perrypaschal0404@gmail.com'
 
   useEffect(() => {
-    // Admin protection - only allow specific email
-    if (!user) {
-      router.push('/auth/login')
-      return
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      
+      if (user && user.email === ADMIN_EMAIL) {
+        setIsAdmin(true)
+        fetchData()
+      } else {
+        setIsAdmin(false)
+        setLoading(false)
+      }
+    } catch (error) {
+      console.error('Auth error:', error)
+      setIsAdmin(false)
+    } finally {
+      setAuthLoading(false)
     }
-    
-    if (user.email !== ADMIN_EMAIL) {
-      alert('Access denied. Admin only.')
-      router.push('/dashboard')
-      return
-    }
-    
-    fetchData()
-  }, [user, router])
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -162,19 +177,51 @@ export default function AdminPage() {
     }
   }
 
-  if (!user) {
+  // Loading state
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Admin Access Required</h1>
-          <Link href="/auth/login" className="bg-green-600 text-white px-6 py-3 rounded-lg">
-            Login
+          <div className="inline-block w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-white mt-4">Checking authorization...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Not logged in
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center bg-gray-800 p-8 rounded-xl max-w-md">
+          <h1 className="text-2xl font-bold text-white mb-4">🔐 Admin Access Required</h1>
+          <p className="text-gray-400 mb-6">Please login with admin credentials to access this page.</p>
+          <Link href="/auth/login" className="bg-green-600 text-white px-6 py-3 rounded-lg inline-block hover:bg-green-700">
+            Login to Continue
           </Link>
         </div>
       </div>
     )
   }
 
+  // Logged in but not admin
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center bg-gray-800 p-8 rounded-xl max-w-md">
+          <h1 className="text-2xl font-bold text-red-400 mb-4">⛔ Access Denied</h1>
+          <p className="text-gray-400 mb-2">You are logged in as:</p>
+          <p className="text-white font-mono bg-gray-700 px-4 py-2 rounded mb-6">{user.email}</p>
+          <p className="text-gray-400 mb-6">This page is restricted to administrators only.</p>
+          <Link href="/" className="bg-gray-600 text-white px-6 py-3 rounded-lg inline-block hover:bg-gray-700">
+            ← Back to Home
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Admin view
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
@@ -189,9 +236,12 @@ export default function AdminPage() {
                 ADMIN
               </span>
             </div>
-            <Link href="/dashboard" className="text-gray-300 hover:text-white">
-              ← Back to Dashboard
-            </Link>
+            <div className="flex items-center gap-4">
+              <span className="text-gray-400 text-sm">{user.email}</span>
+              <Link href="/" className="text-gray-300 hover:text-white">
+                ← Back to Site
+              </Link>
+            </div>
           </div>
         </div>
       </header>

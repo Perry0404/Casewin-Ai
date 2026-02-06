@@ -1,0 +1,25 @@
+{
+  "name": "casewin-videos",
+  "version": "1.0.0",
+  "description": "CaseWin AI Marketing Videos",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render src/index.tsx PromoVideo out/promo.mp4",
+    "build:promo": "remotion render src/index.tsx PromoVideo out/promo.mp4",
+    "build:explainer": "remotion render src/index.tsx ExplainerVideo out/explainer.mp4",
+    "build:social": "remotion render src/index.tsx SocialAd out/social.mp4",
+    "build:all": "npm run build:promo && npm run build:explainer && npm run build:social"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/player": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "^4.0.0",
+    "zod": "3.22.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.3.0"
+  }
+}
