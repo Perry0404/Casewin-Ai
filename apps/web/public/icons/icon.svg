@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="80" fill="#1a2744"/>
+  <!-- CaseWinAI Logo - Interlocking C Design -->
+  <g transform="translate(56, 76)">
+    <!-- Top bar -->
+    <rect x="0" y="0" width="400" height="36" rx="4" fill="white"/>
+    <!-- Bottom bar -->
+    <rect x="0" y="324" width="400" height="36" rx="4" fill="white"/>
+    <!-- Left vertical -->
+    <rect x="0" y="0" width="36" height="360" rx="4" fill="white"/>
+    <!-- Right vertical -->
+    <rect x="364" y="0" width="36" height="360" rx="4" fill="white"/>
+    <!-- Middle bar left section -->
+    <rect x="0" y="162" width="165" height="36" rx="4" fill="white"/>
+    <!-- Middle bar right section -->
+    <rect x="235" y="162" width="165" height="36" rx="4" fill="white"/>
+    <!-- Inner left descender -->
+    <rect x="129" y="36" width="30" height="126" rx="4" fill="white"/>
+    <!-- Inner right descender -->
+    <rect x="241" y="198" width="30" height="126" rx="4" fill="white"/>
+  </g>
+</svg>

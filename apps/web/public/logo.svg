@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <rect width="200" height="200" rx="20" fill="#1a2744"/>
+  <!-- Top horizontal bar -->
+  <rect x="50" y="40" width="100" height="12" rx="2" fill="white"/>
+  <!-- Left vertical bar -->
+  <rect x="50" y="40" width="12" height="120" rx="2" fill="white"/>
+  <!-- Right vertical bar -->
+  <rect x="138" y="40" width="12" height="120" rx="2" fill="white"/>
+  <!-- Bottom horizontal bar -->
+  <rect x="50" y="148" width="100" height="12" rx="2" fill="white"/>
+  <!-- Middle horizontal bar (left side) -->
+  <rect x="50" y="94" width="45" height="12" rx="2" fill="white"/>
+  <!-- Middle horizontal bar (right side) -->
+  <rect x="105" y="94" width="45" height="12" rx="2" fill="white"/>
+  <!-- Inner left vertical -->
+  <rect x="83" y="52" width="10" height="42" rx="2" fill="white"/>
+  <!-- Inner right vertical -->
+  <rect x="107" y="106" width="10" height="42" rx="2" fill="white"/>
+</svg>

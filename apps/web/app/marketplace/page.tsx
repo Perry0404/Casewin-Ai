@@ -37,13 +37,13 @@ export default function MarketplacePage() {
   // Navigation component
   const Navigation = () => (
     <nav className="flex gap-6">
-      <Link href="/" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+      <Link href="/" className="text-white hover:text-gray-300 transition-colors font-semibold">
         AI Tools
       </Link>
-      <Link href="/marketplace" className="text-white hover:text-indigo-200 transition-colors font-semibold underline">
+      <Link href="/marketplace" className="text-white hover:text-gray-300 transition-colors font-semibold underline">
         Hire Lawyers
       </Link>
-      <Link href="/predictions" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+      <Link href="/predictions" className="text-white hover:text-gray-300 transition-colors font-semibold">
         Predictions
       </Link>
     </nav>
@@ -155,7 +155,7 @@ export default function MarketplacePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a2744] mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading lawyers...</p>
         </div>
       </div>
@@ -170,17 +170,17 @@ export default function MarketplacePage() {
         </div>
       )}
 
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+      <div className="bg-gradient-to-r from-[#1a2744] to-[#2d3a54] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6 border-b border-indigo-400">
-            <div><h1 className="text-2xl font-bold">CaseWin-NG</h1></div>
+          <div className="flex items-center justify-between py-6 border-b border-[#3d4a64]">
+            <div><h1 className="text-2xl font-bold">CaseWinAI</h1></div>
             <Navigation />
           </div>
           <div className="py-12">
             <h2 className="text-4xl font-bold mb-4">Hire a Nigerian Lawyer</h2>
-            <p className="text-xl text-indigo-100">Browse verified lawyers across all 36 states. Works offline!</p>
+            <p className="text-xl text-gray-200">Browse verified lawyers across all 36 states. Works offline!</p>
             {isOffline && lastUpdated && (
-              <p className="text-sm text-indigo-200 mt-2">Offline Mode - Last updated: {lastUpdated}</p>
+              <p className="text-sm text-gray-300 mt-2">Offline Mode - Last updated: {lastUpdated}</p>
             )}
           </div>
         </div>
@@ -189,7 +189,7 @@ export default function MarketplacePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 mb-4">
           <p className="text-sm text-green-800">
-            <strong>Legal Notice:</strong> CaseWin-NG is a technology platform connecting clients with independent legal practitioners. All lawyers listed are verified members of the Nigerian Bar Association.
+            <strong>Legal Notice:</strong> CaseWinAI is a technology platform connecting clients with independent legal practitioners. All lawyers listed are verified members of the Nigerian Bar Association.
           </p>
         </div>
       </div>
@@ -203,19 +203,19 @@ export default function MarketplacePage() {
               <div className="bg-white rounded-lg shadow-sm p-12 text-center">
                 <p className="text-gray-500 text-lg">No lawyers match your filters</p>
                 <p className="text-sm text-gray-400 mt-2">{isOffline ? 'Try refreshing when you have internet connection.' : 'Try adjusting your search criteria.'}</p>
-                <button onClick={() => { setSelectedSpecialization('all'); setSelectedLocation('all'); setMaxRate(100000); setSearchQuery(''); }} className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium">Clear all filters</button>
+                <button onClick={() => { setSelectedSpecialization('all'); setSelectedLocation('all'); setMaxRate(100000); setSearchQuery(''); }} className="mt-4 text-[#1a2744] hover:text-[#2d3a54] font-medium">Clear all filters</button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredLawyers.map((lawyer) => (
-                  <Link key={lawyer.id} href={`+"/marketplace/lawyer/"+lawyer.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200 hover:border-indigo-300">
+                  <Link key={lawyer.id} href={`+"/marketplace/lawyer/"+lawyer.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200 hover:border-[#1a2744]">
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0">
-                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">{lawyer.full_name.charAt(0)}</div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-[#1a2744] to-[#3d4a64] rounded-full flex items-center justify-center text-white text-2xl font-bold">{lawyer.full_name.charAt(0)}</div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">{lawyer.full_name}</h3>
-                        <p className="text-indigo-600 text-sm font-medium mb-2">{lawyer.specialization}</p>
+                        <p className="text-[#1a2744] text-sm font-medium mb-2">{lawyer.specialization}</p>
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                           <span>{lawyer.location}</span>
                           <span>{lawyer.rating.toFixed(1)} ({lawyer.total_reviews})</span>
@@ -237,3 +237,4 @@ export default function MarketplacePage() {
     </div>
   );
 }
+
