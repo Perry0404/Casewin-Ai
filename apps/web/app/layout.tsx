@@ -1,8 +1,9 @@
-﻿import './globals.css'
+import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { AuthProvider } from '@/contexts/AuthContext'
 import Script from 'next/script'
+import { Analytics } from '@vercel/analytics/next'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -52,6 +53,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <AuthProvider>{children}</AuthProvider>
+        <Analytics />
         
         <Script id="sw-register" strategy="afterInteractive">
           {`if ('serviceWorker' in navigator) { window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js').then(function(r) { console.log('SW registered:', r.scope); }).catch(function(e) { console.log('SW registration failed:', e); }); }); }`}

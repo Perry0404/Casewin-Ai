@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -192,7 +192,69 @@ export default function MarketplacePage() {
             <strong>Legal Notice:</strong> CaseWinAI is a technology platform connecting clients with independent legal practitioners. All lawyers listed are verified members of the Nigerian Bar Association.
           </p>
         </div>
-      </div>
+
+        <div className="flex gap-6">
+          <aside className="w-64 flex-shrink-0">
+            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-4">
+              <h3 className="font-semibold text-gray-900 mb-4">Filters</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by name, bio..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1a2744]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Specialization</label>
+                  <select
+                    value={selectedSpecialization}
+                    onChange={(e) => setSelectedSpecialization(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1a2744]"
+                  >
+                    <option value="all">All Specializations</option>
+                    {specializations.map(spec => (
+                      <option key={spec} value={spec}>{spec}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <select
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1a2744]"
+                  >
+                    <option value="all">All Locations</option>
+                    {locations.map(loc => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Max Rate: ₦{maxRate.toLocaleString()}/hr
+                  </label>
+                  <input
+                    type="range"
+                    min="5000"
+                    max="100000"
+                    step="5000"
+                    value={maxRate}
+                    onChange={(e) => setMaxRate(Number(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+          </aside>
 
           <main className="flex-1">
             <div className="mb-6 flex justify-between items-center">
@@ -208,7 +270,7 @@ export default function MarketplacePage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredLawyers.map((lawyer) => (
-                  <Link key={lawyer.id} href={`+"/marketplace/lawyer/"+lawyer.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200 hover:border-[#1a2744]">
+                  <Link key={lawyer.id} href={`/marketplace/lawyer/${lawyer.id}`} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200 hover:border-[#1a2744]">
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0">
                         <div className="w-16 h-16 bg-gradient-to-br from-[#1a2744] to-[#3d4a64] rounded-full flex items-center justify-center text-white text-2xl font-bold">{lawyer.full_name.charAt(0)}</div>
