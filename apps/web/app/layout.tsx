@@ -54,7 +54,7 @@ export default function RootLayout({
         <AuthProvider>{children}</AuthProvider>
         
         <Script id="sw-register" strategy="afterInteractive">
-          {`+"if ('serviceWorker' in navigator) { window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js').then(function(r) { console.log('SW registered:', r.scope); }).catch(function(e) { console.log('SW registration failed:', e); }); }); }"}
+          {`if ('serviceWorker' in navigator) { window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js').then(function(r) { console.log('SW registered:', r.scope); }).catch(function(e) { console.log('SW registration failed:', e); }); }); }`}
         </Script>
       </body>
     </html>
