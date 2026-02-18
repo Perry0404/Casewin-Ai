@@ -1,9 +1,5 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+﻿import { NextResponse } from 'next/server'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('lawyer_profiles')
       .update({
         is_verified,
@@ -23,7 +19,7 @@ export async function POST(request: Request) {
       .eq('id', lawyer_id)
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('getSupabaseClient() error:', error)
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
@@ -36,3 +32,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to update lawyer' }, { status: 500 })
   }
 }
+
+

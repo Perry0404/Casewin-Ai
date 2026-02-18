@@ -1,9 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+﻿import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +12,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('lawyer_bookings')
       .insert([{
         client_id,
@@ -31,7 +27,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('getSupabaseClient() error:', error)
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
@@ -54,7 +50,7 @@ export async function GET(request: NextRequest) {
     const clientId = searchParams.get('client_id')
     const lawyerId = searchParams.get('lawyer_id')
 
-    let query = supabase
+    let query = getSupabaseClient()
       .from('lawyer_bookings')
       .select(`
         *,
@@ -74,7 +70,7 @@ export async function GET(request: NextRequest) {
     const { data: bookings, error } = await query
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('getSupabaseClient() error:', error)
       return NextResponse.json({ bookings: [] })
     }
 
@@ -84,3 +80,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ bookings: [] })
   }
 }
+
+

@@ -1,16 +1,14 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+﻿import { NextResponse } from 'next/server'
+import { getSupabaseClient } from '@/lib/supabase'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
 
-    let query = supabase
+    let query = getSupabaseClient()
       .from('prediction_markets')
       .select('*')
       .eq('status', 'open')
@@ -23,7 +21,7 @@ export async function GET(request: Request) {
     const { data: markets, error } = await query
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('getSupabaseClient() error:', error)
       return NextResponse.json({ markets: [], error: error.message })
     }
 
@@ -53,7 +51,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { title, description, category, closes_at, outcome_options } = body
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('prediction_markets')
       .insert([{
         title,
@@ -77,3 +75,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create market' }, { status: 500 })
   }
 }
+
+

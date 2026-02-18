@@ -434,6 +434,10 @@ export async function GET(request: NextRequest) {
       ? calculateBuyCost(yesShares, noShares, normalizedOutcome, estimatedShares)
       : calculateSellReturn(yesShares, noShares, normalizedOutcome, estimatedShares);
     
+    // Type-safe access to result properties
+    const totalCost = action === 'buy' && 'cost' in result ? result.cost * (1 + tradingFee) : undefined;
+    const totalReturn = action === 'sell' && 'returns' in result ? result.returns * (1 - tradingFee) : undefined;
+    
     return NextResponse.json({
       quote: {
         action,
@@ -443,8 +447,8 @@ export async function GET(request: NextRequest) {
         estimatedPrice: result.newPrice,
         priceImpact: result.priceImpact,
         fee: amount * tradingFee,
-        totalCost: action === 'buy' ? result.cost * (1 + tradingFee) : undefined,
-        totalReturn: action === 'sell' ? result.returns * (1 - tradingFee) : undefined,
+        totalCost,
+        totalReturn,
       },
       currentPrices,
     });

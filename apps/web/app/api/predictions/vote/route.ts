@@ -1,9 +1,5 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+﻿import { NextResponse } from 'next/server'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function POST(request: Request) {
   try {
@@ -15,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     // Get current market
-    const { data: market, error: marketError } = await supabase
+    const { data: market, error: marketError } = await getSupabaseClient()
       .from('prediction_markets')
       .select('*')
       .eq('id', market_id)
@@ -38,7 +34,7 @@ export async function POST(request: Request) {
     }
 
     // Update market
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabaseClient()
       .from('prediction_markets')
       .update({
         outcome_options: updatedOptions,
@@ -54,7 +50,7 @@ export async function POST(request: Request) {
     if (user_id) {
       const potentialPayout = amount * 2 // Simple 2x payout for now
 
-      await supabase
+      await getSupabaseClient()
         .from('prediction_bets')
         .insert([{
           user_id,
@@ -75,3 +71,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to place vote' }, { status: 500 })
   }
 }
+
+

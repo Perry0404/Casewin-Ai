@@ -1,19 +1,15 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+﻿import { NextResponse } from 'next/server'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const { data: markets, error } = await supabase
+    const { data: markets, error } = await getSupabaseClient()
       .from('prediction_markets')
       .select('*')
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('getSupabaseClient() error:', error)
       return NextResponse.json({ markets: [], error: error.message })
     }
 
@@ -33,7 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('prediction_markets')
       .insert([{
         title,
@@ -50,7 +46,7 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('getSupabaseClient() error:', error)
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
@@ -60,3 +56,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create market' }, { status: 500 })
   }
 }
+
+

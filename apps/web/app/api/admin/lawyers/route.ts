@@ -1,13 +1,9 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+﻿import { NextResponse } from 'next/server'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const { data: lawyers, error } = await supabase
+    const { data: lawyers, error } = await getSupabaseClient()
       .from('lawyer_profiles')
       .select(`
         *,
@@ -20,7 +16,7 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('getSupabaseClient() error:', error)
       return NextResponse.json({ lawyers: [], error: error.message })
     }
 
@@ -44,3 +40,5 @@ export async function GET() {
     return NextResponse.json({ lawyers: [], error: 'Failed to fetch lawyers' })
   }
 }
+
+

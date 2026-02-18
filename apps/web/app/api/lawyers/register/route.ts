@@ -1,9 +1,5 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+﻿import { NextResponse } from 'next/server'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     // Create lawyer profile
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('lawyer_profiles')
       .insert([
         {
@@ -49,7 +45,7 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('getSupabaseClient() error:', error)
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
@@ -66,3 +62,5 @@ export async function POST(request: Request) {
     )
   }
 }
+
+

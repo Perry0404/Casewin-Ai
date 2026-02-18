@@ -1,9 +1,5 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+﻿import { NextResponse } from 'next/server'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     // Update market status
-    const { error: marketError } = await supabase
+    const { error: marketError } = await getSupabaseClient()
       .from('prediction_markets')
       .update({
         status: 'resolved',
@@ -29,12 +25,12 @@ export async function POST(request: Request) {
       .eq('id', market_id)
 
     if (marketError) {
-      console.error('Supabase error:', marketError)
+      console.error('getSupabaseClient() error:', marketError)
       return NextResponse.json({ error: marketError.message }, { status: 400 })
     }
 
     // Update winning bets
-    const { error: betsError } = await supabase
+    const { error: betsError } = await getSupabaseClient()
       .from('prediction_bets')
       .update({ status: 'won' })
       .eq('market_id', market_id)
@@ -46,7 +42,7 @@ export async function POST(request: Request) {
 
     // Update losing bets
     const losingOutcome = outcome === 'yes' ? 'no' : 'yes'
-    await supabase
+    await getSupabaseClient()
       .from('prediction_bets')
       .update({ status: 'lost' })
       .eq('market_id', market_id)
@@ -61,3 +57,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to resolve market' }, { status: 500 })
   }
 }
+
+
