@@ -395,13 +395,12 @@ export default function PredictionsPage() {
 
   const fetchUserBalance = useCallback(async () => {
     try {
-      const savedBalance = localStorage.getItem('casewin_balance');
-      if (savedBalance) {
-        setUserBalance(parseFloat(savedBalance));
+      const res = await fetch('/api/wallet');
+      const data = await res.json();
+      if (data.balance !== undefined) {
+        setUserBalance(data.balance);
       } else {
-        const startingBalance = 50000;
-        localStorage.setItem('casewin_balance', startingBalance.toString());
-        setUserBalance(startingBalance);
+        setUserBalance(50000); // Default starting balance
       }
     } catch {
       setUserBalance(50000);
@@ -419,11 +418,21 @@ export default function PredictionsPage() {
     setShowFundWallet(true);
   };
 
-  const handleFundWallet = () => {
-    const newBalance = userBalance + fundAmount;
-    setUserBalance(newBalance);
-    localStorage.setItem('casewin_balance', newBalance.toString());
-    setShowFundWallet(false);
+  const handleFundWallet = async () => {
+    try {
+      const res = await fetch('/api/wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deposit', amount: fundAmount })
+      });
+      const data = await res.json();
+      if (data.balance !== undefined) {
+        setUserBalance(data.balance);
+      }
+      setShowFundWallet(false);
+    } catch (error) {
+      console.error('Failed to fund wallet:', error);
+    }
   };
 
   const handleTrade = async (marketId: string, outcome: 'yes' | 'no', shares: number) => {
@@ -456,22 +465,9 @@ export default function PredictionsPage() {
         throw new Error(data.error || 'Trade failed');
       }
 
-      const newBalance = userBalance - cost;
-      setUserBalance(newBalance);
-      localStorage.setItem('casewin_balance', newBalance.toString());
-
-      const positions = JSON.parse(localStorage.getItem('casewin_positions') || '[]');
-      positions.push({
-        id: Date.now().toString(),
-        marketId,
-        marketTitle: market.title,
-        outcome,
-        shares,
-        avgPrice: price,
-        purchaseDate: new Date().toISOString()
-      });
-      localStorage.setItem('casewin_positions', JSON.stringify(positions));
-
+      // Refresh balance from server
+      await fetchUserBalance();
+      // Refresh markets to get new prices
       await fetchMarkets();
 
     } catch (err) {

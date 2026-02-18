@@ -11,18 +11,22 @@ interface Position {
   outcome: 'yes' | 'no';
   shares: number;
   avgPrice: number;
+  currentPrice: number;
+  currentValue: number;
+  profitLoss: number;
   purchaseDate: string;
 }
 
 interface Trade {
   id: string;
+  marketId: string;
   marketTitle: string;
-  type: 'buy' | 'sell';
+  action: 'buy' | 'sell';
   outcome: 'yes' | 'no';
   shares: number;
   price: number;
   total: number;
-  timestamp: string;
+  created_at: string;
 }
 
 function formatDate(dateStr: string): string {
@@ -41,77 +45,107 @@ export default function PortfolioPage() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [userBalance, setUserBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSelling, setIsSelling] = useState<string | null>(null);
+
+  const fetchPortfolioData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch balance
+      const balanceRes = await fetch('/api/wallet');
+      const balanceData = await balanceRes.json();
+      setUserBalance(balanceData.balance || 50000);
+
+      // Fetch positions
+      const positionsRes = await fetch('/api/wallet/positions');
+      const positionsData = await positionsRes.json();
+      if (positionsData.positions) {
+        setPositions(positionsData.positions.map((p: any) => ({
+          id: p.id,
+          marketId: p.market_id,
+          marketTitle: p.market_title || 'Unknown Market',
+          outcome: p.outcome,
+          shares: p.shares,
+          avgPrice: p.avg_price,
+          currentPrice: p.current_price || p.avg_price,
+          currentValue: p.current_value || p.shares * p.avg_price,
+          profitLoss: p.profit_loss || 0,
+          purchaseDate: p.created_at
+        })));
+      }
+
+      // Fetch trades (from positions API or separate)
+      if (positionsData.trades) {
+        setTrades(positionsData.trades);
+      }
+
+    } catch (err) {
+      console.error('Failed to load portfolio data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Load from localStorage
-    const loadData = () => {
-      try {
-        const savedBalance = localStorage.getItem('casewin_balance');
-        setUserBalance(savedBalance ? parseFloat(savedBalance) : 50000);
-
-        const savedPositions = localStorage.getItem('casewin_positions');
-        if (savedPositions) {
-          setPositions(JSON.parse(savedPositions));
-        }
-
-        const savedTrades = localStorage.getItem('casewin_trades');
-        if (savedTrades) {
-          setTrades(JSON.parse(savedTrades));
-        }
-      } catch (err) {
-        console.error('Failed to load portfolio data:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
+    fetchPortfolioData();
   }, []);
 
   // Calculate totals
-  const totalInvested = positions.reduce((sum, p) => sum + (p.shares * p.avgPrice), 0);
+  const totalInvested = positions.reduce((sum, p) => sum + p.currentValue, 0);
+  const totalProfitLoss = positions.reduce((sum, p) => sum + p.profitLoss, 0);
   const portfolioValue = userBalance + totalInvested;
 
-  const handleSell = (positionId: string) => {
+  const handleSell = async (positionId: string) => {
     const position = positions.find(p => p.id === positionId);
     if (!position) return;
 
-    // Calculate sell value (simplified - assume same price)
-    const sellValue = position.shares * position.avgPrice;
+    setIsSelling(positionId);
+    
+    try {
+      const res = await fetch('/api/predictions/trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          marketId: position.marketId,
+          action: 'sell',
+          outcome: position.outcome,
+          shares: position.shares
+        })
+      });
 
-    // Update balance
-    const newBalance = userBalance + sellValue;
-    setUserBalance(newBalance);
-    localStorage.setItem('casewin_balance', newBalance.toString());
+      const data = await res.json();
+      
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Sell failed');
+      }
 
-    // Remove position
-    const newPositions = positions.filter(p => p.id !== positionId);
-    setPositions(newPositions);
-    localStorage.setItem('casewin_positions', JSON.stringify(newPositions));
-
-    // Add to trades
-    const newTrade: Trade = {
-      id: Date.now().toString(),
-      marketTitle: position.marketTitle,
-      type: 'sell',
-      outcome: position.outcome,
-      shares: position.shares,
-      price: position.avgPrice,
-      total: sellValue,
-      timestamp: new Date().toISOString()
-    };
-    const newTrades = [newTrade, ...trades];
-    setTrades(newTrades);
-    localStorage.setItem('casewin_trades', JSON.stringify(newTrades));
+      // Refresh portfolio data
+      await fetchPortfolioData();
+      
+    } catch (err) {
+      console.error('Sell error:', err);
+      alert(err instanceof Error ? err.message : 'Failed to sell position');
+    } finally {
+      setIsSelling(null);
+    }
   };
 
-  const handleDeposit = () => {
+  const handleDeposit = async () => {
     const amount = prompt('Enter deposit amount (₦):');
     if (amount && !isNaN(parseFloat(amount))) {
-      const depositAmount = parseFloat(amount);
-      const newBalance = userBalance + depositAmount;
-      setUserBalance(newBalance);
-      localStorage.setItem('casewin_balance', newBalance.toString());
+      try {
+        const res = await fetch('/api/wallet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'deposit', amount: parseFloat(amount) })
+        });
+        const data = await res.json();
+        if (data.balance !== undefined) {
+          setUserBalance(data.balance);
+        }
+      } catch (err) {
+        console.error('Deposit failed:', err);
+      }
     }
   };
 
@@ -182,6 +216,9 @@ export default function PortfolioPage() {
           <div className="bg-slate-800/60 rounded-2xl p-6 border border-slate-700/50">
             <p className="text-sm text-slate-400 mb-1">Positions Value</p>
             <p className="text-3xl font-bold text-white">₦{totalInvested.toFixed(2)}</p>
+            <p className={`text-sm mt-2 font-medium ${totalProfitLoss >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {totalProfitLoss >= 0 ? '+' : ''}₦{totalProfitLoss.toFixed(2)} P&L
+            </p>
           </div>
 
           {/* Active Positions */}
@@ -244,7 +281,7 @@ export default function PortfolioPage() {
                         <th className="text-right text-sm font-medium text-slate-400 px-4 py-4">Shares</th>
                         <th className="text-right text-sm font-medium text-slate-400 px-4 py-4">Avg Price</th>
                         <th className="text-right text-sm font-medium text-slate-400 px-4 py-4">Value</th>
-                        <th className="text-right text-sm font-medium text-slate-400 px-4 py-4">Purchased</th>
+                        <th className="text-right text-sm font-medium text-slate-400 px-4 py-4">P&L</th>
                         <th className="text-center text-sm font-medium text-slate-400 px-4 py-4">Actions</th>
                       </tr>
                     </thead>
@@ -272,17 +309,18 @@ export default function PortfolioPage() {
                             {Math.round(position.avgPrice * 100)}¢
                           </td>
                           <td className="text-right px-4 py-4 text-white font-medium">
-                            ₦{(position.shares * position.avgPrice).toFixed(2)}
+                            ₦{position.currentValue.toFixed(2)}
                           </td>
-                          <td className="text-right px-4 py-4 text-slate-400 text-sm">
-                            {formatDate(position.purchaseDate)}
+                          <td className={`text-right px-4 py-4 font-medium ${position.profitLoss >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {position.profitLoss >= 0 ? '+' : ''}₦{position.profitLoss.toFixed(2)}
                           </td>
                           <td className="text-center px-4 py-4">
                             <button 
                               onClick={() => handleSell(position.id)}
-                              className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium text-white transition-colors"
+                              disabled={isSelling === position.id}
+                              className={`px-4 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium text-white transition-colors ${isSelling === position.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                              Sell
+                              {isSelling === position.id ? 'Selling...' : 'Sell'}
                             </button>
                           </td>
                         </tr>
@@ -329,7 +367,7 @@ export default function PortfolioPage() {
                       {trades.map(trade => (
                         <tr key={trade.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
                           <td className="px-6 py-4 text-slate-400 text-sm">
-                            {formatDate(trade.timestamp)}
+                            {formatDate(trade.created_at)}
                           </td>
                           <td className="px-4 py-4">
                             <span className="text-white line-clamp-1 max-w-xs">
@@ -338,11 +376,11 @@ export default function PortfolioPage() {
                           </td>
                           <td className="text-center px-4 py-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              trade.type === 'buy'
+                              trade.action === 'buy'
                                 ? 'bg-emerald-500/20 text-emerald-400'
                                 : 'bg-orange-500/20 text-orange-400'
                             }`}>
-                              {trade.type.toUpperCase()}
+                              {trade.action.toUpperCase()}
                             </span>
                           </td>
                           <td className="text-center px-4 py-4">
