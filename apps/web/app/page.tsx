@@ -237,6 +237,12 @@ export default function Home() {
             <p className="text-gray-300 mb-8 text-lg max-w-2xl mx-auto">
               Connect with verified Nigerian lawyers for consultations, case reviews, and legal representation. Pay securely in Naira via Korapay.
             </p>
+            {/* Featured on Orynth */}
+            <div className="flex justify-center mb-4">
+              <a href="https://orynth.dev/projects/casewinai" target="_blank" rel="noopener noreferrer">
+                <img src="https://orynth.dev/api/badge/casewinai?theme=light&style=default" alt="Featured on Orynth" width={260} height={80} className="hover:opacity-90 transition-opacity" />
+              </a>
+            </div>
             <div className="flex justify-center gap-8 mb-8">
               <div className="text-center">
                 <div className="text-3xl font-bold text-purple-400">500+</div>

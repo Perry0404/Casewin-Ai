@@ -1,33 +1,37 @@
-# 🇳🇬 CaseWin-NG: Nigerian Legal AI Platform
+﻿<a href="https://orynth.dev/projects/casewinai" target="_blank" rel="noopener">
+  <img src="https://orynth.dev/api/badge/casewinai?theme=light&style=default" alt="Featured on Orynth" width="260" height="80" />
+</a>
+
+# ðŸ‡³ðŸ‡¬ CaseWin-NG: Nigerian Legal AI Platform
 
 ## Complete Legal AI Assistant for Nigerian Lawyers
 
 CaseWin-NG provides **8 comprehensive AI-powered legal capabilities** trained on Nigerian law:
 
-### 🤖 AI Features
-1. **Legal Document Drafting** (₦500) - Writs, Affidavits, Motions, Defence
-2. **Case Outcome Prediction** (₦1,000) - AI analysis with 8,427 Nigerian cases
+### ðŸ¤– AI Features
+1. **Legal Document Drafting** (â‚¦500) - Writs, Affidavits, Motions, Defence
+2. **Case Outcome Prediction** (â‚¦1,000) - AI analysis with 8,427 Nigerian cases
 3. **Legal Research Assistant** (FREE) - Answer questions with case citations
-4. **Contract Analysis** (₦1,500) - Risk assessment & compliance checking
-5. **Case Summarization** (₦750) - Condense lengthy judgments
+4. **Contract Analysis** (â‚¦1,500) - Risk assessment & compliance checking
+5. **Case Summarization** (â‚¦750) - Condense lengthy judgments
 6. **Legal Translation** (FREE) - English/Yoruba/Hausa/Igbo
-7. **Argument Generator** (₦800) - For/against any legal position
-8. **Compliance Checker** (₦1,200) - CAMA, Labour, Tax, Data Protection
+7. **Argument Generator** (â‚¦800) - For/against any legal position
+8. **Compliance Checker** (â‚¦1,200) - CAMA, Labour, Tax, Data Protection
 
-### ⚖️ Marketplace
+### âš–ï¸ Marketplace
 - Browse verified Nigerian lawyers
 - Filter by specialization, location, hourly rate
 - Book consultations with instant payment
 - Review and rating system
 
-### 💬 WhatsApp Bot
+### ðŸ’¬ WhatsApp Bot
 - 24/7 access to all AI features
 - No app download required
 - Pay via Paystack (cards, bank transfer, USSD)
 
 ---
 
-## 🚀 Quick Start
+## ðŸš€ Quick Start
 
 ### Prerequisites
 - Node.js 18+
@@ -75,7 +79,7 @@ npm run dev
 
 ---
 
-## 📊 Tech Stack
+## ðŸ“Š Tech Stack
 
 - **Frontend**: Next.js 15 (App Router), React 18, Tailwind CSS
 - **Backend**: Next.js API Routes, Supabase (PostgreSQL)
@@ -86,39 +90,39 @@ npm run dev
 
 ---
 
-## 📁 Project Structure
+## ðŸ“ Project Structure
 
 \`\`\`
 Casewin-Ai/
-├── apps/
-│   ├── web/              # Next.js web application
-│   │   ├── app/
-│   │   │   ├── api/     # 11 API endpoints
-│   │   │   ├── marketplace/  # Lawyer marketplace
-│   │   │   └── page.tsx
-│   └── whatsapp-bot/     # Baileys WhatsApp integration
-├── programs/
-│   └── casewin-escrow/   # Solana Anchor program
-├── supabase/
-│   └── migrations/       # Database schema (4 migrations)
-├── data/
-│   └── nigerian_cases_2025/  # Sample Nigerian cases
-├── scripts/
-│   └── index-cases.ts    # Qdrant indexing script
-└── docker-compose.yml
+â”œâ”€â”€ apps/
+â”‚   â”œâ”€â”€ web/              # Next.js web application
+â”‚   â”‚   â”œâ”€â”€ app/
+â”‚   â”‚   â”‚   â”œâ”€â”€ api/     # 11 API endpoints
+â”‚   â”‚   â”‚   â”œâ”€â”€ marketplace/  # Lawyer marketplace
+â”‚   â”‚   â”‚   â””â”€â”€ page.tsx
+â”‚   â””â”€â”€ whatsapp-bot/     # Baileys WhatsApp integration
+â”œâ”€â”€ programs/
+â”‚   â””â”€â”€ casewin-escrow/   # Solana Anchor program
+â”œâ”€â”€ supabase/
+â”‚   â””â”€â”€ migrations/       # Database schema (4 migrations)
+â”œâ”€â”€ data/
+â”‚   â””â”€â”€ nigerian_cases_2025/  # Sample Nigerian cases
+â”œâ”€â”€ scripts/
+â”‚   â””â”€â”€ index-cases.ts    # Qdrant indexing script
+â””â”€â”€ docker-compose.yml
 \`\`\`
 
 ---
 
-## 📖 Documentation
+## ðŸ“– Documentation
 
 See [AI_CAPABILITIES.md](./AI_CAPABILITIES.md) for detailed documentation of all 8 AI features with examples.
 
 ---
 
-## 🌍 Deployment
+## ðŸŒ Deployment
 
-Deploy to Contabo/Hetzner VPS (€4.99-€5.83/month):
+Deploy to Contabo/Hetzner VPS (â‚¬4.99-â‚¬5.83/month):
 
 \`\`\`bash
 chmod +x deploy-vps.sh
@@ -127,10 +131,13 @@ chmod +x deploy-vps.sh
 
 ---
 
-## 📝 License
+## ðŸ“ License
 
 MIT License - See LICENSE file
 
 ---
 
-**Built with ❤️ for Nigerian lawyers** 🇳🇬⚖️🤖
+**Built with â¤ï¸ for Nigerian lawyers** ðŸ‡³ðŸ‡¬âš–ï¸ðŸ¤–
+
+
+
