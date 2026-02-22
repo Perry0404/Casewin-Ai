@@ -1,184 +1,332 @@
 ﻿/**
- * CaseWin Prediction Market AI Agent
+ * Prediction Market AI Agent (Serverless Compatible)
  */
-import { BaseAgent, AgentTool, AgentThought } from './base-agent'
-import { getMemoryManager } from './memory'
+
+import { BaseAgent, AgentTool, AgentThought, callLLM } from './base-agent'
 
 export interface MarketAnalysis {
   marketId: string
-  marketTitle: string
-  currentOdds: { yes: number; no: number }
-  aiPrediction: { outcome: 'yes' | 'no' | 'uncertain'; confidence: number; reasoning: string }
-  recommendation: { action: 'buy_yes' | 'buy_no' | 'hold' | 'avoid'; strength: 'strong' | 'moderate' | 'weak'; rationale: string }
-  riskAssessment: { level: 'low' | 'medium' | 'high'; factors: string[] }
-  supportingCases: CaseReference[]
-  historicalPatterns: string[]
+  question: string
+  currentYesPercent: number
+  currentNoPercent: number
+  aiPrediction: 'YES' | 'NO' | 'UNCERTAIN'
+  aiConfidence: number
+  recommendation: 'STRONG_YES' | 'LEAN_YES' | 'HOLD' | 'LEAN_NO' | 'STRONG_NO'
+  reasoning: string
   keyFactors: string[]
-  timeline: string
-  updatedAt: Date
+  riskAssessment: { level: 'LOW' | 'MEDIUM' | 'HIGH'; factors: string[] }
+  supportingCases: CaseReference[]
+  relevantStatutes: string[]
+  historicalPatterns: string[]
 }
 
-export interface CaseReference { name: string; citation: string; outcome: string; relevance: number; summary: string }
-export interface JudicialPattern { judge: string; court: string; category: string; rulingTendency: string; sampleSize: number; confidence: number }
-export interface LegislativeTrend { bill: string; chamber: string; stage: string; passageLikelihood: number; historicalComparison: string[] }
+export interface CaseReference {
+  citation: string
+  outcome: string
+  relevance: number
+  keyPrinciple: string
+}
+
+export interface JudicialPattern {
+  court: string
+  pattern: string
+  confidence: number
+  cases: string[]
+}
+
+export interface LegislativeTrend {
+  area: string
+  trend: 'expanding' | 'contracting' | 'stable'
+  recentChanges: string[]
+  prediction: string
+}
 
 export class PredictionMarketAgent extends BaseAgent {
-  private memory = getMemoryManager()
-
   constructor() {
     super({
-      name: 'CaseWin Prediction Agent',
-      role: 'Nigerian Legal Prediction Market Analyst',
-      goal: 'Analyze legal markets and provide data-driven predictions',
-      backstory: 'Expert analyst specializing in Nigerian legal outcomes with deep knowledge of Supreme Court, Court of Appeal, and National Assembly patterns.',
+      name: 'CaseWin Prediction Oracle',
+      role: 'Legal Prediction Market Analyst',
+      goal: 'Provide accurate predictions on Nigerian legal outcomes',
+      backstory: `You are an expert legal analyst specializing in Nigerian law prediction markets. 
+        You analyze judicial trends, legislative patterns, and historical outcomes to provide 
+        data-driven predictions on legal matters.`,
       tools: [],
-      maxIterations: 12,
-      verbose: true,
-      temperature: 0.3
+      maxIterations: 8,
+      verbose: true
     })
   }
 
   async initialize() {
-    await super.initialize()
-    await this.memory.initialize()
+    this.config.tools = this.buildTools()
   }
 
-  async analyzeMarket(market: { id: string; title: string; description: string; category: string; deadline: string; yes_votes: number; no_votes: number; total_pool: number }): Promise<MarketAnalysis> {
-    const totalVotes = market.yes_votes + market.no_votes
-    const currentOdds = {
-      yes: totalVotes > 0 ? Math.round((market.yes_votes / totalVotes) * 100) : 50,
-      no: totalVotes > 0 ? Math.round((market.no_votes / totalVotes) * 100) : 50
-    }
+  async analyzeMarket(market: {
+    id: string
+    question: string
+    category: string
+    currentYes: number
+    currentNo: number
+    endDate?: string
+  }): Promise<MarketAnalysis> {
+    const { result, thoughts } = await this.run(`
+      Analyze this Nigerian legal prediction market:
+      
+      QUESTION: ${market.question}
+      CATEGORY: ${market.category}
+      CURRENT SENTIMENT: ${market.currentYes}% YES / ${market.currentNo}% NO
+      ${market.endDate ? `RESOLVES: ${market.endDate}` : ''}
+      
+      Provide:
+      1. Your prediction (YES/NO/UNCERTAIN)
+      2. Confidence level (0-100%)
+      3. Key factors influencing the outcome
+      4. Relevant Nigerian cases
+      5. Risk assessment
+    `)
 
-    const { result, thoughts } = await this.run(`Analyze Nigerian legal prediction market:
-MARKET: ${market.title}
-CATEGORY: ${market.category}
-CURRENT ODDS: YES ${currentOdds.yes}% / NO ${currentOdds.no}%
-
-Provide: prediction (YES/NO) with confidence %, key factors, historical precedents, trading recommendation.`)
-
-    const aiPrediction = this.parsePrediction(result, thoughts)
-    const recommendation = this.generateRecommendation(aiPrediction, currentOdds)
-
-    await this.memory.remember(`Market: "${market.title}": ${aiPrediction.outcome} ${aiPrediction.confidence}%`, 'solution', { importance: 0.8 })
+    const prediction = this.extractPrediction(result)
+    const confidence = this.extractConfidence(result, thoughts)
 
     return {
       marketId: market.id,
-      marketTitle: market.title,
-      currentOdds,
-      aiPrediction,
-      recommendation,
-      riskAssessment: this.assessRisk(result, market.category),
-      supportingCases: this.getMockCases(),
-      historicalPatterns: this.extractPatterns(result),
-      keyFactors: this.extractKeyFactors(result),
-      timeline: this.estimateTimeline(market.deadline),
-      updatedAt: new Date()
-    }
-  }
-
-  async analyzeMultipleMarkets(markets: any[]): Promise<MarketAnalysis[]> {
-    const results: MarketAnalysis[] = []
-    for (const m of markets) results.push(await this.analyzeMarket(m))
-    return results
-  }
-
-  async predictCaseOutcome(caseInfo: { caseName: string; court: string; legalIssues: string[]; parties: string; background: string }) {
-    const { result, thoughts } = await this.run(`Predict outcome: ${caseInfo.caseName} in ${caseInfo.court}. Issues: ${caseInfo.legalIssues.join(', ')}`)
-    return {
-      prediction: this.extractOutcome(result),
-      confidence: this.extractConfidence(result),
+      question: market.question,
+      currentYesPercent: market.currentYes,
+      currentNoPercent: market.currentNo,
+      aiPrediction: prediction,
+      aiConfidence: confidence,
+      recommendation: this.generateRecommendation(prediction, confidence, market.currentYes),
       reasoning: result,
-      precedents: this.getMockCases(),
-      timeline: this.extractTimeline(result)
+      keyFactors: this.extractKeyFactors(result),
+      riskAssessment: this.assessRisk(result, confidence),
+      supportingCases: this.extractCaseReferences(result),
+      relevantStatutes: this.extractStatutes(result),
+      historicalPatterns: this.extractPatterns(result)
     }
   }
 
-  async findContrarianOpportunities(markets: any[]) {
-    const opps = []
-    for (const m of markets) {
-      const analysis = await this.analyzeMarket(m)
-      const marketOdds = analysis.aiPrediction.outcome === 'yes' ? analysis.currentOdds.yes : analysis.currentOdds.no
-      const edge = analysis.aiPrediction.confidence - marketOdds
-      opps.push({ market: m, analysis, opportunity: Math.abs(edge) > 25 ? 'strong_contrarian' : Math.abs(edge) > 10 ? 'moderate_contrarian' : 'aligned', potentialEdge: edge })
+  async predictCaseOutcome(caseFacts: string, jurisdiction: string, legalArea: string): Promise<{
+    prediction: 'WIN' | 'LOSE' | 'UNCERTAIN'
+    confidence: number
+    reasoning: string
+    similarCases: CaseReference[]
+    judicialPatterns: JudicialPattern[]
+  }> {
+    const { result, thoughts } = await this.run(`
+      Predict the outcome of this Nigerian legal case:
+      
+      FACTS: ${caseFacts}
+      JURISDICTION: ${jurisdiction}
+      LEGAL AREA: ${legalArea}
+      
+      Analyze similar precedents and judicial patterns.
+    `)
+
+    return {
+      prediction: this.extractCasePrediction(result),
+      confidence: this.extractConfidence(result, thoughts),
+      reasoning: result,
+      similarCases: this.extractCaseReferences(result),
+      judicialPatterns: this.extractJudicialPatterns(result)
     }
-    return opps.sort((a, b) => Math.abs(b.potentialEdge) - Math.abs(a.potentialEdge))
   }
 
-  async analyzeJudicialPatterns(params: { court: string; category: string; judge?: string }): Promise<JudicialPattern[]> {
-    return [{ judge: params.judge || 'Court overall', court: params.court, category: params.category, rulingTendency: 'Balanced', sampleSize: 100, confidence: 0.7 }]
+  async findContrarianOpportunities(markets: any[]): Promise<Array<{
+    market: any
+    aiVsCrowd: number
+    opportunity: string
+    confidence: number
+  }>> {
+    const opportunities: Array<{
+      market: any
+      aiVsCrowd: number
+      opportunity: string
+      confidence: number
+    }> = []
+
+    for (const market of markets.slice(0, 5)) {
+      const analysis = await this.analyzeMarket(market)
+      
+      const crowdYes = market.currentYes
+      const aiYes = analysis.aiPrediction === 'YES' ? analysis.aiConfidence : (100 - analysis.aiConfidence)
+      const difference = Math.abs(aiYes - crowdYes)
+
+      if (difference > 15) {
+        opportunities.push({
+          market,
+          aiVsCrowd: aiYes - crowdYes,
+          opportunity: aiYes > crowdYes ? 'AI more bullish than crowd' : 'AI more bearish than crowd',
+          confidence: analysis.aiConfidence
+        })
+      }
+    }
+
+    return opportunities.sort((a, b) => Math.abs(b.aiVsCrowd) - Math.abs(a.aiVsCrowd))
   }
 
-  private parsePrediction(result: string, thoughts: AgentThought[]): { outcome: 'yes' | 'no' | 'uncertain'; confidence: number; reasoning: string } {
+  async analyzeJudicialPatterns(jurisdiction: string, legalArea: string): Promise<{
+    patterns: JudicialPattern[]
+    trends: LegislativeTrend[]
+    insights: string[]
+  }> {
+    const { result } = await this.run(`
+      Analyze judicial patterns in Nigerian courts:
+      
+      JURISDICTION: ${jurisdiction}
+      LEGAL AREA: ${legalArea}
+      
+      Identify:
+      1. How courts typically rule on similar matters
+      2. Recent legislative changes
+      3. Emerging trends
+    `)
+
+    return {
+      patterns: this.extractJudicialPatterns(result),
+      trends: this.extractLegislativeTrends(result),
+      insights: result.split('\n').filter(l => l.trim().length > 20).slice(0, 5)
+    }
+  }
+
+  private buildTools(): AgentTool[] {
+    return [
+      {
+        name: 'search_precedents',
+        description: 'Search Nigerian legal precedents',
+        parameters: { query: { type: 'string', description: 'Search query' } },
+        execute: async ({ query }) => ({ precedents: [`Result for: ${query}`] })
+      },
+      {
+        name: 'analyze_trends',
+        description: 'Analyze legal trends in Nigeria',
+        parameters: { area: { type: 'string', description: 'Legal area' } },
+        execute: async ({ area }) => ({ trend: 'stable', area })
+      },
+      {
+        name: 'final_answer',
+        description: 'Provide final prediction',
+        parameters: { answer: { type: 'string', description: 'Final answer' } },
+        execute: async ({ answer }) => answer
+      }
+    ]
+  }
+
+  private extractPrediction(result: string): 'YES' | 'NO' | 'UNCERTAIN' {
     const lower = result.toLowerCase()
-    let outcome: 'yes' | 'no' | 'uncertain' = 'uncertain'
-    if (lower.includes('predict yes') || lower.includes('likely to pass')) outcome = 'yes'
-    else if (lower.includes('predict no') || lower.includes('unlikely')) outcome = 'no'
-    const confMatch = result.match(/(\d{1,3})\s*%/)
-    let confidence = confMatch ? parseInt(confMatch[1]) : 50
-    confidence = Math.min(confidence + thoughts.length * 2, 95)
-    return { outcome, confidence, reasoning: result }
+    if (/\b(yes|likely|probable|will succeed|favor)\b/.test(lower)) return 'YES'
+    if (/\b(no|unlikely|improbable|will fail|against)\b/.test(lower)) return 'NO'
+    return 'UNCERTAIN'
   }
 
-  private generateRecommendation(pred: { outcome: string; confidence: number }, odds: { yes: number; no: number }) {
-    if (pred.outcome === 'uncertain' || pred.confidence < 55) return { action: 'avoid' as const, strength: 'weak' as const, rationale: 'Insufficient confidence' }
-    const marketOdds = pred.outcome === 'yes' ? odds.yes : odds.no
-    const edge = pred.confidence - marketOdds
-    if (edge > 20) return { action: (pred.outcome === 'yes' ? 'buy_yes' : 'buy_no') as 'buy_yes' | 'buy_no', strength: 'strong' as const, rationale: `Strong edge: ${edge}%` }
-    if (edge > 10) return { action: (pred.outcome === 'yes' ? 'buy_yes' : 'buy_no') as 'buy_yes' | 'buy_no', strength: 'moderate' as const, rationale: `Moderate edge: ${edge}%` }
-    return { action: 'hold' as const, strength: 'weak' as const, rationale: 'No significant edge' }
+  private extractCasePrediction(result: string): 'WIN' | 'LOSE' | 'UNCERTAIN' {
+    const lower = result.toLowerCase()
+    if (/\b(win|succeed|favorable|likely to prevail)\b/.test(lower)) return 'WIN'
+    if (/\b(lose|fail|unfavorable|likely to lose)\b/.test(lower)) return 'LOSE'
+    return 'UNCERTAIN'
   }
 
-  private assessRisk(result: string, category: string): { level: 'low' | 'medium' | 'high'; factors: string[] } {
-    const factors: string[] = []
-    if (/uncertain|unclear/i.test(result)) factors.push('Outcome uncertain')
-    if (/appeal/i.test(result)) factors.push('Appeals possible')
-    if (/political/i.test(result)) factors.push('Political factors')
-    return { level: factors.length >= 3 ? 'high' : factors.length >= 1 ? 'medium' : 'low', factors }
+  private extractConfidence(result: string, thoughts: AgentThought[]): number {
+    const confidenceMatch = result.match(/(\d{1,3})%\s*confiden/i)
+    if (confidenceMatch) {
+      return Math.min(100, Math.max(0, parseInt(confidenceMatch[1])))
+    }
+    return 50 + Math.min(thoughts.length * 5, 25)
+  }
+
+  private generateRecommendation(
+    prediction: 'YES' | 'NO' | 'UNCERTAIN',
+    confidence: number,
+    currentYes: number
+  ): 'STRONG_YES' | 'LEAN_YES' | 'HOLD' | 'LEAN_NO' | 'STRONG_NO' {
+    if (prediction === 'UNCERTAIN' || confidence < 60) return 'HOLD'
+    
+    const edge = prediction === 'YES' ? (confidence - currentYes) : (confidence - (100 - currentYes))
+    
+    if (prediction === 'YES') {
+      if (edge > 20) return 'STRONG_YES'
+      if (edge > 10) return 'LEAN_YES'
+    } else {
+      if (edge > 20) return 'STRONG_NO'
+      if (edge > 10) return 'LEAN_NO'
+    }
+    return 'HOLD'
   }
 
   private extractKeyFactors(result: string): string[] {
-    const numbered = result.match(/\d+\.\s*([^\n]+)/g) || []
-    return numbered.map(p => p.replace(/^\d+\.\s*/, '').trim()).slice(0, 5)
+    return result.split('\n')
+      .filter(l => /factor|reason|because|due to|consider/i.test(l))
+      .slice(0, 5)
+      .map(l => l.trim())
+  }
+
+  private assessRisk(result: string, confidence: number): { level: 'LOW' | 'MEDIUM' | 'HIGH'; factors: string[] } {
+    const level = confidence > 75 ? 'LOW' : confidence > 50 ? 'MEDIUM' : 'HIGH'
+    const factors = result.split('\n')
+      .filter(l => /risk|uncertain|volatile|unpredictable/i.test(l))
+      .slice(0, 3)
+      .map(l => l.trim())
+    return { level, factors }
+  }
+
+  private extractCaseReferences(result: string): CaseReference[] {
+    const patterns = [
+      /\[\d{4}\]\s+\d+\s+NWLR\s+\([^)]+\)\s+\d+/g,
+      /\(\d{4}\)\s+LPELR-\d+/g
+    ]
+    const refs: CaseReference[] = []
+    for (const pattern of patterns) {
+      const matches = result.match(pattern) || []
+      for (const match of matches.slice(0, 3)) {
+        refs.push({
+          citation: match,
+          outcome: 'See full case',
+          relevance: 0.8,
+          keyPrinciple: 'Relevant precedent'
+        })
+      }
+    }
+    return refs
+  }
+
+  private extractStatutes(result: string): string[] {
+    const patterns = [
+      /CAMA\s+2020/gi,
+      /Constitution\s+of\s+Nigeria/gi,
+      /[A-Z][a-z]+\s+Act,?\s+\d{4}/g,
+      /Section\s+\d+/gi
+    ]
+    const statutes: string[] = []
+    for (const pattern of patterns) {
+      statutes.push(...(result.match(pattern) || []))
+    }
+    return [...new Set(statutes)].slice(0, 5)
   }
 
   private extractPatterns(result: string): string[] {
-    const sentences = result.split(/[.!?]/)
-    return sentences.filter(s => /historically|pattern|trend|typically/i.test(s)).slice(0, 3)
+    return result.split('\n')
+      .filter(l => /pattern|trend|typically|usually|historically/i.test(l))
+      .slice(0, 3)
+      .map(l => l.trim())
   }
 
-  private estimateTimeline(deadline: string): string {
-    const days = Math.floor((new Date(deadline).getTime() - Date.now()) / (1000*60*60*24))
-    if (days < 0) return 'Ended'
-    if (days < 7) return `${days} days`
-    if (days < 30) return `${Math.floor(days/7)} weeks`
-    return `${Math.floor(days/30)} months`
+  private extractJudicialPatterns(result: string): JudicialPattern[] {
+    return [{
+      court: 'Supreme Court of Nigeria',
+      pattern: 'Generally follows established precedent',
+      confidence: 0.75,
+      cases: []
+    }]
   }
 
-  private extractOutcome(result: string): 'plaintiff' | 'defendant' | 'mixed' | 'uncertain' {
-    const l = result.toLowerCase()
-    if (l.includes('plaintiff') && l.includes('win')) return 'plaintiff'
-    if (l.includes('defendant') && l.includes('win')) return 'defendant'
-    return 'uncertain'
-  }
-
-  private extractConfidence(result: string): number {
-    const m = result.match(/(\d{1,3})\s*%/)
-    return m ? Math.min(parseInt(m[1]), 95) : 50
-  }
-
-  private extractTimeline(result: string): string {
-    const m = result.match(/within\s+(\d+)\s+(month|year|week)/i)
-    return m ? m[0] : 'Timeline uncertain'
-  }
-
-  private getMockCases(): CaseReference[] {
-    return [
-      { name: 'Savannah Bank v. Ajilo', citation: '(1989) LPELR-3043(SC)', outcome: 'Plaintiff', relevance: 0.85, summary: 'Contractual obligations' },
-      { name: 'Attorney General v. Abubakar', citation: '(2007) LPELR-3063(SC)', outcome: 'Constitutional', relevance: 0.72, summary: 'Constitutional law' }
-    ]
+  private extractLegislativeTrends(result: string): LegislativeTrend[] {
+    return [{
+      area: 'General',
+      trend: 'stable',
+      recentChanges: [],
+      prediction: 'Continued stability expected'
+    }]
   }
 }
 
-export function createPredictionAgent(): PredictionMarketAgent { return new PredictionMarketAgent() }
-export default PredictionMarketAgent
+export function createPredictionAgent(): PredictionMarketAgent {
+  return new PredictionMarketAgent()
+}

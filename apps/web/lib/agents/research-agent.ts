@@ -1,12 +1,17 @@
 ﻿/**
- * Autonomous Legal Research Agent
+ * Autonomous Legal Research Agent (Serverless Compatible)
  */
-import { BaseAgent, AgentThought } from './base-agent'
-import { getMemoryManager } from './memory'
+
+import { BaseAgent, AgentTool, AgentThought, callLLM } from './base-agent'
 
 export interface ResearchPlan {
   objective: string
-  steps: { id: string; description: string; expectedOutput: string; status: string }[]
+  steps: {
+    id: string
+    description: string
+    expectedOutput: string
+    status: 'pending' | 'in-progress' | 'completed' | 'failed'
+  }[]
   estimatedTime: string
 }
 
@@ -35,23 +40,23 @@ export interface ResearchReport {
 }
 
 export class AutonomousResearchAgent extends BaseAgent {
-  private memory = getMemoryManager()
-
   constructor() {
     super({
       name: 'CaseWin Research Agent',
       role: 'Autonomous Legal Research Specialist',
       goal: 'Conduct comprehensive legal research and provide actionable insights',
-      backstory: 'The most advanced legal research AI in Nigeria, trained on Nigerian case law.',
+      backstory: `You are the most advanced legal research AI in Nigeria. You understand Nigerian 
+        law deeply - from constitutional principles to commercial law, from criminal procedure 
+        to family law. You conduct research methodically, verify all citations, and provide 
+        analysis that rivals senior advocates. You never make up cases or citations.`,
       tools: [],
-      maxIterations: 15,
+      maxIterations: 10,
       verbose: true
     })
   }
 
   async initialize() {
-    await super.initialize()
-    await this.memory.initialize()
+    this.config.tools = this.buildTools()
   }
 
   async research(query: string, options: {
@@ -61,18 +66,31 @@ export class AutonomousResearchAgent extends BaseAgent {
     userId?: string
   } = {}): Promise<ResearchReport> {
     const startTime = Date.now()
-    const { depth = 'standard', userId } = options
+    const { depth = 'standard', jurisdiction = ['Nigeria'], yearRange } = options
 
-    this.memory.addTurn('user', `Research request: ${query}`)
-
+    // Create research plan
     const plan = await this.createResearchPlan(query, depth)
-    const { result, thoughts } = await this.run(`Research: ${query}\nDepth: ${depth}`)
-    
-    const findings = this.parseFindings(result)
-    const executiveSummary = result.split('\n')[0] || 'Research completed'
-    const citations = this.extractCitations(result)
 
-    this.memory.addTurn('assistant', executiveSummary)
+    // Execute research
+    const { result, thoughts } = await this.run(`
+      Execute this research plan:
+      
+      QUERY: ${query}
+      
+      PLAN: ${plan.steps.map((s, i) => `${i + 1}. ${s.description}`).join('\n')}
+      
+      CONSTRAINTS:
+      - Focus on Nigerian law
+      - Only cite real cases and statutes
+      - Depth: ${depth}
+      - Jurisdictions: ${jurisdiction.join(', ')}
+      ${yearRange ? `- Year range: ${yearRange.from}-${yearRange.to}` : ''}
+    `)
+
+    const findings = this.parseFindings(result, thoughts)
+    const executiveSummary = await this.generateSummary(query, findings)
+    const citations = this.extractAllCitations(result)
+    const confidence = this.calculateResearchConfidence(findings, thoughts)
 
     return {
       query,
@@ -81,7 +99,7 @@ export class AutonomousResearchAgent extends BaseAgent {
       analysis: result,
       recommendations: this.extractRecommendations(result),
       citations,
-      confidence: 0.75 + (thoughts.length * 0.02),
+      confidence,
       researchPlan: plan,
       thoughts,
       generatedAt: new Date(),
@@ -90,41 +108,129 @@ export class AutonomousResearchAgent extends BaseAgent {
   }
 
   private async createResearchPlan(query: string, depth: string): Promise<ResearchPlan> {
-    return {
-      objective: query,
-      steps: [
-        { id: '1', description: 'Search relevant cases', expectedOutput: 'Case list', status: 'pending' },
-        { id: '2', description: 'Identify statutes', expectedOutput: 'Statute refs', status: 'pending' },
-        { id: '3', description: 'Analyze legal position', expectedOutput: 'Analysis', status: 'pending' },
-        { id: '4', description: 'Synthesize findings', expectedOutput: 'Report', status: 'pending' }
-      ],
-      estimatedTime: depth === 'quick' ? '5s' : depth === 'standard' ? '15s' : '30s'
+    try {
+      const response = await callLLM([
+        {
+          role: 'system',
+          content: `Create a research plan as JSON: {"objective":"...","steps":[{"id":"1","description":"...","expectedOutput":"...","status":"pending"}],"estimatedTime":"..."}`
+        },
+        { role: 'user', content: `Research: ${query}, Depth: ${depth}` }
+      ], 0.3)
+
+      return JSON.parse(response)
+    } catch {
+      return {
+        objective: query,
+        steps: [
+          { id: '1', description: 'Search for relevant cases', expectedOutput: 'Case list', status: 'pending' },
+          { id: '2', description: 'Identify applicable statutes', expectedOutput: 'Statute references', status: 'pending' },
+          { id: '3', description: 'Analyze legal position', expectedOutput: 'Analysis', status: 'pending' }
+        ],
+        estimatedTime: '15 seconds'
+      }
     }
   }
 
-  private parseFindings(result: string): ResearchFinding[] {
-    return [{
-      type: 'case',
-      title: 'Research findings',
-      relevance: 0.8,
-      summary: result.slice(0, 200),
-      keyPoints: [],
-      source: 'AI Analysis'
-    }]
+  private buildTools(): AgentTool[] {
+    return [
+      {
+        name: 'search_cases',
+        description: 'Search Nigerian case law database',
+        parameters: { query: { type: 'string', description: 'Search query' } },
+        execute: async ({ query }) => {
+          return { results: [`Sample case result for: ${query}`], source: 'Nigerian Law Reports' }
+        }
+      },
+      {
+        name: 'search_statutes',
+        description: 'Search Nigerian statutes and legislation',
+        parameters: { query: { type: 'string', description: 'Search query' } },
+        execute: async ({ query }) => {
+          return { results: [`Relevant statute for: ${query}`], source: 'Laws of Federation' }
+        }
+      },
+      {
+        name: 'final_answer',
+        description: 'Provide final research findings',
+        parameters: { answer: { type: 'string', description: 'Final answer' } },
+        execute: async ({ answer }) => answer
+      }
+    ]
   }
 
-  private extractCitations(text: string): string[] {
-    const pattern = /\(\d{4}\)\s+LPELR-?\d+\([A-Z]+\)/g
-    return text.match(pattern) || []
+  private parseFindings(result: string, thoughts: AgentThought[]): ResearchFinding[] {
+    const findings: ResearchFinding[] = []
+    
+    // Extract case references
+    const casePattern = /\[\d{4}\]\s+\d+\s+NWLR|LPELR-\d+/g
+    const cases = result.match(casePattern) || []
+    
+    for (const caseRef of cases.slice(0, 5)) {
+      findings.push({
+        type: 'case',
+        title: `Case ${caseRef}`,
+        citation: caseRef,
+        relevance: 0.8,
+        summary: 'Relevant legal precedent',
+        keyPoints: ['Key legal principle'],
+        source: 'Nigerian Law Reports'
+      })
+    }
+
+    if (findings.length === 0) {
+      findings.push({
+        type: 'doctrine',
+        title: 'Legal Analysis',
+        relevance: 0.9,
+        summary: result.slice(0, 500),
+        keyPoints: ['Based on Nigerian legal principles'],
+        source: 'AI Analysis'
+      })
+    }
+
+    return findings
+  }
+
+  private async generateSummary(query: string, findings: ResearchFinding[]): Promise<string> {
+    try {
+      return await callLLM([
+        { role: 'system', content: 'Summarize legal research findings concisely in 2-3 sentences.' },
+        { role: 'user', content: `Query: ${query}\nFindings: ${findings.map(f => f.summary).join('; ')}` }
+      ], 0.3)
+    } catch {
+      return `Research completed for: ${query}. ${findings.length} findings identified.`
+    }
+  }
+
+  private extractAllCitations(text: string): string[] {
+    const patterns = [
+      /\[\d{4}\]\s+\d+\s+NWLR\s+\([^)]+\)\s+\d+/g,
+      /\(\d{4}\)\s+LPELR-\d+/g,
+      /[A-Za-z]+\s+v\.\s+[A-Za-z\s]+\[\d{4}\]/g
+    ]
+    const citations: string[] = []
+    for (const pattern of patterns) {
+      citations.push(...(text.match(pattern) || []))
+    }
+    return [...new Set(citations)]
+  }
+
+  private calculateResearchConfidence(findings: ResearchFinding[], thoughts: AgentThought[]): number {
+    let confidence = 0.5
+    confidence += Math.min(findings.length * 0.1, 0.3)
+    confidence += thoughts.length > 3 ? 0.1 : 0
+    return Math.min(confidence, 0.95)
   }
 
   private extractRecommendations(text: string): string[] {
-    return text.split('\n').filter(l => /^\d+\.|^-|^\*/.test(l.trim())).slice(0, 5)
+    const lines = text.split('\n')
+    return lines
+      .filter(l => /recommend|suggest|advise|should/i.test(l))
+      .slice(0, 3)
+      .map(l => l.trim())
   }
 }
 
 export function createResearchAgent(): AutonomousResearchAgent {
   return new AutonomousResearchAgent()
 }
-
-export default AutonomousResearchAgent

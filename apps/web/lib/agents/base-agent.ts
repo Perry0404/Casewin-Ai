@@ -1,11 +1,7 @@
 ﻿/**
- * CaseWin AI Agent Framework
+ * CaseWin AI Agent Framework (Serverless Compatible)
  * 
- * A sophisticated multi-agent system that makes CaseWin stand out:
- * - Chain-of-thought reasoning
- * - Tool usage and autonomous decision-making
- * - Self-verification and fact-checking
- * - Memory persistence across sessions
+ * Uses xAI/OpenAI API instead of Ollama for serverless deployment
  */
 
 export interface AgentTool {
@@ -41,11 +37,43 @@ export interface AgentConfig {
   temperature?: number
 }
 
+async function callLLM(messages: { role: string; content: string }[], temperature: number = 0.7): Promise<string> {
+  const apiKey = process.env.XAI_API_KEY || process.env.OPENAI_API_KEY
+  const baseUrl = process.env.XAI_API_KEY 
+    ? 'https://api.x.ai/v1'
+    : 'https://api.openai.com/v1'
+  const model = process.env.XAI_API_KEY ? 'grok-beta' : 'gpt-4-turbo-preview'
+  
+  if (!apiKey) {
+    throw new Error('No API key configured. Set XAI_API_KEY or OPENAI_API_KEY.')
+  }
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens: 2000
+    })
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`LLM API error: ${error}`)
+  }
+
+  const data = await response.json()
+  return data.choices[0].message.content
+}
+
 export class BaseAgent {
   protected config: AgentConfig
   protected memory: AgentMemory
-  protected ollama: any
-  protected model: string
 
   constructor(config: AgentConfig) {
     this.config = {
@@ -59,19 +87,13 @@ export class BaseAgent {
       longTerm: new Map(),
       episodic: []
     }
-    this.model = process.env.OLLAMA_MODEL || 'llama3.2:3b'
   }
 
   async initialize() {
-    const { Ollama } = await import('ollama')
-    this.ollama = new Ollama({ 
-      host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434' 
-    })
+    // No initialization needed for serverless
   }
 
   async run(task: string): Promise<{ result: string; thoughts: AgentThought[] }> {
-    await this.initialize()
-    
     const thoughts: AgentThought[] = []
     let currentContext = task
     let finalAnswer = ''
@@ -79,6 +101,7 @@ export class BaseAgent {
 
     while (iteration < this.config.maxIterations!) {
       iteration++
+
       const { thought, action, actionInput, finalResponse } = await this.think(currentContext, thoughts)
       
       const agentThought: AgentThought = {
@@ -140,24 +163,29 @@ BACKSTORY: ${this.config.backstory}
 You have access to these tools:
 ${toolDescriptions}
 
-RESPONSE FORMAT:
-Thought: [Your reasoning]
+IMPORTANT INSTRUCTIONS:
+1. Think step-by-step before taking any action
+2. Use tools to gather information before giving final answers
+3. Verify facts by cross-referencing multiple sources
+4. If uncertain, use tools to research more
+5. Always cite Nigerian legal sources when applicable
+
+RESPONSE FORMAT (use exactly this format):
+Thought: [Your reasoning about what to do next]
 Action: [tool_name OR "final_answer"]
-Action Input: [JSON parameters OR final response]
+Action Input: [JSON parameters for tool OR your final response]
 
 Previous reasoning:
-${thoughtHistory || 'None'}
+${thoughtHistory || 'None - this is the first step'}
 
 Current task: ${context}`
 
-    const response = await this.ollama.generate({
-      model: this.model,
-      prompt: systemPrompt,
-      stream: false,
-      options: { temperature: this.config.temperature }
-    })
+    const response = await callLLM([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: 'Continue with the task.' }
+    ], this.config.temperature)
 
-    return this.parseResponse(response.response)
+    return this.parseResponse(response)
   }
 
   protected parseResponse(response: string): {
@@ -180,15 +208,29 @@ Current task: ${context}`
 
     let actionInput = actionInputRaw
     try {
-      if (actionInputRaw) actionInput = JSON.parse(actionInputRaw)
-    } catch {}
+      if (actionInputRaw) {
+        actionInput = JSON.parse(actionInputRaw)
+      }
+    } catch {
+      // Keep as string if not valid JSON
+    }
 
     return { thought, action, actionInput }
   }
 
-  remember(key: string, value: any) { this.memory.longTerm.set(key, value) }
-  recall(key: string): any { return this.memory.longTerm.get(key) }
+  remember(key: string, value: any) {
+    this.memory.longTerm.set(key, value)
+  }
+
+  recall(key: string): any {
+    return this.memory.longTerm.get(key)
+  }
+
   getReasoningChain(): string {
-    return this.memory.episodic.map(t => `[Step ${t.step}] ${t.thought}`).join('\n')
+    return this.memory.episodic.map(t => 
+      `[Step ${t.step}] ${t.thought}`
+    ).join('\n')
   }
 }
+
+export { callLLM }
