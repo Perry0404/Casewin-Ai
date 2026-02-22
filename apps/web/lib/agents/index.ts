@@ -1,5 +1,5 @@
 ﻿/**
- * CaseWin AI Agent Framework - Exports
+ * CaseWin AI Agent Framework
  */
 export { BaseAgent } from './base-agent'
 export type { AgentTool, AgentThought, AgentMemory, AgentConfig } from './base-agent'
@@ -7,6 +7,8 @@ export { AgentCrew } from './crew'
 export type { CrewTask, CrewResult, AgentRole } from './crew'
 export { AutonomousResearchAgent, createResearchAgent } from './research-agent'
 export type { ResearchPlan, ResearchFinding, ResearchReport } from './research-agent'
+export { PredictionMarketAgent, createPredictionAgent } from './prediction-agent'
+export type { MarketAnalysis, CaseReference, JudicialPattern, LegislativeTrend } from './prediction-agent'
 export { MemoryManager, getMemoryManager } from './memory'
 export type { Memory, ConversationTurn } from './memory'
 export { VerificationLayer, getVerificationLayer } from './verification'
@@ -39,4 +41,11 @@ export async function predictCaseWithAgents(caseFacts: string, legalIssues: stri
   const crew = new AgentCrew()
   await crew.initialize()
   return await crew.predictCaseOutcome(caseFacts, legalIssues)
+}
+
+export async function analyzeMarketWithAgent(market: any) {
+  const { createPredictionAgent } = await import('./prediction-agent')
+  const agent = createPredictionAgent()
+  await agent.initialize()
+  return await agent.analyzeMarket(market)
 }
