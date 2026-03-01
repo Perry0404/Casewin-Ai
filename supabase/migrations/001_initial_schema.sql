@@ -1,11 +1,34 @@
--- CaseWin AI — Complete Database Schema
--- Run this in your Supabase SQL Editor (Dashboard > SQL Editor > New Query)
--- Last updated: 2026-03-01
+-- CaseWin AI - Complete Database Schema (Clean Install)
+-- Drops ALL old tables and recreates with correct schema
+-- Run this FIRST in Supabase SQL Editor
 
 -- ============================================================
--- 1. PROFILES (extends Supabase auth.users)
+-- DROP EXISTING TABLES (reverse dependency order)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS profiles (
+DROP VIEW IF EXISTS market_votes CASCADE;
+DROP VIEW IF EXISTS trades CASCADE;
+DROP VIEW IF EXISTS positions CASCADE;
+DROP VIEW IF EXISTS user_balances CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS case_predictions CASCADE;
+DROP TABLE IF EXISTS research_history CASCADE;
+DROP TABLE IF EXISTS saved_documents CASCADE;
+DROP TABLE IF EXISTS prediction_bets CASCADE;
+DROP TABLE IF EXISTS prediction_markets CASCADE;
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS lawyer_bookings CASCADE;
+DROP TABLE IF EXISTS lawyer_profiles CASCADE;
+DROP TABLE IF EXISTS wallet_transactions CASCADE;
+DROP TABLE IF EXISTS wallets CASCADE;
+DROP TABLE IF EXISTS legal_cases CASCADE;
+DROP TABLE IF EXISTS legal_statutes CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+
+-- ============================================================
+-- 1. PROFILES
+-- ============================================================
+CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   full_name TEXT,
@@ -18,7 +41,22 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Auto-create profile on signup
+-- ============================================================
+-- 2. WALLETS & TRANSACTIONS
+-- ============================================================
+CREATE TABLE wallets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'NGN',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id)
+);
+
+CREATE VIEW user_balances AS SELECT * FROM wallets;
+
+-- Auto-create profile + wallet on signup
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -29,7 +67,6 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'user_type', 'client')
   );
-  -- Also create wallet
   INSERT INTO wallets (user_id, balance, currency)
   VALUES (NEW.id, 0, 'NGN');
   RETURN NEW;
@@ -41,28 +78,7 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
--- ============================================================
--- 2. WALLETS & TRANSACTIONS
--- ============================================================
-CREATE TABLE IF NOT EXISTS wallets (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  balance DECIMAL(12,2) NOT NULL DEFAULT 0,
-  currency TEXT NOT NULL DEFAULT 'NGN',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(user_id)
-);
-
--- Alias view for code that references user_balances
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'user_balances' AND relkind = 'r') THEN
-    DROP TABLE user_balances CASCADE;
-  END IF;
-END $$;
-CREATE OR REPLACE VIEW user_balances AS SELECT * FROM wallets;
-
-CREATE TABLE IF NOT EXISTS wallet_transactions (
+CREATE TABLE wallet_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   wallet_id UUID REFERENCES wallets(id),
@@ -81,7 +97,7 @@ CREATE INDEX idx_wallet_transactions_user ON wallet_transactions(user_id);
 -- ============================================================
 -- 3. LAWYER PROFILES & MARKETPLACE
 -- ============================================================
-CREATE TABLE IF NOT EXISTS lawyer_profiles (
+CREATE TABLE lawyer_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT NOT NULL,
@@ -113,7 +129,7 @@ CREATE INDEX idx_lawyer_verified ON lawyer_profiles(is_verified) WHERE is_verifi
 CREATE INDEX idx_lawyer_specializations ON lawyer_profiles USING GIN(specializations);
 CREATE INDEX idx_lawyer_state ON lawyer_profiles(state);
 
-CREATE TABLE IF NOT EXISTS lawyer_bookings (
+CREATE TABLE lawyer_bookings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID NOT NULL REFERENCES auth.users(id),
   lawyer_id UUID NOT NULL REFERENCES lawyer_profiles(id),
@@ -131,7 +147,7 @@ CREATE TABLE IF NOT EXISTS lawyer_bookings (
 CREATE INDEX idx_bookings_client ON lawyer_bookings(client_id);
 CREATE INDEX idx_bookings_lawyer ON lawyer_bookings(lawyer_id);
 
-CREATE TABLE IF NOT EXISTS reviews (
+CREATE TABLE reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   reviewer_id UUID NOT NULL REFERENCES auth.users(id),
   lawyer_id UUID NOT NULL REFERENCES lawyer_profiles(id),
@@ -145,15 +161,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 -- ============================================================
 -- 4. PREDICTION MARKETS
 -- ============================================================
--- Drop old check constraint if it exists with different values
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'prediction_markets_category_check' AND table_name = 'prediction_markets') THEN
-    ALTER TABLE prediction_markets DROP CONSTRAINT prediction_markets_category_check;
-    ALTER TABLE prediction_markets ADD CONSTRAINT prediction_markets_category_check CHECK (category IN ('supreme_court', 'appeal', 'high_court', 'tribunal', 'legislation', 'other'));
-  END IF;
-END $$;
-
-CREATE TABLE IF NOT EXISTS prediction_markets (
+CREATE TABLE prediction_markets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
@@ -172,7 +180,7 @@ CREATE TABLE IF NOT EXISTS prediction_markets (
 
 CREATE INDEX idx_markets_status ON prediction_markets(status);
 
-CREATE TABLE IF NOT EXISTS prediction_bets (
+CREATE TABLE prediction_bets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
   market_id UUID NOT NULL REFERENCES prediction_markets(id),
@@ -186,40 +194,22 @@ CREATE TABLE IF NOT EXISTS prediction_bets (
 CREATE INDEX idx_bets_user ON prediction_bets(user_id);
 CREATE INDEX idx_bets_market ON prediction_bets(market_id);
 
--- Alias view for code that references positions
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'positions' AND relkind = 'r') THEN
-    DROP TABLE positions CASCADE;
-  END IF;
-END $$;
-CREATE OR REPLACE VIEW positions AS
+CREATE VIEW positions AS
   SELECT id, user_id, market_id, selected_outcome, amount, potential_payout, status, created_at
   FROM prediction_bets;
 
--- Alias view for code that references trades
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'trades' AND relkind = 'r') THEN
-    DROP TABLE trades CASCADE;
-  END IF;
-END $$;
-CREATE OR REPLACE VIEW trades AS
+CREATE VIEW trades AS
   SELECT id, user_id, market_id, selected_outcome, amount, status, created_at
   FROM prediction_bets;
 
--- Alias view for code that references market_votes
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'market_votes' AND relkind = 'r') THEN
-    DROP TABLE market_votes CASCADE;
-  END IF;
-END $$;
-CREATE OR REPLACE VIEW market_votes AS
+CREATE VIEW market_votes AS
   SELECT id, user_id, market_id, selected_outcome, amount, status, created_at
   FROM prediction_bets;
 
 -- ============================================================
 -- 5. SAVED DOCUMENTS & RESEARCH HISTORY
 -- ============================================================
-CREATE TABLE IF NOT EXISTS saved_documents (
+CREATE TABLE saved_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
@@ -233,7 +223,7 @@ CREATE TABLE IF NOT EXISTS saved_documents (
 
 CREATE INDEX idx_docs_user ON saved_documents(user_id);
 
-CREATE TABLE IF NOT EXISTS research_history (
+CREATE TABLE research_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   query TEXT NOT NULL,
@@ -245,7 +235,7 @@ CREATE TABLE IF NOT EXISTS research_history (
 
 CREATE INDEX idx_research_user ON research_history(user_id);
 
-CREATE TABLE IF NOT EXISTS case_predictions (
+CREATE TABLE case_predictions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   case_type TEXT,
@@ -261,7 +251,7 @@ CREATE TABLE IF NOT EXISTS case_predictions (
 -- ============================================================
 -- 6. NIGERIAN CASE LAW DATABASE
 -- ============================================================
-CREATE TABLE IF NOT EXISTS legal_cases (
+CREATE TABLE legal_cases (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   case_title TEXT NOT NULL,
   citation TEXT NOT NULL,
@@ -287,7 +277,6 @@ CREATE TABLE IF NOT EXISTS legal_cases (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Full-text search index
 CREATE INDEX idx_cases_search ON legal_cases USING GIN(search_vector);
 CREATE INDEX idx_cases_court ON legal_cases(court);
 CREATE INDEX idx_cases_year ON legal_cases(year);
@@ -296,7 +285,6 @@ CREATE INDEX idx_cases_subjects ON legal_cases USING GIN(subject_matter);
 CREATE INDEX idx_cases_citation ON legal_cases(citation);
 CREATE INDEX idx_cases_landmark ON legal_cases(is_landmark) WHERE is_landmark = true;
 
--- Auto-update search vector
 CREATE OR REPLACE FUNCTION update_case_search_vector()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -324,7 +312,7 @@ CREATE TRIGGER case_search_update
 -- ============================================================
 -- 7. NIGERIAN STATUTES
 -- ============================================================
-CREATE TABLE IF NOT EXISTS legal_statutes (
+CREATE TABLE legal_statutes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   short_title TEXT,
@@ -366,7 +354,7 @@ CREATE TRIGGER statute_search_update
 -- ============================================================
 -- 8. NOTIFICATIONS
 -- ============================================================
-CREATE TABLE IF NOT EXISTS notifications (
+CREATE TABLE notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
@@ -382,7 +370,7 @@ CREATE INDEX idx_notifications_user ON notifications(user_id, is_read);
 -- ============================================================
 -- 9. PAYMENTS
 -- ============================================================
-CREATE TABLE IF NOT EXISTS payments (
+CREATE TABLE payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
   amount DECIMAL(12,2) NOT NULL,
@@ -399,7 +387,7 @@ CREATE INDEX idx_payments_user ON payments(user_id);
 CREATE INDEX idx_payments_reference ON payments(reference);
 
 -- ============================================================
--- 10. ROW LEVEL SECURITY (RLS)
+-- 10. ROW LEVEL SECURITY
 -- ============================================================
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wallets ENABLE ROW LEVEL SECURITY;
@@ -412,69 +400,36 @@ ALTER TABLE research_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE case_predictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
-
--- Public read for these
 ALTER TABLE prediction_markets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lawyer_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE legal_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE legal_statutes ENABLE ROW LEVEL SECURITY;
 
--- Profiles: users can read/update own profile
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
-
--- Wallets: users can view own wallet
 CREATE POLICY "Users can view own wallet" ON wallets FOR SELECT USING (auth.uid() = user_id);
-
--- Transactions: users can view own
 CREATE POLICY "Users can view own transactions" ON wallet_transactions FOR SELECT USING (auth.uid() = user_id);
-
--- Bookings: clients and lawyers can see their bookings
-CREATE POLICY "Users can view own bookings" ON lawyer_bookings FOR SELECT 
-  USING (auth.uid() = client_id OR auth.uid() IN (SELECT user_id FROM lawyer_profiles WHERE id = lawyer_id));
+CREATE POLICY "Users can view own bookings" ON lawyer_bookings FOR SELECT USING (auth.uid() = client_id OR auth.uid() IN (SELECT user_id FROM lawyer_profiles WHERE id = lawyer_id));
 CREATE POLICY "Users can create bookings" ON lawyer_bookings FOR INSERT WITH CHECK (auth.uid() = client_id);
-
--- Reviews: public read, authenticated write
 CREATE POLICY "Anyone can read reviews" ON reviews FOR SELECT USING (true);
 CREATE POLICY "Users can write reviews" ON reviews FOR INSERT WITH CHECK (auth.uid() = reviewer_id);
-
--- Prediction markets: public read, authenticated create
 CREATE POLICY "Anyone can read markets" ON prediction_markets FOR SELECT USING (true);
 CREATE POLICY "Authenticated can create markets" ON prediction_markets FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-
--- Bets: users can see own bets
 CREATE POLICY "Users can view own bets" ON prediction_bets FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can place bets" ON prediction_bets FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Documents: users can CRUD own documents
 CREATE POLICY "Users can view own documents" ON saved_documents FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can create documents" ON saved_documents FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own documents" ON saved_documents FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own documents" ON saved_documents FOR DELETE USING (auth.uid() = user_id);
-
--- Research history: users can see own
 CREATE POLICY "Users own research" ON research_history FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can save research" ON research_history FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Case predictions: users can see own
 CREATE POLICY "Users own predictions" ON case_predictions FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can save predictions" ON case_predictions FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Notifications: users can see own
 CREATE POLICY "Users own notifications" ON notifications FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE USING (auth.uid() = user_id);
-
--- Payments: users can see own
 CREATE POLICY "Users can view own payments" ON payments FOR SELECT USING (auth.uid() = user_id);
-
--- Lawyer profiles: public read
 CREATE POLICY "Anyone can view verified lawyers" ON lawyer_profiles FOR SELECT USING (true);
 CREATE POLICY "Lawyers can update own profile" ON lawyer_profiles FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can register as lawyer" ON lawyer_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Legal cases & statutes: public read
 CREATE POLICY "Anyone can read cases" ON legal_cases FOR SELECT USING (true);
 CREATE POLICY "Anyone can read statutes" ON legal_statutes FOR SELECT USING (true);
-
--- Service role bypass for API routes (service_role key ignores RLS)
--- No additional policies needed for admin operations using service_role key.
