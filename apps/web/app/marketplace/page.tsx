@@ -43,6 +43,9 @@ export default function MarketplacePage() {
       <Link href="/predictions" className="text-white hover:text-gray-300 transition-colors font-semibold">
         Predictions
       </Link>
+      <Link href="/dashboard" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+        Dashboard
+      </Link>
     </nav>
   );
 
@@ -197,9 +200,14 @@ export default function MarketplacePage() {
             <Navigation />
           </div>
           <div className="py-12">
-            <h2 className="text-4xl font-bold mb-4">Legal Marketplace</h2>
-            <p className="text-xl text-gray-200">
-              AI-powered legal automation & verified Nigerian lawyers across all 36 states
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-4xl font-bold">🇳🇬 Hire a Nigerian Lawyer</h2>
+              <span className="px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-full flex items-center gap-1">
+                🎥 Video Calls
+              </span>
+            </div>
+            <p className="text-xl text-indigo-100">
+              Browse verified lawyers across all 36 states. Book video consultations in-app!
             </p>
             {isOffline && lastUpdated && (
               <p className="text-sm text-gray-300 mt-2">
@@ -469,9 +477,14 @@ export default function MarketplacePage() {
                           <span className="text-lg font-bold text-gray-900">
                             ₦{lawyer.hourly_rate.toLocaleString()}/hr
                           </span>
-                          <span className="text-sm text-gray-500">
-                            {lawyer.years_of_experience} years exp.
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                              🎥 Video
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {lawyer.years_of_experience} years exp.
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
