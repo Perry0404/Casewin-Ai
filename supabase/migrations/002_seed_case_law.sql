@@ -151,7 +151,7 @@ INSERT INTO legal_cases (case_title, citation, court, year, judges, category, su
  'The Supreme Court laid down the definitive test for court competence: (1) it must be properly constituted, (2) the subject matter must be within jurisdiction, (3) the case must be initiated by due process, and (4) any conditions precedent must be fulfilled.',
  'A court is competent when: (a) it is properly constituted as regards numbers and qualifications of members; (b) the subject matter is within jurisdiction; (c) the matter is initiated by due process of law; (d) any condition precedent to jurisdiction has been fulfilled.',
  ARRAY['High Court Law', 'Constitution of Nigeria'],
- ARRAY[],
+ ARRAY[]::TEXT[],
  'allowed', 'Nigeria', true),
 
 ('Fawehinmi v. Akilu', '(1987) 4 NWLR (Pt. 67) 797', 'Supreme Court', 1987,

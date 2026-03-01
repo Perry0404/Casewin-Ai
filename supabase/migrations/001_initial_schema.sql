@@ -3,12 +3,12 @@
 -- Run this FIRST in Supabase SQL Editor
 
 -- ============================================================
--- DROP EXISTING TABLES (reverse dependency order)
+-- DROP EXISTING TABLES/VIEWS (handles both cases safely)
 -- ============================================================
-DROP VIEW IF EXISTS market_votes CASCADE;
-DROP VIEW IF EXISTS trades CASCADE;
-DROP VIEW IF EXISTS positions CASCADE;
-DROP VIEW IF EXISTS user_balances CASCADE;
+DO $$ BEGIN EXECUTE 'DROP VIEW IF EXISTS market_votes CASCADE'; EXCEPTION WHEN wrong_object_type THEN EXECUTE 'DROP TABLE IF EXISTS market_votes CASCADE'; END $$;
+DO $$ BEGIN EXECUTE 'DROP VIEW IF EXISTS trades CASCADE'; EXCEPTION WHEN wrong_object_type THEN EXECUTE 'DROP TABLE IF EXISTS trades CASCADE'; END $$;
+DO $$ BEGIN EXECUTE 'DROP VIEW IF EXISTS positions CASCADE'; EXCEPTION WHEN wrong_object_type THEN EXECUTE 'DROP TABLE IF EXISTS positions CASCADE'; END $$;
+DO $$ BEGIN EXECUTE 'DROP VIEW IF EXISTS user_balances CASCADE'; EXCEPTION WHEN wrong_object_type THEN EXECUTE 'DROP TABLE IF EXISTS user_balances CASCADE'; END $$;
 DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS case_predictions CASCADE;
