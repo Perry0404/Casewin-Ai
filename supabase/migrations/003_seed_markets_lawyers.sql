@@ -2,6 +2,18 @@
 -- Real Nigerian legal questions based on ongoing legal issues
 -- Run AFTER 001_initial_schema.sql
 
+-- Ensure category constraint includes 'legislation'
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'prediction_markets_category_check' AND table_name = 'prediction_markets') THEN
+    ALTER TABLE prediction_markets DROP CONSTRAINT prediction_markets_category_check;
+    ALTER TABLE prediction_markets ADD CONSTRAINT prediction_markets_category_check CHECK (category IN ('supreme_court', 'appeal', 'high_court', 'tribunal', 'legislation', 'other'));
+  END IF;
+END $$;
+
+-- Clear any existing seed data to avoid duplicates
+DELETE FROM prediction_markets WHERE created_by IS NULL;
+DELETE FROM lawyer_profiles WHERE email LIKE '%@casewin.example';
+
 INSERT INTO prediction_markets (title, description, case_reference, court, category, outcome_options, total_pool, status, closes_at) VALUES
 
 ('Will the Supreme Court uphold the new Electoral Act amendments on electronic transmission of results?',

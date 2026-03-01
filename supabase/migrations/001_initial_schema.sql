@@ -55,6 +55,11 @@ CREATE TABLE IF NOT EXISTS wallets (
 );
 
 -- Alias view for code that references user_balances
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'user_balances' AND relkind = 'r') THEN
+    DROP TABLE user_balances CASCADE;
+  END IF;
+END $$;
 CREATE OR REPLACE VIEW user_balances AS SELECT * FROM wallets;
 
 CREATE TABLE IF NOT EXISTS wallet_transactions (
@@ -140,6 +145,14 @@ CREATE TABLE IF NOT EXISTS reviews (
 -- ============================================================
 -- 4. PREDICTION MARKETS
 -- ============================================================
+-- Drop old check constraint if it exists with different values
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'prediction_markets_category_check' AND table_name = 'prediction_markets') THEN
+    ALTER TABLE prediction_markets DROP CONSTRAINT prediction_markets_category_check;
+    ALTER TABLE prediction_markets ADD CONSTRAINT prediction_markets_category_check CHECK (category IN ('supreme_court', 'appeal', 'high_court', 'tribunal', 'legislation', 'other'));
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS prediction_markets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
@@ -174,16 +187,31 @@ CREATE INDEX idx_bets_user ON prediction_bets(user_id);
 CREATE INDEX idx_bets_market ON prediction_bets(market_id);
 
 -- Alias view for code that references positions
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'positions' AND relkind = 'r') THEN
+    DROP TABLE positions CASCADE;
+  END IF;
+END $$;
 CREATE OR REPLACE VIEW positions AS
   SELECT id, user_id, market_id, selected_outcome, amount, potential_payout, status, created_at
   FROM prediction_bets;
 
 -- Alias view for code that references trades
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'trades' AND relkind = 'r') THEN
+    DROP TABLE trades CASCADE;
+  END IF;
+END $$;
 CREATE OR REPLACE VIEW trades AS
   SELECT id, user_id, market_id, selected_outcome, amount, status, created_at
   FROM prediction_bets;
 
 -- Alias view for code that references market_votes
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'market_votes' AND relkind = 'r') THEN
+    DROP TABLE market_votes CASCADE;
+  END IF;
+END $$;
 CREATE OR REPLACE VIEW market_votes AS
   SELECT id, user_id, market_id, selected_outcome, amount, status, created_at
   FROM prediction_bets;
