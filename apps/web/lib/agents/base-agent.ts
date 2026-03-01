@@ -1,5 +1,5 @@
 ﻿/**
- * CaseWin AI Agent Framework (Serverless - Grok API)
+ * CaseWin AI Agent Framework (Serverless - Grok 4 API)
  */
 
 export interface AgentTool {
@@ -43,7 +43,7 @@ export async function callLLM(
   if (!apiKey) throw new Error('No API key. Set XAI_API_KEY or OPENAI_API_KEY.')
   const isXai = !!process.env.XAI_API_KEY
   const baseUrl = isXai ? 'https://api.x.ai/v1' : 'https://api.openai.com/v1'
-  const model = isXai ? 'grok-3' : 'gpt-4-turbo-preview'
+  const model = isXai ? 'grok-4' : 'gpt-4-turbo-preview'
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -108,3 +108,4 @@ export class BaseAgent {
   recall(key: string) { return this.memory.longTerm.get(key) }
   getReasoningChain() { return this.memory.episodic.map(t => `[${t.step}] ${t.thought}`).join('\n') }
 }
+
