@@ -45,19 +45,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // Timeout to prevent hanging if Supabase is unreachable
+    const timeout = setTimeout(() => {
+      setLoading(false)
+    }, 5000)
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-        fetchWallet(session.user.id)
+    supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
+      clearTimeout(timeout)
+      setUser(data.session?.user ?? null)
+      if (data.session?.user) {
+        fetchProfile(data.session.user.id)
+        fetchWallet(data.session.user.id)
       }
+      setLoading(false)
+    }).catch(() => {
+      clearTimeout(timeout)
       setLoading(false)
     })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: any) => {
         setUser(session?.user ?? null)
         if (session?.user) {
           await fetchProfile(session.user.id)

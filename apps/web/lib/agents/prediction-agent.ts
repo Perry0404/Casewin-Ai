@@ -1,8 +1,10 @@
 /**
  * Prediction Market AI Agent (Serverless - Grok API)
+ * Uses real Nigerian case law database for precedent analysis
  */
 
 import { BaseAgent, AgentTool, AgentThought, callLLM } from './base-agent'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export interface MarketAnalysis { marketId: string; question: string; currentYesPercent: number; currentNoPercent: number; aiPrediction: { outcome: 'YES' | 'NO' | 'UNCERTAIN'; confidence: number }; recommendation: { action: 'STRONG_YES' | 'LEAN_YES' | 'HOLD' | 'LEAN_NO' | 'STRONG_NO'; strength: number }; reasoning: string; keyFactors: string[]; riskAssessment: { level: 'LOW' | 'MEDIUM' | 'HIGH'; factors: string[] }; supportingCases: CaseReference[]; timeline: string }
 export interface CaseReference { citation: string; outcome: string; relevance: number; keyPrinciple: string }
@@ -55,8 +57,56 @@ export class PredictionMarketAgent extends BaseAgent {
 
   private buildTools(): AgentTool[] {
     return [
-      { name: 'search_precedents', description: 'Search Nigerian precedents', parameters: { query: { type: 'string', description: 'Query' } }, execute: async ({ query }) => ({ precedents: [`Result: ${query}`] }) },
-      { name: 'analyze_trends', description: 'Analyze legal trends', parameters: { area: { type: 'string', description: 'Area' } }, execute: async ({ area }) => ({ trend: 'stable', area }) },
+      {
+        name: 'search_precedents',
+        description: 'Search Nigerian case law database for relevant precedents and judicial decisions',
+        parameters: { query: { type: 'string', description: 'Search query' } },
+        execute: async ({ query }) => {
+          try {
+            const supabase = getSupabaseClient()
+            const searchTerms = query.split(' ').filter((w: string) => w.length > 2).join(' & ')
+            const { data } = await supabase
+              .from('legal_cases')
+              .select('case_title, citation, court, year, category, holding, ratio_decidendi, outcome, is_landmark')
+              .textSearch('search_vector', searchTerms, { type: 'websearch', config: 'english' })
+              .limit(6)
+            if (data?.length) return { precedents: data, source: 'CaseWin Nigerian Law Database' }
+            // Fallback search
+            const { data: fallback } = await supabase
+              .from('legal_cases')
+              .select('case_title, citation, court, year, category, holding, ratio_decidendi, outcome, is_landmark')
+              .or(`case_title.ilike.%${query}%,holding.ilike.%${query}%`)
+              .limit(6)
+            return { precedents: fallback || [], source: fallback?.length ? 'CaseWin Database' : 'AI Knowledge Base' }
+          } catch {
+            return { precedents: [], source: 'AI Knowledge Base' }
+          }
+        }
+      },
+      {
+        name: 'analyze_trends',
+        description: 'Analyze judicial trends and patterns in Nigerian courts',
+        parameters: { area: { type: 'string', description: 'Legal area to analyze' } },
+        execute: async ({ area }) => {
+          try {
+            const supabase = getSupabaseClient()
+            // Get outcome distribution for this legal area
+            const { data } = await supabase
+              .from('legal_cases')
+              .select('outcome, court, year, is_landmark')
+              .ilike('category', `%${area}%`)
+              .order('year', { ascending: false })
+              .limit(20)
+            if (data?.length) {
+              const outcomes = data.reduce((acc: Record<string, number>, c: any) => { acc[c.outcome] = (acc[c.outcome] || 0) + 1; return acc }, {})
+              return { area, outcomes, totalCases: data.length, yearRange: { from: Math.min(...data.map((c: any) => c.year)), to: Math.max(...data.map((c: any) => c.year)) }, trend: 'Based on database analysis', source: 'CaseWin Database' }
+            }
+            return { area, trend: 'stable', note: 'Limited data available', source: 'AI Analysis' }
+          } catch {
+            return { area, trend: 'stable', source: 'AI Analysis' }
+          }
+        }
+      },
       { name: 'final_answer', description: 'Final prediction', parameters: { answer: { type: 'string', description: 'Answer' } }, execute: async ({ answer }) => answer }
     ]
   }

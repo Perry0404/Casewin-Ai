@@ -1,8 +1,10 @@
 /**
  * Autonomous Legal Research Agent (Serverless - Grok API)
+ * Uses real Nigerian case law database via Supabase full-text search
  */
 
 import { BaseAgent, AgentTool, AgentThought, callLLM } from './base-agent'
+import { getSupabaseClient } from '@/lib/supabase'
 
 export interface ResearchPlan { objective: string; steps: { id: string; description: string; expectedOutput: string; status: 'pending' | 'in-progress' | 'completed' | 'failed' }[]; estimatedTime: string }
 export interface ResearchFinding { type: 'case' | 'statute' | 'doctrine' | 'commentary'; title: string; citation?: string; relevance: number; summary: string; keyPoints: string[]; source: string }
@@ -35,8 +37,65 @@ export class AutonomousResearchAgent extends BaseAgent {
 
   private buildTools(): AgentTool[] {
     return [
-      { name: 'search_cases', description: 'Search Nigerian case law', parameters: { query: { type: 'string', description: 'Query' } }, execute: async ({ query }) => ({ results: [`Case result for: ${query}`], source: 'Nigerian Law Reports' }) },
-      { name: 'search_statutes', description: 'Search Nigerian legislation', parameters: { query: { type: 'string', description: 'Query' } }, execute: async ({ query }) => ({ results: [`Statute for: ${query}`] }) },
+      {
+        name: 'search_cases',
+        description: 'Search Nigerian case law database for relevant cases, judgments, and precedents',
+        parameters: { query: { type: 'string', description: 'Search query for cases' } },
+        execute: async ({ query }) => {
+          try {
+            const supabase = getSupabaseClient()
+            const searchTerms = query.split(' ').filter((w: string) => w.length > 2).join(' & ')
+            const { data, error } = await supabase
+              .from('legal_cases')
+              .select('case_title, citation, court, year, category, subject_matter, holding, ratio_decidendi, outcome, is_landmark')
+              .textSearch('search_vector', searchTerms, { type: 'websearch', config: 'english' })
+              .limit(8)
+            if (error || !data?.length) {
+              // Fallback: try ilike search
+              const { data: fallback } = await supabase
+                .from('legal_cases')
+                .select('case_title, citation, court, year, category, subject_matter, holding, ratio_decidendi, outcome, is_landmark')
+                .or(`case_title.ilike.%${query}%,holding.ilike.%${query}%,category.ilike.%${query}%`)
+                .limit(8)
+              if (fallback?.length) return { results: fallback, source: 'CaseWin Nigerian Law Database', count: fallback.length }
+              return { results: [{ note: `No exact matches for "${query}". The AI will reason from its training data on Nigerian law.` }], source: 'AI Knowledge Base' }
+            }
+            return { results: data, source: 'CaseWin Nigerian Law Database', count: data.length }
+          } catch {
+            return { results: [{ note: `Database search unavailable. Reasoning from training data for: ${query}` }], source: 'AI Knowledge Base' }
+          }
+        }
+      },
+      {
+        name: 'search_statutes',
+        description: 'Search Nigerian legislation, acts, and statutory provisions',
+        parameters: { query: { type: 'string', description: 'Search query for statutes' } },
+        execute: async ({ query }) => {
+          try {
+            const supabase = getSupabaseClient()
+            const searchTerms = query.split(' ').filter((w: string) => w.length > 2).join(' & ')
+            const { data, error } = await supabase
+              .from('legal_statutes')
+              .select('title, short_title, year, section, content, category')
+              .textSearch('search_vector', searchTerms, { type: 'websearch', config: 'english' })
+              .eq('is_active', true)
+              .limit(8)
+            if (error || !data?.length) {
+              const { data: fallback } = await supabase
+                .from('legal_statutes')
+                .select('title, short_title, year, section, content, category')
+                .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+                .eq('is_active', true)
+                .limit(8)
+              if (fallback?.length) return { results: fallback, source: 'Nigerian Statute Database' }
+              return { results: [{ note: `No statute matches for "${query}". Using AI knowledge of Nigerian legislation.` }], source: 'AI Knowledge Base' }
+            }
+            return { results: data, source: 'Nigerian Statute Database' }
+          } catch {
+            return { results: [{ note: `Statute search unavailable. Reasoning from training data for: ${query}` }], source: 'AI Knowledge Base' }
+          }
+        }
+      },
       { name: 'final_answer', description: 'Provide final answer', parameters: { answer: { type: 'string', description: 'Answer' } }, execute: async ({ answer }) => answer }
     ]
   }
