@@ -1,8 +1,5 @@
 ﻿/**
- * CaseWin Memory System (Serverless Compatible)
- * 
- * Short-term memory always works.
- * Long-term memory (Qdrant) is optional - gracefully degrades if not available.
+ * CaseWin Memory System (Serverless - In-Memory)
  */
 
 import { callLLM } from './base-agent'
@@ -29,146 +26,68 @@ export interface ConversationTurn {
   metadata?: Record<string, any>
 }
 
-// In-memory fallback when Qdrant is not available
-const inMemoryStore: Map<string, Memory> = new Map()
+const store: Map<string, Memory> = new Map()
 
 export class MemoryManager {
   private shortTermMemory: ConversationTurn[] = []
-  private maxShortTermSize: number = 20
-  private qdrantAvailable = false
-  private qdrant: any = null
+  private maxShortTermSize = 20
+  private initialized = false
 
-  async initialize() {
-    // Try to connect to Qdrant if URL is configured
-    if (process.env.QDRANT_URL) {
-      try {
-        const { QdrantClient } = await import('@qdrant/js-client-rest')
-        this.qdrant = new QdrantClient({ url: process.env.QDRANT_URL })
-        
-        // Test connection
-        await this.qdrant.getCollections()
-        this.qdrantAvailable = true
-        
-        // Ensure collection exists
-        try {
-          await this.qdrant.getCollection('casewin_memories')
-        } catch {
-          await this.qdrant.createCollection('casewin_memories', {
-            vectors: { size: 1536, distance: 'Cosine' }
-          })
-        }
-        console.log('Qdrant connected for long-term memory')
-      } catch (error) {
-        console.log('Qdrant not available, using in-memory fallback')
-        this.qdrantAvailable = false
-      }
-    }
-  }
+  async initialize() { this.initialized = true }
 
   addTurn(role: 'user' | 'assistant' | 'system', content: string, metadata?: Record<string, any>) {
-    const turn: ConversationTurn = {
-      role,
-      content,
-      timestamp: new Date(),
-      metadata
-    }
-
-    this.shortTermMemory.push(turn)
-
-    if (this.shortTermMemory.length > this.maxShortTermSize) {
+    this.shortTermMemory.push({ role, content, timestamp: new Date(), metadata })
+    if (this.shortTermMemory.length > this.maxShortTermSize)
       this.shortTermMemory = this.shortTermMemory.slice(-this.maxShortTermSize)
-    }
   }
 
   getConversationContext(maxTurns?: number): string {
-    const turns = maxTurns 
-      ? this.shortTermMemory.slice(-maxTurns)
-      : this.shortTermMemory
-
+    const turns = maxTurns ? this.shortTermMemory.slice(-maxTurns) : this.shortTermMemory
     return turns.map(t => `${t.role.toUpperCase()}: ${t.content}`).join('\n\n')
   }
 
   async remember(content: string, type: Memory['type'], metadata: Partial<Memory['metadata']> = {}) {
-    const memory: Memory = {
-      id: `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      content,
-      metadata: {
-        timestamp: new Date(),
-        importance: metadata.importance || 0.5,
-        lastAccessed: new Date(),
-        accessCount: 0,
-        ...metadata
-      }
+    const mem: Memory = {
+      id: `mem_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      type, content,
+      metadata: { timestamp: new Date(), importance: metadata.importance || 0.5, lastAccessed: new Date(), accessCount: 0, ...metadata }
     }
-
-    // Store in-memory (always works)
-    inMemoryStore.set(memory.id, memory)
-
-    return memory.id
+    store.set(mem.id, mem)
+    return mem.id
   }
 
-  async recall(query: string, options: {
-    limit?: number
-    type?: Memory['type']
-    userId?: string
-    minImportance?: number
-  } = {}): Promise<Memory[]> {
+  async recall(query: string, options: { limit?: number; type?: Memory['type']; userId?: string; minImportance?: number } = {}): Promise<Memory[]> {
     const { limit = 5, type, minImportance = 0 } = options
-
-    // Use in-memory search (simple text matching)
+    const q = query.toLowerCase()
     const results: Memory[] = []
-    const queryLower = query.toLowerCase()
-    
-    for (const memory of inMemoryStore.values()) {
-      if (type && memory.type !== type) continue
-      if (memory.metadata.importance < minImportance) continue
-      if (memory.content.toLowerCase().includes(queryLower)) {
-        results.push(memory)
-        if (results.length >= limit) break
-      }
+    for (const m of store.values()) {
+      if (type && m.type !== type) continue
+      if (m.metadata.importance < minImportance) continue
+      if (m.content.toLowerCase().includes(q)) { results.push(m); if (results.length >= limit) break }
     }
-
     return results
   }
 
-  async summarizeConversation(): Promise<string> {
-    if (this.shortTermMemory.length < 3) {
-      return 'Conversation too short to summarize'
-    }
-
-    const context = this.getConversationContext()
-    
-    try {
-      const summary = await callLLM([
-        { role: 'system', content: 'Summarize this conversation concisely, focusing on key legal topics and decisions.' },
-        { role: 'user', content: context }
-      ], 0.3)
-      return summary
-    } catch {
-      return 'Summary unavailable'
-    }
+  async buildContext(query: string, userId?: string) {
+    const recent = this.getConversationContext(10)
+    const memories = await this.recall(query, { limit: 5, userId })
+    const memCtx = memories.map(m => `[${m.type.toUpperCase()}] ${m.content}`).join('\n')
+    return { recentConversation: recent, relevantMemories: memories, combinedContext: `=== Recent ===\n${recent || 'None'}\n\n=== Knowledge ===\n${memCtx || 'None'}` }
   }
 
-  clearShortTerm() {
-    this.shortTermMemory = []
+  async exportMemories(userId?: string): Promise<Memory[]> {
+    const all = Array.from(store.values())
+    return userId ? all.filter(m => m.metadata.userId === userId) : all
   }
 
-  getStats() {
-    return {
-      shortTermSize: this.shortTermMemory.length,
-      longTermSize: inMemoryStore.size,
-      qdrantAvailable: this.qdrantAvailable
-    }
-  }
+  clearShortTerm() { this.shortTermMemory = [] }
+
+  getStats() { return { shortTermSize: this.shortTermMemory.length, longTermSize: store.size } }
 }
 
-// Singleton instance
-let memoryManager: MemoryManager | null = null
-
+let instance: MemoryManager | null = null
 export function getMemoryManager(): MemoryManager {
-  if (!memoryManager) {
-    memoryManager = new MemoryManager()
-  }
-  return memoryManager
+  if (!instance) instance = new MemoryManager()
+  return instance
 }
+export default MemoryManager

@@ -24,7 +24,7 @@ export default function Home() {
       id: 'research',
       title: 'Legal Research',
       icon: '🔍',
-      description: 'Search 10,000+ Nigerian judgments',
+      description: 'Search 30,000+ Nigerian judgments',
       color: 'from-green-500 to-emerald-500',
       href: '/tools/research'
     },
@@ -125,7 +125,7 @@ export default function Home() {
             </span>
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-            Transform your legal practice with cutting-edge AI. Research cases, draft documents, predict outcomes, and more - all powered by 10,000+ Nigerian case law database.
+            Transform your legal practice with cutting-edge AI. Research cases, draft documents, predict outcomes, and more - all powered by 30,000+ Nigerian case law database.
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
             <Link href="/auth/signup" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-green-500/50 hover:scale-105 transition">
@@ -265,7 +265,7 @@ export default function Home() {
       <section className="relative container mx-auto px-4 py-16">
         <div className="grid md:grid-cols-4 gap-6 text-center">
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-            <div className="text-5xl font-bold text-green-400 mb-2">10,000+</div>
+            <div className="text-5xl font-bold text-green-400 mb-2">30,000+</div>
             <div className="text-gray-400">Nigerian Cases</div>
           </div>
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
@@ -344,3 +344,4 @@ export default function Home() {
     </main>
   )
 }
+
