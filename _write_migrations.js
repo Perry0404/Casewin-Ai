@@ -1,0 +1,987 @@
+const fs = require('fs');
+const path = require('path');
+const dir = path.join(__dirname, 'supabase', 'migrations');
+
+// ============================================================
+// MIGRATION 1: Schema (drop + recreate)
+// ============================================================
+const m1 = `-- CaseWin AI - Complete Database Schema (Clean Install)
+-- Drops ALL old tables and recreates with correct schema
+-- Run this FIRST in Supabase SQL Editor
+
+-- ============================================================
+-- DROP EXISTING TABLES (reverse dependency order)
+-- ============================================================
+DROP VIEW IF EXISTS market_votes CASCADE;
+DROP VIEW IF EXISTS trades CASCADE;
+DROP VIEW IF EXISTS positions CASCADE;
+DROP VIEW IF EXISTS user_balances CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS case_predictions CASCADE;
+DROP TABLE IF EXISTS research_history CASCADE;
+DROP TABLE IF EXISTS saved_documents CASCADE;
+DROP TABLE IF EXISTS prediction_bets CASCADE;
+DROP TABLE IF EXISTS prediction_markets CASCADE;
+DROP TABLE IF EXISTS reviews CASCADE;
+DROP TABLE IF EXISTS lawyer_bookings CASCADE;
+DROP TABLE IF EXISTS lawyer_profiles CASCADE;
+DROP TABLE IF EXISTS wallet_transactions CASCADE;
+DROP TABLE IF EXISTS wallets CASCADE;
+DROP TABLE IF EXISTS legal_cases CASCADE;
+DROP TABLE IF EXISTS legal_statutes CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+
+-- ============================================================
+-- 1. PROFILES
+-- ============================================================
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  full_name TEXT,
+  phone TEXT,
+  user_type TEXT NOT NULL DEFAULT 'client' CHECK (user_type IN ('client', 'lawyer', 'law_firm')),
+  avatar_url TEXT,
+  bio TEXT,
+  location TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- 2. WALLETS & TRANSACTIONS
+-- ============================================================
+CREATE TABLE wallets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'NGN',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id)
+);
+
+CREATE VIEW user_balances AS SELECT * FROM wallets;
+
+-- Auto-create profile + wallet on signup
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO profiles (id, email, full_name, user_type)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'user_type', 'client')
+  );
+  INSERT INTO wallets (user_id, balance, currency)
+  VALUES (NEW.id, 0, 'NGN');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+CREATE TABLE wallet_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  wallet_id UUID REFERENCES wallets(id),
+  type TEXT NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'payment', 'refund', 'earning', 'bet', 'win')),
+  amount DECIMAL(12,2) NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'NGN',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
+  reference TEXT,
+  description TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_wallet_transactions_user ON wallet_transactions(user_id);
+
+-- ============================================================
+-- 3. LAWYER PROFILES & MARKETPLACE
+-- ============================================================
+CREATE TABLE lawyer_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  bar_number TEXT,
+  years_of_experience INTEGER NOT NULL DEFAULT 0,
+  specializations TEXT[] NOT NULL DEFAULT '{}',
+  hourly_rate DECIMAL(10,2),
+  consultation_fee DECIMAL(10,2),
+  rating DECIMAL(3,2) NOT NULL DEFAULT 0,
+  total_reviews INTEGER NOT NULL DEFAULT 0,
+  total_cases INTEGER NOT NULL DEFAULT 0,
+  win_rate DECIMAL(5,2) NOT NULL DEFAULT 0,
+  is_verified BOOLEAN NOT NULL DEFAULT false,
+  verification_date TIMESTAMPTZ,
+  location TEXT,
+  state TEXT,
+  bio TEXT,
+  languages TEXT[] DEFAULT '{English}',
+  education JSONB DEFAULT '[]',
+  certifications JSONB DEFAULT '[]',
+  avatar_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id)
+);
+
+CREATE INDEX idx_lawyer_verified ON lawyer_profiles(is_verified) WHERE is_verified = true;
+CREATE INDEX idx_lawyer_specializations ON lawyer_profiles USING GIN(specializations);
+CREATE INDEX idx_lawyer_state ON lawyer_profiles(state);
+
+CREATE TABLE lawyer_bookings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES auth.users(id),
+  lawyer_id UUID NOT NULL REFERENCES lawyer_profiles(id),
+  booking_type TEXT NOT NULL DEFAULT 'consultation' CHECK (booking_type IN ('consultation', 'case_review', 'document_review', 'representation')),
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  duration_minutes INTEGER NOT NULL DEFAULT 30,
+  amount DECIMAL(10,2) NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')),
+  notes TEXT,
+  meeting_link TEXT,
+  payment_reference TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_bookings_client ON lawyer_bookings(client_id);
+CREATE INDEX idx_bookings_lawyer ON lawyer_bookings(lawyer_id);
+
+CREATE TABLE reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reviewer_id UUID NOT NULL REFERENCES auth.users(id),
+  lawyer_id UUID NOT NULL REFERENCES lawyer_profiles(id),
+  booking_id UUID REFERENCES lawyer_bookings(id),
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(reviewer_id, booking_id)
+);
+
+-- ============================================================
+-- 4. PREDICTION MARKETS
+-- ============================================================
+CREATE TABLE prediction_markets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  case_reference TEXT,
+  court TEXT,
+  category TEXT NOT NULL DEFAULT 'other' CHECK (category IN ('supreme_court', 'appeal', 'high_court', 'tribunal', 'legislation', 'other')),
+  outcome_options JSONB NOT NULL DEFAULT '[]',
+  total_pool DECIMAL(12,2) NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed', 'resolved', 'cancelled')),
+  resolution_date TIMESTAMPTZ,
+  actual_outcome TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  closes_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_markets_status ON prediction_markets(status);
+
+CREATE TABLE prediction_bets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  market_id UUID NOT NULL REFERENCES prediction_markets(id),
+  selected_outcome TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  potential_payout DECIMAL(10,2),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'won', 'lost', 'refunded')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_bets_user ON prediction_bets(user_id);
+CREATE INDEX idx_bets_market ON prediction_bets(market_id);
+
+CREATE VIEW positions AS
+  SELECT id, user_id, market_id, selected_outcome, amount, potential_payout, status, created_at
+  FROM prediction_bets;
+
+CREATE VIEW trades AS
+  SELECT id, user_id, market_id, selected_outcome, amount, status, created_at
+  FROM prediction_bets;
+
+CREATE VIEW market_votes AS
+  SELECT id, user_id, market_id, selected_outcome, amount, status, created_at
+  FROM prediction_bets;
+
+-- ============================================================
+-- 5. SAVED DOCUMENTS & RESEARCH HISTORY
+-- ============================================================
+CREATE TABLE saved_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  document_type TEXT NOT NULL DEFAULT 'other' CHECK (document_type IN ('contract', 'letter', 'pleading', 'affidavit', 'mou', 'power-of-attorney', 'will', 'tenancy', 'other')),
+  content TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  is_favorite BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_docs_user ON saved_documents(user_id);
+
+CREATE TABLE research_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  query TEXT NOT NULL,
+  results JSONB,
+  jurisdiction TEXT,
+  category TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_research_user ON research_history(user_id);
+
+CREATE TABLE case_predictions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  case_type TEXT,
+  case_facts TEXT,
+  legal_issues TEXT,
+  jurisdiction TEXT,
+  client_position TEXT,
+  prediction_result JSONB,
+  win_probability DECIMAL(5,2),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- 6. NIGERIAN CASE LAW DATABASE
+-- ============================================================
+CREATE TABLE legal_cases (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_title TEXT NOT NULL,
+  citation TEXT NOT NULL,
+  court TEXT NOT NULL,
+  year INTEGER NOT NULL,
+  judges TEXT[],
+  category TEXT NOT NULL,
+  subject_matter TEXT[] NOT NULL DEFAULT '{}',
+  facts TEXT,
+  issues TEXT[],
+  holding TEXT NOT NULL,
+  ratio_decidendi TEXT,
+  obiter_dicta TEXT,
+  full_text TEXT,
+  statutes_considered TEXT[],
+  cases_cited TEXT[],
+  outcome TEXT NOT NULL CHECK (outcome IN ('allowed', 'dismissed', 'struck_out', 'settled', 'other')),
+  jurisdiction TEXT NOT NULL DEFAULT 'Nigeria',
+  state TEXT,
+  is_landmark BOOLEAN NOT NULL DEFAULT false,
+  search_vector TSVECTOR,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_cases_search ON legal_cases USING GIN(search_vector);
+CREATE INDEX idx_cases_court ON legal_cases(court);
+CREATE INDEX idx_cases_year ON legal_cases(year);
+CREATE INDEX idx_cases_category ON legal_cases(category);
+CREATE INDEX idx_cases_subjects ON legal_cases USING GIN(subject_matter);
+CREATE INDEX idx_cases_citation ON legal_cases(citation);
+CREATE INDEX idx_cases_landmark ON legal_cases(is_landmark) WHERE is_landmark = true;
+
+CREATE OR REPLACE FUNCTION update_case_search_vector()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.search_vector := to_tsvector('english',
+    COALESCE(NEW.case_title, '') || ' ' ||
+    COALESCE(NEW.citation, '') || ' ' ||
+    COALESCE(NEW.court, '') || ' ' ||
+    COALESCE(NEW.category, '') || ' ' ||
+    COALESCE(NEW.holding, '') || ' ' ||
+    COALESCE(NEW.ratio_decidendi, '') || ' ' ||
+    COALESCE(NEW.facts, '') || ' ' ||
+    COALESCE(array_to_string(NEW.subject_matter, ' '), '') || ' ' ||
+    COALESCE(array_to_string(NEW.issues, ' '), '') || ' ' ||
+    COALESCE(array_to_string(NEW.statutes_considered, ' '), '')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS case_search_update ON legal_cases;
+CREATE TRIGGER case_search_update
+  BEFORE INSERT OR UPDATE ON legal_cases
+  FOR EACH ROW EXECUTE FUNCTION update_case_search_vector();
+
+-- ============================================================
+-- 7. NIGERIAN STATUTES
+-- ============================================================
+CREATE TABLE legal_statutes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  short_title TEXT,
+  year INTEGER,
+  chapter TEXT,
+  part TEXT,
+  section TEXT,
+  content TEXT NOT NULL,
+  category TEXT NOT NULL,
+  jurisdiction TEXT NOT NULL DEFAULT 'Federal',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  amendments JSONB DEFAULT '[]',
+  search_vector TSVECTOR,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_statutes_search ON legal_statutes USING GIN(search_vector);
+CREATE INDEX idx_statutes_category ON legal_statutes(category);
+CREATE INDEX idx_statutes_title ON legal_statutes(title);
+
+CREATE OR REPLACE FUNCTION update_statute_search_vector()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.search_vector := to_tsvector('english',
+    COALESCE(NEW.title, '') || ' ' ||
+    COALESCE(NEW.short_title, '') || ' ' ||
+    COALESCE(NEW.content, '') || ' ' ||
+    COALESCE(NEW.category, '')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS statute_search_update ON legal_statutes;
+CREATE TRIGGER statute_search_update
+  BEFORE INSERT OR UPDATE ON legal_statutes
+  FOR EACH ROW EXECUTE FUNCTION update_statute_search_vector();
+
+-- ============================================================
+-- 8. NOTIFICATIONS
+-- ============================================================
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning', 'error', 'payment', 'booking', 'prediction')),
+  is_read BOOLEAN NOT NULL DEFAULT false,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_notifications_user ON notifications(user_id, is_read);
+
+-- ============================================================
+-- 9. PAYMENTS
+-- ============================================================
+CREATE TABLE payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  amount DECIMAL(12,2) NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'NGN',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
+  provider TEXT NOT NULL DEFAULT 'paystack',
+  reference TEXT UNIQUE,
+  provider_reference TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_payments_user ON payments(user_id);
+CREATE INDEX idx_payments_reference ON payments(reference);
+
+-- ============================================================
+-- 10. ROW LEVEL SECURITY
+-- ============================================================
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wallets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wallet_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lawyer_bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prediction_bets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE saved_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE research_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE case_predictions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prediction_markets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lawyer_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE legal_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE legal_statutes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can view own wallet" ON wallets FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own transactions" ON wallet_transactions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own bookings" ON lawyer_bookings FOR SELECT USING (auth.uid() = client_id OR auth.uid() IN (SELECT user_id FROM lawyer_profiles WHERE id = lawyer_id));
+CREATE POLICY "Users can create bookings" ON lawyer_bookings FOR INSERT WITH CHECK (auth.uid() = client_id);
+CREATE POLICY "Anyone can read reviews" ON reviews FOR SELECT USING (true);
+CREATE POLICY "Users can write reviews" ON reviews FOR INSERT WITH CHECK (auth.uid() = reviewer_id);
+CREATE POLICY "Anyone can read markets" ON prediction_markets FOR SELECT USING (true);
+CREATE POLICY "Authenticated can create markets" ON prediction_markets FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Users can view own bets" ON prediction_bets FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can place bets" ON prediction_bets FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view own documents" ON saved_documents FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can create documents" ON saved_documents FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own documents" ON saved_documents FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own documents" ON saved_documents FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Users own research" ON research_history FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can save research" ON research_history FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users own predictions" ON case_predictions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can save predictions" ON case_predictions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users own notifications" ON notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own payments" ON payments FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Anyone can view verified lawyers" ON lawyer_profiles FOR SELECT USING (true);
+CREATE POLICY "Lawyers can update own profile" ON lawyer_profiles FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can register as lawyer" ON lawyer_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Anyone can read cases" ON legal_cases FOR SELECT USING (true);
+CREATE POLICY "Anyone can read statutes" ON legal_statutes FOR SELECT USING (true);
+`;
+
+// ============================================================
+// MIGRATION 2: Seed Nigerian Case Law
+// ============================================================
+const m2 = `-- CaseWin AI - Seed Nigerian Case Law Data
+-- Run this SECOND in Supabase SQL Editor (after 001_initial_schema.sql)
+
+-- Clean any existing seed data first (safe - tables exist from migration 1)
+DELETE FROM legal_cases WHERE is_landmark = true;
+DELETE FROM legal_statutes WHERE jurisdiction IN ('Federal', 'Lagos State');
+
+-- ============================================================
+-- LANDMARK NIGERIAN SUPREME COURT CASES
+-- ============================================================
+INSERT INTO legal_cases (case_title, citation, court, year, judges, category, subject_matter, facts, issues, holding, ratio_decidendi, statutes_considered, cases_cited, outcome, jurisdiction, is_landmark) VALUES
+
+('Inec v. Musa', '(2003) 3 NWLR (Pt. 806) 72', 'Supreme Court', 2003,
+ ARRAY['Uwais CJN', 'Belgore JSC', 'Kutigi JSC'],
+ 'Constitutional Law',
+ ARRAY['Electoral Law', 'Constitutional Interpretation', 'Political Rights'],
+ 'Challenge to the powers of INEC regarding electoral processes and the constitutional framework governing elections in Nigeria.',
+ ARRAY['Whether INEC has absolute discretion in electoral matters', 'Constitutional limits on INEC powers'],
+ 'The Supreme Court held that INEC''s powers, while extensive, are subject to constitutional limitations and judicial review.',
+ 'Electoral bodies must operate within constitutional bounds and their decisions are subject to judicial scrutiny.',
+ ARRAY['Constitution of the Federal Republic of Nigeria 1999', 'Electoral Act 2002'],
+ ARRAY['Attorney-General of Ondo State v. Attorney-General of the Federation (2002)'],
+ 'allowed', 'Nigeria', true),
+
+('Amaechi v. INEC', '(2008) 5 NWLR (Pt. 1080) 227', 'Supreme Court', 2008,
+ ARRAY['Katsina-Alu JSC', 'Tobi JSC', 'Ogbuagu JSC', 'Onnoghen JSC', 'Aderemi JSC'],
+ 'Electoral Law',
+ ARRAY['Electoral Law', 'Right to Vote', 'Party Primaries', 'Substitution of Candidates'],
+ 'Rotimi Amaechi won the PDP gubernatorial primary in Rivers State but was substituted by the party. He challenged the substitution.',
+ ARRAY['Whether a court can declare a candidate winner who did not contest the election', 'Rights of a validly nominated candidate'],
+ 'The Supreme Court held that Amaechi, as the validly nominated candidate, was entitled to the votes cast for PDP and should be declared governor.',
+ 'Votes belong to the political party, not the individual candidate. A validly nominated candidate who is unlawfully substituted is entitled to the benefit of votes cast for the party.',
+ ARRAY['Constitution of the Federal Republic of Nigeria 1999 - Section 177', 'Electoral Act 2006'],
+ ARRAY['Ugwu v. Ararume (2007)'],
+ 'allowed', 'Nigeria', true),
+
+('Adesokan v. Adetunji', '(1994) 5 NWLR (Pt. 346) 540', 'Supreme Court', 1994,
+ ARRAY['Karibi-Whyte JSC', 'Akpata JSC', 'Ogundare JSC'],
+ 'Land Law',
+ ARRAY['Land Law', 'Customary Land Rights', 'Land Use Act'],
+ 'Dispute over ownership of land in Lagos under customary law and the Land Use Act.',
+ ARRAY['Whether customary land rights survive the Land Use Act', 'Nature of rights under certificate of occupancy'],
+ 'The Supreme Court held that while the Land Use Act vests all land in the Governor, pre-existing customary rights are recognized as deemed rights of occupancy.',
+ 'Customary land rights existing before the Land Use Act are preserved as deemed rights of occupancy under the Act.',
+ ARRAY['Land Use Act 1978', 'Constitution of the Federal Republic of Nigeria 1979'],
+ ARRAY['Abioye v. Yakubu (1991)', 'Savannah Bank v. Ajilo (1989)'],
+ 'allowed', 'Nigeria', true),
+
+('Ariori v. Elemo', '(1983) 1 SCNLR 1', 'Supreme Court', 1983,
+ ARRAY['Fatayi-Williams CJN', 'Idigbe JSC', 'Obaseki JSC', 'Eso JSC'],
+ 'Land Law',
+ ARRAY['Land Law', 'Land Use Act', 'Customary Tenure'],
+ 'A fundamental case on the interpretation and application of the Land Use Act 1978 and its effect on pre-existing land rights.',
+ ARRAY['Effect of the Land Use Act on existing titles', 'Whether the Act extinguished pre-existing rights'],
+ 'The Land Use Act did not extinguish pre-existing rights to land but converted them to rights of occupancy.',
+ 'The Land Use Act 1978 is not retroactive in its effect on pre-existing land titles; such titles are converted to statutory or customary rights of occupancy.',
+ ARRAY['Land Use Act 1978 - Sections 34, 36'],
+ ARRAY['Nkwocha v. Governor of Anambra State (1984)'],
+ 'allowed', 'Nigeria', true),
+
+('Abacha v. Fawehinmi', '(2000) 6 NWLR (Pt. 660) 228', 'Supreme Court', 2000,
+ ARRAY['Uwais CJN', 'Ayoola JSC', 'Belgore JSC', 'Wali JSC', 'Iguh JSC'],
+ 'Human Rights',
+ ARRAY['Human Rights', 'Fundamental Rights', 'African Charter', 'International Law'],
+ 'Chief Gani Fawehinmi was arrested and detained by agents of the Abacha military regime. He challenged his detention as a violation of his fundamental rights under the African Charter on Human and Peoples Rights.',
+ ARRAY['Whether the African Charter has force of law in Nigeria', 'Jurisdiction of courts to enforce the Charter', 'Whether fundamental rights can be suspended by military decree'],
+ 'The Supreme Court held that the African Charter on Human and Peoples Rights, having been domesticated by the National Assembly, has the force of law in Nigeria and is superior to domestic legislation.',
+ 'The African Charter on Human and Peoples Rights (Ratification and Enforcement) Act gives the Charter the force of law in Nigeria, and its provisions can be enforced by Nigerian courts.',
+ ARRAY['African Charter on Human and Peoples Rights (Ratification and Enforcement) Act', 'Constitution of the Federal Republic of Nigeria 1999', 'Fundamental Rights (Enforcement Procedure) Rules'],
+ ARRAY['Ogugu v. State (1994)'],
+ 'allowed', 'Nigeria', true),
+
+('Marwa v. Nyako', '(2012) 6 NWLR (Pt. 1296) 199', 'Supreme Court', 2012,
+ ARRAY['Musdapher CJN', 'Onnoghen JSC', 'Adekeye JSC', 'Rhodes-Vivour JSC'],
+ 'Electoral Law',
+ ARRAY['Electoral Law', 'Governorship Election Petition', 'Burden of Proof'],
+ 'Election petition challenging the governorship election result in Adamawa State.',
+ ARRAY['Standard of proof in election petitions', 'Whether petitioner discharged burden of proof'],
+ 'The Supreme Court restated the standard of proof in election petitions, holding that the petitioner must prove his case beyond reasonable doubt where criminal allegations of electoral malpractice are made.',
+ 'In election petitions, where criminal allegations such as fraud and electoral malpractice are made, the standard of proof is beyond reasonable doubt.',
+ ARRAY['Electoral Act 2010', 'Evidence Act 2011'],
+ ARRAY['Buhari v. Obasanjo (2005)', 'Awolowo v. Shagari (1979)'],
+ 'dismissed', 'Nigeria', true),
+
+('Attorney General of Lagos State v. Attorney General of the Federation', '(2003) 12 NWLR (Pt. 833) 1', 'Supreme Court', 2003,
+ ARRAY['Uwais CJN', 'Belgore JSC', 'Kutigi JSC', 'Karibi-Whyte JSC', 'Ayoola JSC'],
+ 'Constitutional Law',
+ ARRAY['Constitutional Law', 'Federalism', 'Local Government', 'Revenue Allocation'],
+ 'Lagos State challenged the Federal Government''s withholding of local government allocation funds over the creation of additional local council development areas by Lagos State.',
+ ARRAY['Whether the Federal Government can withhold funds', 'Power to create local governments', 'Fiscal federalism'],
+ 'The Supreme Court held that the Federal Government cannot withhold constitutionally allocated funds to a state as a punitive measure.',
+ 'The Federal Government has no constitutional power to withhold funds allocated to a state under the revenue allocation formula as a punitive measure for any reason.',
+ ARRAY['Constitution of the Federal Republic of Nigeria 1999 - Sections 7, 8, 162'],
+ ARRAY['Attorney-General of Ogun State v. Attorney-General of the Federation (2002)'],
+ 'allowed', 'Nigeria', true),
+
+('Olafisoye v. Federal Republic of Nigeria', '(2004) 4 NWLR (Pt. 864) 580', 'Supreme Court', 2004,
+ ARRAY['Uwais CJN', 'Belgore JSC', 'Kutigi JSC', 'Pats-Acholonu JSC'],
+ 'Criminal Law',
+ ARRAY['Criminal Law', 'Anti-Corruption', 'ICPC', 'Constitutional Validity'],
+ 'Challenge to the constitutional validity of the Corrupt Practices and Other Related Offences Act 2000 which established the ICPC.',
+ ARRAY['Whether the ICPC Act is constitutional', 'Scope of legislative power on corruption'],
+ 'The Supreme Court upheld the constitutionality of the ICPC Act, holding that the National Assembly has power to legislate against corruption.',
+ 'The National Assembly has the constitutional competence to enact legislation against corruption and the ICPC Act is a valid exercise of that power.',
+ ARRAY['Corrupt Practices and Other Related Offences Act 2000', 'Constitution of the Federal Republic of Nigeria 1999 - Item 60(a) Second Schedule'],
+ ARRAY['Attorney-General of Ondo State v. Attorney-General of the Federation (2002)'],
+ 'dismissed', 'Nigeria', true),
+
+('Saleh v. Monguno', '(2006) 15 NWLR (Pt. 1001) 43', 'Supreme Court', 2006,
+ ARRAY['Pats-Acholonu JSC', 'Edozie JSC', 'Tabai JSC'],
+ 'Electoral Law',
+ ARRAY['Electoral Law', 'Senate Election', 'Pre-election Matters'],
+ 'A pre-election dispute regarding the nomination of candidates for the Senate election in Borno State.',
+ ARRAY['Jurisdiction in pre-election matters', 'Party nomination process'],
+ 'The Supreme Court held that pre-election matters are within the jurisdiction of the regular courts, not the election tribunals.',
+ 'Pre-election disputes concerning party primaries and nomination processes fall within the jurisdiction of the Federal High Court or State High Courts, not election tribunals.',
+ ARRAY['Electoral Act 2006', 'Constitution of the Federal Republic of Nigeria 1999 - Section 285'],
+ ARRAY['Onuoha v. Okafor (1983)', 'Dalhatu v. Turaki (2003)'],
+ 'allowed', 'Nigeria', true),
+
+('Hameed Ajani Olalekan v. The State', '(2001) 18 NWLR (Pt. 746) 793', 'Supreme Court', 2001,
+ ARRAY['Ogundare JSC', 'Uwaifo JSC', 'Ayoola JSC'],
+ 'Criminal Law',
+ ARRAY['Criminal Law', 'Murder', 'Self-Defence', 'Burden of Proof'],
+ 'Appeal against conviction for murder. The appellant raised the defence of self-defence.',
+ ARRAY['Requirements for self-defence', 'Burden of proof in self-defence cases'],
+ 'The Supreme Court held that once self-defence is raised, the prosecution must disprove it beyond reasonable doubt.',
+ 'When the defence of self-defence is raised in a murder trial, the burden shifts to the prosecution to disprove it beyond reasonable doubt.',
+ ARRAY['Criminal Code Act - Sections 286, 287', 'Evidence Act - Section 138(1)'],
+ ARRAY['Okonji v. The State (1987)', 'Balogun v. Attorney-General of Ogun State (2002)'],
+ 'allowed', 'Nigeria', true),
+
+('Savannah Bank v. Ajilo', '(1989) 1 NWLR (Pt. 97) 305', 'Supreme Court', 1989,
+ ARRAY['Nnamani JSC', 'Oputa JSC', 'Belgore JSC'],
+ 'Commercial Law',
+ ARRAY['Banking Law', 'Land Use Act', 'Mortgage', 'Governor''s Consent'],
+ 'Savannah Bank granted a loan secured by a mortgage over land without obtaining the Governor''s consent as required by the Land Use Act.',
+ ARRAY['Effect of failure to obtain Governor''s consent', 'Validity of mortgage without consent'],
+ 'The Supreme Court held that a mortgage created over land without the Governor''s consent as required under the Land Use Act is null and void.',
+ 'Any transaction involving the alienation of interest in land without the Governor''s consent under the Land Use Act is null and void ab initio.',
+ ARRAY['Land Use Act 1978 - Section 22'],
+ ARRAY['Awojugbagbe Light Industries v. Chinukwe (1995)'],
+ 'dismissed', 'Nigeria', true),
+
+('Madukolu v. Nkemdilim', '(1962) 2 SCNLR 341', 'Supreme Court', 1962,
+ ARRAY['Brett JSC', 'Taylor JSC', 'Ademola CJN'],
+ 'Civil Procedure',
+ ARRAY['Jurisdiction', 'Civil Procedure', 'Court Competence'],
+ 'The fundamental case on when a court is competent to exercise jurisdiction.',
+ ARRAY['Conditions for court competence', 'When jurisdiction is properly invoked'],
+ 'The Supreme Court laid down the definitive test for court competence: (1) it must be properly constituted, (2) the subject matter must be within jurisdiction, (3) the case must be initiated by due process, and (4) any conditions precedent must be fulfilled.',
+ 'A court is competent when: (a) it is properly constituted as regards numbers and qualifications of members; (b) the subject matter is within jurisdiction; (c) the matter is initiated by due process of law; (d) any condition precedent to jurisdiction has been fulfilled.',
+ ARRAY['High Court Law', 'Constitution of Nigeria'],
+ ARRAY[],
+ 'allowed', 'Nigeria', true),
+
+('Fawehinmi v. Akilu', '(1987) 4 NWLR (Pt. 67) 797', 'Supreme Court', 1987,
+ ARRAY['Obaseki JSC', 'Nnamani JSC', 'Oputa JSC', 'Coker JSC'],
+ 'Criminal Law',
+ ARRAY['Criminal Law', 'Private Prosecution', 'Attorney General Powers', 'Rule of Law'],
+ 'Chief Gani Fawehinmi sought to privately prosecute certain public officers for criminal offences. The Attorney General attempted to take over and discontinue the prosecution.',
+ ARRAY['Right of private prosecution', 'Attorney General''s power to take over and discontinue prosecution'],
+ 'The Supreme Court held that every citizen has the right to institute private prosecution, and while the Attorney General can take over, this power must be exercised in the public interest.',
+ 'The right of private prosecution is a constitutional right. The Attorney General''s power under Section 174 of the Constitution to take over and discontinue prosecution must be exercised in good faith and in the public interest.',
+ ARRAY['Constitution of the Federal Republic of Nigeria 1979 - Section 160', 'Criminal Procedure Act'],
+ ARRAY['I.G.P v. Aniagolu (1975)'],
+ 'allowed', 'Nigeria', true),
+
+('Obi v. INEC', '(2007) 11 NWLR (Pt. 1046) 565', 'Supreme Court', 2007,
+ ARRAY['Pats-Acholonu JSC', 'Niki Tobi JSC', 'Aderemi JSC'],
+ 'Electoral Law',
+ ARRAY['Electoral Law', 'Governorship Election', 'Impeachment'],
+ 'Peter Obi challenged his removal as Governor of Anambra State via impeachment and the subsequent conduct of fresh elections by INEC.',
+ ARRAY['Validity of impeachment proceedings', 'Whether INEC can conduct fresh election after illegal impeachment'],
+ 'The Supreme Court held that the impeachment was unconstitutional and that Obi remained the lawful Governor. His tenure should be computed from the date he was first sworn in.',
+ 'An unconstitutional impeachment is a nullity and cannot truncate the tenure of a validly elected Governor.',
+ ARRAY['Constitution of the Federal Republic of Nigeria 1999 - Sections 180, 188'],
+ ARRAY['Adeleke v. Oyo State House of Assembly (2006)'],
+ 'allowed', 'Nigeria', true),
+
+('Alao v. ACB', '(2000) 6 NWLR (Pt. 662) 634', 'Supreme Court', 2000,
+ ARRAY['Ogundare JSC', 'Iguh JSC', 'Ayoola JSC'],
+ 'Commercial Law',
+ ARRAY['Banking Law', 'Banker-Customer Relationship', 'Negligence', 'Cheques'],
+ 'A customer sued his bank for wrongfully dishonoring his cheque and the resulting damage to his reputation.',
+ ARRAY['Duty of bank to honour cheques', 'Damages for wrongful dishonour'],
+ 'The Supreme Court held that a bank has a contractual duty to honour its customer''s cheques when there are sufficient funds, and wrongful dishonour gives rise to a presumption of damage.',
+ 'A banker who wrongfully dishonours a customer''s cheque is liable in damages. For a trader or businessperson, damage is presumed without proof of special damage.',
+ ARRAY['Bills of Exchange Act', 'Central Bank of Nigeria Act'],
+ ARRAY['Union Bank v. Ozigi (1994)', 'Horsfall v. Royal Exchange Assurance (1991)'],
+ 'allowed', 'Nigeria', true),
+
+('Macaulay v. RZB of Austria', '(2003) 18 NWLR (Pt. 852) 282', 'Supreme Court', 2003,
+ ARRAY['Uwais CJN', 'Belgore JSC', 'Kutigi JSC'],
+ 'Commercial Law',
+ ARRAY['International Trade', 'Letters of Credit', 'Banking Law', 'Contract'],
+ 'Dispute regarding a letter of credit in international trade transaction.',
+ ARRAY['Autonomy of letters of credit', 'Bank''s obligation under letters of credit'],
+ 'The Supreme Court upheld the principle of autonomy of letters of credit, holding that banks must honour conforming documents regardless of underlying disputes between the buyer and seller.',
+ 'The autonomy principle of letters of credit means the bank deals in documents, not goods. The bank is obligated to pay against conforming documents.',
+ ARRAY['Uniform Customs and Practice for Documentary Credits (UCP 500)'],
+ ARRAY['United City Merchants v. Royal Bank of Canada (1983)'],
+ 'dismissed', 'Nigeria', true),
+
+('Adegoke Motors v. Adesanya', '(1989) 3 NWLR (Pt. 109) 250', 'Supreme Court', 1989,
+ ARRAY['Oputa JSC', 'Nnamani JSC', 'Belgore JSC'],
+ 'Civil Procedure',
+ ARRAY['Locus Standi', 'Civil Procedure', 'Access to Court'],
+ 'The question of who has standing to bring an action in court.',
+ ARRAY['Test for locus standi', 'Sufficient interest requirement'],
+ 'The Supreme Court held that to have locus standi, a person must show sufficient interest in the suit. The interest must be direct, pecuniary, or proprietary.',
+ 'Locus standi requires showing of sufficient interest which is over and above the interest of the general public. The plaintiff must show that his civil rights and obligations have been or are in danger of being adversely affected.',
+ ARRAY['Constitution of the Federal Republic of Nigeria 1979 - Section 6(6)(b)'],
+ ARRAY['Adesanya v. President of Nigeria (1981)', 'Thomas v. Olufosoye (1986)'],
+ 'dismissed', 'Nigeria', true),
+
+('NDIC v. Okem Enterprises', '(2004) 10 NWLR (Pt. 880) 107', 'Supreme Court', 2004,
+ ARRAY['Belgore JSC', 'Kutigi JSC', 'Kalgo JSC', 'Edozie JSC'],
+ 'Commercial Law',
+ ARRAY['Banking Law', 'NDIC', 'Failed Banks', 'Depositors Rights'],
+ 'Case concerning the rights of depositors in failed banks and the role of the Nigeria Deposit Insurance Corporation.',
+ ARRAY['Liability of NDIC to depositors', 'Rights of depositors in failed banks'],
+ 'The Supreme Court held that NDIC has a statutory obligation to pay insured depositors of failed banks up to the maximum insured limit.',
+ 'The NDIC Decree imposes a statutory duty on NDIC to pay depositors of failed banks up to the insured limit, and this obligation is enforceable by depositors.',
+ ARRAY['NDIC Act', 'Banks and Other Financial Institutions Act (BOFIA)'],
+ ARRAY['NDIC v. CBN (2002)'],
+ 'allowed', 'Nigeria', true),
+
+('Senator Abraham Adesanya v. President of the Federal Republic of Nigeria', '(1981) 2 NCLR 358', 'Supreme Court', 1981,
+ ARRAY['Fatayi-Williams CJN', 'Sowemimo JSC', 'Idigbe JSC', 'Bello JSC', 'Obaseki JSC', 'Eso JSC', 'Nnamani JSC'],
+ 'Constitutional Law',
+ ARRAY['Constitutional Law', 'Locus Standi', 'Fundamental Rights', 'Justiceable Rights'],
+ 'Senator Adesanya challenged the appointment of Justice Ovie-Whiskey as Chairman of the Federal Electoral Commission, arguing it was unconstitutional.',
+ ARRAY['Whether a citizen has standing to challenge government actions', 'Meaning of locus standi in constitutional matters'],
+ 'The Supreme Court, in a 4-3 split decision, held that the plaintiff lacked locus standi as he could not show that his personal rights were directly affected by the appointment.',
+ 'A person who challenges a government action must show that his personal legal rights or interests are directly affected. General public interest is insufficient to ground locus standi.',
+ ARRAY['Constitution of the Federal Republic of Nigeria 1979 - Section 6(6)(b)'],
+ ARRAY['Gamioba v. Esezi (1961)'],
+ 'dismissed', 'Nigeria', true),
+
+('Shell Petroleum Development Company v. Farah', '(1995) 3 NWLR (Pt. 382) 148', 'Supreme Court', 1995,
+ ARRAY['Wali JSC', 'Belgore JSC', 'Kutigi JSC'],
+ 'Environmental Law',
+ ARRAY['Environmental Law', 'Oil and Gas', 'Negligence', 'Pollution', 'Compensation'],
+ 'Residents of an oil-producing community sued Shell for environmental pollution and degradation caused by oil spills.',
+ ARRAY['Liability for oil spills', 'Standard of care in oil operations', 'Compensation for environmental damage'],
+ 'The Supreme Court held Shell liable for the oil spills, finding that the company owed a duty of care to the surrounding communities and had breached that duty.',
+ 'Oil companies owe a duty of care to host communities to prevent oil spills and environmental pollution. Failure to maintain equipment properly constitutes negligence.',
+ ARRAY['Oil Pipelines Act', 'Petroleum Act'],
+ ARRAY['Elf Nigeria Ltd v. Opere Sillo (1994)'],
+ 'allowed', 'Nigeria', true),
+
+('Ogbonna v. Attorney General of Imo State', '(1992) 1 NWLR (Pt. 220) 647', 'Supreme Court', 1992,
+ ARRAY['Karibi-Whyte JSC', 'Nnaemeka-Agu JSC', 'Belgore JSC'],
+ 'Constitutional Law',
+ ARRAY['Constitutional Law', 'Fundamental Rights', 'Right to Life', 'Death Penalty'],
+ 'Constitutional challenge to the death penalty under Section 33 of the 1979 Constitution.',
+ ARRAY['Whether the death penalty violates the right to life', 'Constitutional validity of capital punishment'],
+ 'The Supreme Court held that the death penalty does not violate the right to life as guaranteed by the Constitution, since the Constitution itself provides for it as an exception.',
+ 'The death penalty is constitutional as the right to life under Section 33 is expressly subject to the exception of execution pursuant to a sentence of a court of law.',
+ ARRAY['Constitution of the Federal Republic of Nigeria 1979 - Section 30', 'Criminal Code Act - Section 319'],
+ ARRAY['Kalu v. The State (1998)'],
+ 'dismissed', 'Nigeria', true),
+
+('Elf Nigeria Ltd v. Opere Sillo', '(1994) 6 NWLR (Pt. 350) 258', 'Supreme Court', 1994,
+ ARRAY['Wali JSC', 'Belgore JSC', 'Ogundare JSC'],
+ 'Environmental Law',
+ ARRAY['Environmental Law', 'Oil Spill', 'Strict Liability', 'Compensation'],
+ 'Community members sued Elf for damages from oil spill that destroyed their fishing grounds and farmlands.',
+ ARRAY['Basis of liability for oil spills', 'Whether strict liability applies to oil operations'],
+ 'The Supreme Court applied the principle of strict liability to oil spill cases, holding that oil companies are liable for pollution regardless of fault.',
+ 'Oil operations are ultra-hazardous activities to which strict liability applies. The operator is liable for damage caused by oil spills regardless of negligence.',
+ ARRAY['Oil Pipelines Act - Section 11', 'Petroleum Act'],
+ ARRAY['Rylands v. Fletcher (1868)', 'Umudje v. Shell-BP (1975)'],
+ 'allowed', 'Nigeria', true),
+
+('Registered Trustees of the National Association of Community Health Practitioners of Nigeria v. Medical and Health Workers Union of Nigeria', '(2008) 2 NWLR (Pt. 1070) 1', 'Supreme Court', 2008,
+ ARRAY['Katsina-Alu JSC', 'Tobi JSC', 'Ogbuagu JSC'],
+ 'Labour Law',
+ ARRAY['Labour Law', 'Trade Unions', 'Right to Organize', 'Freedom of Association'],
+ 'Dispute between professional associations and trade unions over the right to organize health workers.',
+ ARRAY['Right of workers to join unions', 'Difference between professional associations and trade unions'],
+ 'The Supreme Court clarified the distinction between professional associations and trade unions, holding that workers have the right to belong to both.',
+ 'Freedom of association includes the right of workers to join trade unions of their choice. Professional associations and trade unions serve different purposes and membership in one does not preclude membership in the other.',
+ ARRAY['Trade Unions Act', 'Constitution of the Federal Republic of Nigeria 1999 - Section 40'],
+ ARRAY['NURTW v. RTEAN (1992)'],
+ 'allowed', 'Nigeria', true),
+
+('FRN v. Ifegwu', '(2003) 15 NWLR (Pt. 842) 113', 'Supreme Court', 2003,
+ ARRAY['Uwais CJN', 'Kutigi JSC', 'Edozie JSC', 'Tobi JSC'],
+ 'Criminal Law',
+ ARRAY['Criminal Law', 'Economic Crimes', 'Failed Banks', 'Money Laundering'],
+ 'Prosecution of a bank executive for economic crimes related to the failure of a financial institution.',
+ ARRAY['Elements of the offence under the Failed Banks Act', 'Proof of criminal liability of bank directors'],
+ 'The Supreme Court upheld the conviction, holding that bank directors who authorize reckless lending or mismanagement of funds are criminally liable.',
+ 'Directors and officers of banks who authorize reckless grants of credit or mismanagement of depositors'' funds are personally criminally liable under the Failed Banks (Recovery of Debts) and Financial Malpractices in Banks Act.',
+ ARRAY['Failed Banks (Recovery of Debts) and Financial Malpractices in Banks Act 1994', 'BOFIA'],
+ ARRAY['FRN v. Osahon (2006)'],
+ 'allowed', 'Nigeria', true),
+
+('Ogunlana v. Military Governor of Lagos State', '(1987) 4 NWLR (Pt. 65) 233', 'Supreme Court', 1987,
+ ARRAY['Obaseki JSC', 'Nnamani JSC', 'Oputa JSC'],
+ 'Land Law',
+ ARRAY['Land Law', 'Compulsory Acquisition', 'Compensation', 'Governor Powers'],
+ 'Challenge to the compulsory acquisition of land by the Lagos State Government without adequate compensation.',
+ ARRAY['Right to compensation for compulsory acquisition', 'Adequacy of compensation'],
+ 'The Supreme Court held that compulsory acquisition of land must be accompanied by prompt and adequate compensation as provided by law.',
+ 'The right to prompt and adequate compensation for compulsory acquisition of property is a constitutional right that cannot be circumvented by any government.',
+ ARRAY['Land Use Act 1978 - Section 29', 'Constitution of the Federal Republic of Nigeria 1979 - Section 40'],
+ ARRAY['Governor of Lagos State v. Ojukwu (1986)'],
+ 'allowed', 'Nigeria', true);
+
+-- ============================================================
+-- NIGERIAN STATUTES (Key Provisions)
+-- ============================================================
+INSERT INTO legal_statutes (title, short_title, year, section, content, category, jurisdiction) VALUES
+
+('Constitution of the Federal Republic of Nigeria 1999', 'CFRN 1999', 1999, 'Chapter IV',
+ 'Fundamental Rights provisions including: Right to Life (S.33), Right to Dignity of Human Person (S.34), Right to Personal Liberty (S.35), Right to Fair Hearing (S.36), Right to Private and Family Life (S.37), Right to Freedom of Thought, Conscience and Religion (S.38), Right to Freedom of Expression (S.39), Right to Peaceful Assembly and Association (S.40), Right to Freedom of Movement (S.41), Right to Freedom from Discrimination (S.42), Right to Acquire and Own Immovable Property (S.43), Compulsory Acquisition of Property (S.44).',
+ 'Constitutional Law', 'Federal'),
+
+('Land Use Act 1978', 'LUA 1978', 1978, 'Sections 1-50',
+ 'All land in each State is vested in the Governor. Section 1: Land vested in Governor in trust. Section 5: Powers of Governor for urban land. Section 6: Powers of Local Government for non-urban land. Section 22: Alienation requires Governor consent. Section 26: Revocation of right of occupancy. Section 28: Compensation for improvements. Section 29: Compensation provisions. Section 34: Transitional provisions preserving existing rights. Section 36: Saving of existing rights as deemed rights of occupancy.',
+ 'Land Law', 'Federal'),
+
+('Electoral Act 2022', 'EA 2022', 2022, 'Key Provisions',
+ 'Sections 29-42: Nomination of candidates and party primaries. Section 50: Conduct of elections. Section 51: Voting procedures. Section 60: Collation and announcement of results. Section 65: Corrupt practices. Section 130-140: Election petitions and tribunals. Section 131: Grounds for questioning election. Section 134: Burden of proof. Section 137: Period for filing petitions.',
+ 'Electoral Law', 'Federal'),
+
+('Criminal Code Act (Southern Nigeria)', 'CCA', 1916, 'Key Provisions',
+ 'Part 1: Preliminary. Part 5 Chapter 27: Murder (S.316-321) - defines murder, manslaughter, and defences. Part 6: Offences against property - Theft (S.382), Robbery (S.401-402), Fraud (S.418-421). Part 7: Forgery (S.465-477). Chapter 21: Offences against morality. Chapter 30: Assault (S.351-365). Section 319: Punishment for murder is death.',
+ 'Criminal Law', 'Federal'),
+
+('Penal Code Act (Northern Nigeria)', 'PCA', 1960, 'Key Provisions',
+ 'Section 221: Punishment for murder (death). Section 222: Culpable homicide not punishable with death. Section 270-280: Offences relating to property. Section 340: Criminal misappropriation. Section 341: Criminal breach of trust. Sections 387-389: Offences relating to religion.',
+ 'Criminal Law', 'Federal'),
+
+('Companies and Allied Matters Act 2020', 'CAMA 2020', 2020, 'Key Provisions',
+ 'Part A: Corporate Affairs Commission. Part B: Incorporation of Companies - Types (S.18-22), Registration (S.27-35), Capacity and Powers (S.42-46). Part C: Shares and Share Capital. Part D: Management and Administration - Directors (S.265-308), Secretary (S.330). Part F: Arrangements and Compromises. Part G: Receivership and Managership. Part H: Winding Up.',
+ 'Company Law', 'Federal'),
+
+('Evidence Act 2011', 'EA 2011', 2011, 'Key Provisions',
+ 'Part I: Preliminary - Relevancy of facts. Part II: Proof - Burden of proof (S.131-136), Standard of proof (S.134-135). Part III: Documentary Evidence (S.83-107) including electronic evidence (S.84). Part IV: Oral Evidence. Part V: Examination of witnesses - competence, compellability, cross-examination. Part X: Estoppel. Part XII: Expert evidence.',
+ 'Evidence Law', 'Federal'),
+
+('Administration of Criminal Justice Act 2015', 'ACJA 2015', 2015, 'Key Provisions',
+ 'Part 1: Arrest. Part 2: Bail provisions (S.158-188) - conditions, forfeiture. Part 4: Trial of offences - Arraignment (S.364-369), Plea bargain (S.270), Sentencing (S.401-416). Part 5: Appeal. Key reform: Emphasis on speedy trial, victim compensation, prohibition of torture in investigation.',
+ 'Criminal Procedure', 'Federal'),
+
+('Arbitration and Mediation Act 2023', 'AMA 2023', 2023, 'Key Provisions',
+ 'Part I: Arbitration Agreement. Part II: Composition of Arbitral Tribunal. Part III: Jurisdiction of Arbitral Tribunal. Part IV: Conduct of Arbitral Proceedings. Part V: Making of Award and Termination of Proceedings. Part VII: Recognition and Enforcement of Awards. Part IX: Mediation. Replaces Arbitration and Conciliation Act 1988.',
+ 'Alternative Dispute Resolution', 'Federal'),
+
+('Investments and Securities Act 2007', 'ISA 2007', 2007, 'Key Provisions',
+ 'Part I: Securities and Exchange Commission. Part II: Registration of Securities Exchanges. Part III: Capital Trade Points. Part IV: Registration of Securities. Part X: Mergers and Acquisitions. Part XII: Market Abuse - insider dealing (S.111-115), market manipulation (S.106-110). Establishes regulatory framework for Nigerian capital markets.',
+ 'Securities Law', 'Federal'),
+
+('Child Rights Act 2003', 'CRA 2003', 2003, 'Key Provisions',
+ 'Part I: Best interests of the child. Part II: Rights and responsibilities - Right to survival (S.4), Right to name (S.5), Freedom from discrimination (S.6), Right to education (S.15), Right to health (S.13). Part III: Protection from child labour, trafficking, and abuse. Part IV: Child justice administration. Part X: Family Court.',
+ 'Family Law', 'Federal'),
+
+('Cybercrime (Prohibition, Prevention etc.) Act 2015', 'Cybercrime Act 2015', 2015, 'Key Provisions',
+ 'Part I: Offences against critical national information infrastructure - unauthorized access (S.6), system interference (S.7). Part II: Offences against computer systems - hacking, data theft. Part III: Cyber fraud, identity theft (S.22), cyberstalking (S.24). Part V: Duties of service providers. Part VI: International cooperation. Key: 7-year penalty for cyber fraud.',
+ 'Cyber Law', 'Federal'),
+
+('Nigerian Data Protection Act 2023', 'NDPA 2023', 2023, 'Key Provisions',
+ 'Part I: Nigeria Data Protection Commission (NDPC). Part II: Data protection principles - lawfulness, consent, purpose limitation, data minimization. Part III: Lawful basis for processing. Part IV: Rights of data subjects - access, rectification, erasure, portability. Part V: Data controllers and processors obligations. Part VI: Cross-border data transfer. Part VII: Enforcement and penalties.',
+ 'Data Protection', 'Federal'),
+
+('Matrimonial Causes Act 1970', 'MCA 1970', 1970, 'Key Provisions',
+ 'Section 15: Grounds for dissolution - marriage breakdown. Section 16: Evidence of breakdown - adultery (a), unreasonable behavior (b), desertion for 2 years (c), living apart for 2 years with consent (d), living apart for 3 years (e). Section 56-73: Custody and maintenance of children. Section 70-73: Property settlement and maintenance orders.',
+ 'Family Law', 'Federal'),
+
+('Lagos State High Court (Civil Procedure) Rules 2019', 'Lagos HC CPR 2019', 2019, 'Key Provisions',
+ 'Order 1: Citation and application. Order 3: Commencement by Writ of Summons. Order 5: Originating Summons. Order 11: Service of originating process. Order 15: Default judgment. Order 25: Summary judgment. Order 29: Discovery and inspection. Order 39: Trial. Order 42: Judgments and orders. Front-loaded system requiring filing of all processes with originating process.',
+ 'Civil Procedure', 'Lagos State');
+`;
+
+// ============================================================
+// MIGRATION 3: Seed Markets & Lawyers
+// ============================================================
+const m3 = `-- CaseWin AI - Seed Prediction Markets & Lawyer Profiles
+-- Run this THIRD in Supabase SQL Editor (after 002)
+
+-- Clean any existing seed data first
+DELETE FROM prediction_markets WHERE created_by IS NULL;
+DELETE FROM lawyer_profiles WHERE email LIKE '%@casewin.example';
+
+-- ============================================================
+-- PREDICTION MARKETS
+-- ============================================================
+INSERT INTO prediction_markets (title, description, case_reference, court, category, outcome_options, total_pool, status, closes_at) VALUES
+
+('Supreme Court Ruling on Digital Assets Classification',
+ 'Will the Supreme Court classify cryptocurrencies as securities under Nigerian law in the pending CBN v. Digital Assets Dealers case?',
+ 'SC/CV/2024/001', 'Supreme Court', 'supreme_court',
+ '[{"label":"Classified as Securities","probability":0.35},{"label":"Not Securities - Commodities","probability":0.40},{"label":"New Regulatory Category","probability":0.25}]',
+ 150000, 'open', NOW() + INTERVAL '90 days'),
+
+('Appeal Court Decision on Remote Hearing Validity',
+ 'Will the Court of Appeal uphold the validity of judgments delivered via remote/virtual hearings during and after the COVID-19 period?',
+ 'CA/LAG/CV/2024/123', 'Court of Appeal', 'appeal',
+ '[{"label":"Fully Valid","probability":0.55},{"label":"Valid with Conditions","probability":0.30},{"label":"Invalid - Physical Presence Required","probability":0.15}]',
+ 85000, 'open', NOW() + INTERVAL '60 days'),
+
+('NICN Ruling on Gig Workers Status',
+ 'How will the National Industrial Court classify gig economy workers (ride-hailing, delivery) - as employees or independent contractors?',
+ 'NICN/LA/2024/045', 'National Industrial Court', 'tribunal',
+ '[{"label":"Employees","probability":0.30},{"label":"Independent Contractors","probability":0.45},{"label":"New Hybrid Category","probability":0.25}]',
+ 200000, 'open', NOW() + INTERVAL '120 days'),
+
+('Federal High Court Decision on Social Media Regulation',
+ 'Will the Federal High Court uphold the NBC''s authority to regulate social media content under existing broadcasting laws?',
+ 'FHC/ABJ/CS/2024/789', 'Federal High Court', 'high_court',
+ '[{"label":"NBC Authority Upheld","probability":0.25},{"label":"Authority Struck Down","probability":0.50},{"label":"Limited Authority","probability":0.25}]',
+ 120000, 'open', NOW() + INTERVAL '45 days'),
+
+('Electoral Act Amendment on Electronic Transmission of Results',
+ 'Will the National Assembly pass the amendment mandating electronic transmission of election results for 2027?',
+ 'NASS/BILL/2024/EA-AMEND', 'National Assembly', 'legislation',
+ '[{"label":"Full Electronic Transmission","probability":0.40},{"label":"Hybrid System","probability":0.35},{"label":"Amendment Rejected","probability":0.25}]',
+ 300000, 'open', NOW() + INTERVAL '180 days'),
+
+('Supreme Court on State Police Creation',
+ 'Will the Supreme Court rule that states have the constitutional power to establish state police forces?',
+ 'SC/CV/2024/FED-v-STATES', 'Supreme Court', 'supreme_court',
+ '[{"label":"States Can Create Police","probability":0.20},{"label":"Only Federal Police Allowed","probability":0.50},{"label":"Concurrent Power","probability":0.30}]',
+ 250000, 'open', NOW() + INTERVAL '150 days'),
+
+('Lagos High Court Tenancy Dispute Resolution',
+ 'Will the Lagos High Court adopt the new Fast Track procedure for residential tenancy disputes, reducing resolution time?',
+ 'LD/LH/PRACTICE/2024/01', 'Lagos High Court', 'high_court',
+ '[{"label":"Fast Track Adopted","probability":0.60},{"label":"Modified Procedure","probability":0.25},{"label":"Status Quo Maintained","probability":0.15}]',
+ 75000, 'open', NOW() + INTERVAL '30 days'),
+
+('EFCC v. Former Governor - Asset Forfeiture',
+ 'Will the court order final forfeiture of assets in the EFCC''s case against the former state governor?',
+ 'FHC/ABJ/CR/2023/456', 'Federal High Court', 'high_court',
+ '[{"label":"Full Forfeiture","probability":0.45},{"label":"Partial Forfeiture","probability":0.35},{"label":"Case Dismissed","probability":0.20}]',
+ 180000, 'open', NOW() + INTERVAL '75 days'),
+
+('Court of Appeal - Landlord Tenant Act Interpretation',
+ 'How will the Court of Appeal interpret the notice requirement under the Lagos Tenancy Law for commercial properties?',
+ 'CA/LAG/CV/2024/567', 'Court of Appeal', 'appeal',
+ '[{"label":"Strict 6-Month Notice","probability":0.40},{"label":"3-Month Notice Sufficient","probability":0.35},{"label":"Case-by-Case Basis","probability":0.25}]',
+ 95000, 'open', NOW() + INTERVAL '60 days'),
+
+('Data Protection Commission Enforcement Action',
+ 'Will the Nigeria Data Protection Commission issue its first major fine against a telecom company for data breaches?',
+ 'NDPC/ENF/2024/001', 'Administrative Tribunal', 'tribunal',
+ '[{"label":"Major Fine Issued","probability":0.50},{"label":"Warning Only","probability":0.30},{"label":"Settlement Reached","probability":0.20}]',
+ 160000, 'open', NOW() + INTERVAL '90 days');
+
+-- ============================================================
+-- SAMPLE LAWYER PROFILES (no user_id - for display only)
+-- ============================================================
+INSERT INTO lawyer_profiles (full_name, email, phone, bar_number, years_of_experience, specializations, hourly_rate, consultation_fee, rating, total_reviews, total_cases, win_rate, is_verified, location, state, bio, languages) VALUES
+
+('Adebayo Ogunlesi', 'adebayo.ogunlesi@casewin.example', '+2348012345001', 'NBA/2005/4521',
+ 19, ARRAY['Corporate Law', 'Mergers & Acquisitions', 'Securities Law'],
+ 150000, 50000, 4.9, 127, 450, 89.5, true,
+ 'Victoria Island, Lagos', 'Lagos',
+ 'Senior Partner at Ogunlesi & Associates with extensive experience in corporate transactions, M&A, and capital markets. Advised on several landmark deals including major bank consolidations.',
+ ARRAY['English', 'Yoruba']),
+
+('Amina Mohammed-Bello', 'amina.bello@casewin.example', '+2348012345002', 'NBA/2008/6789',
+ 16, ARRAY['Human Rights', 'Constitutional Law', 'Criminal Defence'],
+ 120000, 40000, 4.8, 98, 320, 85.3, true,
+ 'Wuse, Abuja', 'FCT',
+ 'Award-winning human rights lawyer and constitutional law expert. Has argued several cases before the Supreme Court and ECOWAS Court.',
+ ARRAY['English', 'Hausa', 'French']),
+
+('Chukwuemeka Okafor', 'chukwuemeka.okafor@casewin.example', '+2348012345003', 'NBA/2010/8901',
+ 14, ARRAY['Oil & Gas Law', 'Environmental Law', 'Energy Law'],
+ 130000, 45000, 4.7, 76, 280, 82.1, true,
+ 'Port Harcourt, Rivers State', 'Rivers',
+ 'Specialized in oil and gas law with particular expertise in JOA disputes, environmental litigation, and regulatory compliance in the Niger Delta region.',
+ ARRAY['English', 'Igbo']),
+
+('Folashade Adeyemi-Williams', 'folashade.williams@casewin.example', '+2348012345004', 'NBA/2007/5678',
+ 17, ARRAY['Family Law', 'Estate Planning', 'Child Rights'],
+ 100000, 35000, 4.9, 156, 520, 91.2, true,
+ 'Ikeja, Lagos', 'Lagos',
+ 'Leading family law practitioner with a passion for child rights advocacy. Has handled complex custody disputes, high net-worth divorce proceedings, and estate administration matters.',
+ ARRAY['English', 'Yoruba']),
+
+('Ibrahim Suleiman Danjuma', 'ibrahim.danjuma@casewin.example', '+2348012345005', 'NBA/2003/3456',
+ 21, ARRAY['Land Law', 'Property Law', 'Real Estate'],
+ 140000, 48000, 4.6, 89, 380, 87.6, true,
+ 'Garki, Abuja', 'FCT',
+ 'One of Nigeria''s foremost land and property lawyers with deep expertise in the Land Use Act, compulsory acquisition, and real estate development transactions across multiple states.',
+ ARRAY['English', 'Hausa', 'Fulfulde']),
+
+('Ngozi Eze-Obi', 'ngozi.eze@casewin.example', '+2348012345006', 'NBA/2012/0123',
+ 12, ARRAY['Intellectual Property', 'Technology Law', 'Startup Law'],
+ 110000, 38000, 4.8, 65, 190, 88.4, true,
+ 'Lekki, Lagos', 'Lagos',
+ 'Tech-savvy IP lawyer specializing in protecting innovation. Advises leading Nigerian startups and tech companies on IP strategy, data protection compliance, and technology licensing.',
+ ARRAY['English', 'Igbo']),
+
+('Olumide Bankole SAN', 'olumide.bankole@casewin.example', '+2348012345007', 'NBA/1998/1234',
+ 26, ARRAY['Commercial Litigation', 'Arbitration', 'Banking Law'],
+ 200000, 75000, 4.9, 203, 680, 92.3, true,
+ 'Ikoyi, Lagos', 'Lagos',
+ 'Senior Advocate of Nigeria with over 25 years of experience in complex commercial litigation and international arbitration. Has appeared in over 50 Supreme Court cases.',
+ ARRAY['English', 'Yoruba', 'French']),
+
+('Hauwa Abdullahi-Kolo', 'hauwa.kolo@casewin.example', '+2348012345008', 'NBA/2011/7890',
+ 13, ARRAY['Immigration Law', 'International Law', 'Diplomatic Law'],
+ 100000, 35000, 4.5, 48, 160, 80.0, true,
+ 'Maitama, Abuja', 'FCT',
+ 'Immigration and international law specialist with expertise in work permits, expatriate quota management, and cross-border legal matters.',
+ ARRAY['English', 'Hausa', 'Arabic']),
+
+('Babatunde Fashola-Coker', 'babatunde.coker@casewin.example', '+2348012345009', 'NBA/2009/2345',
+ 15, ARRAY['Tax Law', 'Revenue Law', 'Customs Law'],
+ 120000, 42000, 4.7, 71, 240, 84.6, true,
+ 'Marina, Lagos', 'Lagos',
+ 'Tax law expert advising corporations and HNIs on tax planning, FIRS disputes, transfer pricing, and customs duty optimization. Former consultant to the Lagos State Internal Revenue Service.',
+ ARRAY['English', 'Yoruba']),
+
+('Aisha Garba-Musa', 'aisha.musa@casewin.example', '+2348012345010', 'NBA/2013/4567',
+ 11, ARRAY['Labour Law', 'Employment Law', 'Industrial Relations'],
+ 95000, 32000, 4.6, 54, 175, 83.4, true,
+ 'Central Business District, Abuja', 'FCT',
+ 'Employment law specialist with experience representing both employers and employees in the National Industrial Court. Expert in collective bargaining agreements and workplace dispute resolution.',
+ ARRAY['English', 'Hausa']);
+`;
+
+// Write all files
+fs.writeFileSync(path.join(dir, '001_initial_schema.sql'), m1, 'utf8');
+console.log('Migration 1 written: ' + m1.length + ' chars');
+
+fs.writeFileSync(path.join(dir, '002_seed_case_law.sql'), m2, 'utf8');
+console.log('Migration 2 written: ' + m2.length + ' chars');
+
+fs.writeFileSync(path.join(dir, '003_seed_markets_lawyers.sql'), m3, 'utf8');
+console.log('Migration 3 written: ' + m3.length + ' chars');
+
+console.log('All migrations written successfully!');

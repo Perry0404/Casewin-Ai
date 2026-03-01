@@ -1,8 +1,31 @@
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
+// Routes that don't require authentication
+const PUBLIC_ROUTES = [
+  '/',
+  '/auth/login',
+  '/auth/signup',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/privacy',
+  '/terms',
+]
+
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some(route => pathname === route)
+}
+
 export async function middleware(request: NextRequest) {
-  return await updateSession(request)
+  const { pathname } = request.nextUrl
+
+  // Always allow public routes and API routes
+  if (isPublicRoute(pathname) || pathname.startsWith('/api/')) {
+    return await updateSession(request)
+  }
+
+  // For protected routes, check auth and redirect if not logged in
+  return await updateSession(request, true)
 }
 
 export const config = {

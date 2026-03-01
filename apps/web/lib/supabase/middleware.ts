@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function updateSession(request: NextRequest) {
+export async function updateSession(request: NextRequest, requireAuth: boolean = false) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -13,6 +13,12 @@ export async function updateSession(request: NextRequest) {
 
   // Skip Supabase session refresh if not configured — prevents hanging
   if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+    // If auth is required but Supabase isn't configured, redirect to login
+    if (requireAuth) {
+      const loginUrl = new URL('/auth/login', request.url)
+      loginUrl.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(loginUrl)
+    }
     return response
   }
 
@@ -66,15 +72,29 @@ export async function updateSession(request: NextRequest) {
     // Timeout after 5s to prevent hanging
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 5000)
+    let user = null
     try {
-      await supabase.auth.getUser()
+      const { data } = await supabase.auth.getUser()
+      user = data?.user ?? null
     } catch {
       // Ignore errors — page will still load
     } finally {
       clearTimeout(timeout)
     }
+
+    // If auth is required and user is not logged in, redirect to login
+    if (requireAuth && !user) {
+      const loginUrl = new URL('/auth/login', request.url)
+      loginUrl.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   } catch {
-    // Supabase not available — pass through
+    // Supabase not available
+    if (requireAuth) {
+      const loginUrl = new URL('/auth/login', request.url)
+      loginUrl.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
   return response
