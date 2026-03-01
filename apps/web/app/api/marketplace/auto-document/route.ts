@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { callLLM } from '@/lib/agents/base-agent';
 
 const DOCUMENT_TEMPLATES = {

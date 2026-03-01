@@ -1,4 +1,4 @@
-﻿// CaseWin-NG Service Worker for Offline Support
+// CaseWin-NG Service Worker for Offline Support
 const CACHE_NAME = "casewin-ng-v1";
 const STATIC_CACHE_NAME = "casewin-ng-static-v1";
 const DYNAMIC_CACHE_NAME = "casewin-ng-dynamic-v1";

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createPredictionAgent } from '@/lib/agents/prediction-agent'
 import { getMemoryManager } from '@/lib/agents/memory'
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
       case 'predict_case':
         if (!caseInfo) return NextResponse.json({ success: false, error: 'Case info required' }, { status: 400 })
-        result = await agent.predictCaseOutcome(caseInfo)
+        result = await agent.predictCaseOutcome(caseInfo.facts || caseInfo.description || JSON.stringify(caseInfo), caseInfo.jurisdiction || 'Nigeria', caseInfo.legalArea || caseInfo.category || 'General')
         break
 
       case 'find_opportunities':
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
       case 'judicial_patterns':
         if (!court || !category) return NextResponse.json({ success: false, error: 'Court and category required' }, { status: 400 })
-        result = await agent.analyzeJudicialPatterns({ court, category, judge })
+        result = await agent.analyzeJudicialPatterns(court, category)
         break
 
       default:

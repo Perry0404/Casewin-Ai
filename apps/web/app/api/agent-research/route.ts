@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createResearchAgent, getVerificationLayer, getMemoryManager } from '@/lib/agents'
 
 export async function POST(req: NextRequest) {

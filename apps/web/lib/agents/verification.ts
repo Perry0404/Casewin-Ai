@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CaseWin Verification Layer (Serverless - Grok API)
  */
 

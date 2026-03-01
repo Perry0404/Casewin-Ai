@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Autonomous Legal Research Agent (Serverless - Grok API)
  */
 

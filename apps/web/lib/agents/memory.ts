@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CaseWin Memory System (Serverless - In-Memory)
  */
 

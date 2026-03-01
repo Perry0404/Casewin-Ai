@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Prediction Market AI Agent (Serverless - Grok API)
  */
 
@@ -91,5 +91,6 @@ export class PredictionMarketAgent extends BaseAgent {
     return refs
   }
 }
+
 
 export function createPredictionAgent() { return new PredictionMarketAgent() }
