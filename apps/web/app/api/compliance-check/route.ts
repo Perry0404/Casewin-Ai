@@ -18,12 +18,8 @@ export async function POST(req: NextRequest) {
 
     const selectedRegs = (regulations || []).map((r: string) => regulationNames[r] || r).join(', ') || 'All applicable Nigerian regulations'
 
-    // Check if API key is configured
     if (!process.env.XAI_API_KEY) {
-      return NextResponse.json({
-        success: true,
-        results: getMockCompliance(regulations)
-      })
+      return NextResponse.json({ success: false, error: 'AI service not configured. Please set XAI_API_KEY.' }, { status: 500 })
     }
 
     const systemPrompt = `You are an expert Nigerian regulatory compliance analyst with deep knowledge of CAMA 2020, NDPR, FIRS regulations, CBN guidelines, SEC rules, and other Nigerian business regulations.`
@@ -72,14 +68,12 @@ Be specific and cite relevant sections of regulations where applicable.`
     })
   } catch (error: any) {
     console.error('Compliance check error:', error)
-    return NextResponse.json({
-      success: true,
-      results: getMockCompliance([])
-    })
+    return NextResponse.json({ success: false, error: error.message || 'Compliance check failed' }, { status: 500 })
   }
 }
 
-function getMockCompliance(regulations: string[]) {
+// Legacy mock removed - all responses are real AI
+function _unusedMockCompliance(regulations: string[]) {
   const issues = []
 
   if (!regulations || regulations.length === 0 || regulations.includes('cama')) {

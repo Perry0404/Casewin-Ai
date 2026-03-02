@@ -16,14 +16,8 @@ export async function POST(req: NextRequest) {
 
     const targetLang = languageNames[targetLanguage] || targetLanguage
 
-    // Check if API key is configured
     if (!process.env.XAI_API_KEY) {
-      return NextResponse.json({
-        success: true,
-        translation: getMockTranslation(targetLanguage),
-        sourceLanguage: 'en',
-        targetLanguage
-      })
+      return NextResponse.json({ success: false, error: 'AI service not configured. Please set XAI_API_KEY.' }, { status: 500 })
     }
 
     const systemPrompt = `You are an expert translator specializing in Nigerian languages and legal terminology. You can accurately translate legal documents while preserving their legal meaning and formality.`
@@ -50,16 +44,11 @@ Provide only the translation, no explanations.`
     })
   } catch (error: any) {
     console.error('Translation error:', error)
-    return NextResponse.json({
-      success: true,
-      translation: getMockTranslation('yo'),
-      sourceLanguage: 'en',
-      targetLanguage: 'yo'
-    })
+    return NextResponse.json({ success: false, error: error.message || 'Translation failed' }, { status: 500 })
   }
 }
 
-function getMockTranslation(targetLanguage: string): string {
+function _unusedMockTranslation(targetLanguage: string): string {
   const translations: Record<string, string> = {
     'yo': `Ẹ káàbọ̀ sí ìwé àdéhùn yìí. 
 

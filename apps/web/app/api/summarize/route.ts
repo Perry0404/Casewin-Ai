@@ -5,12 +5,8 @@ export async function POST(req: NextRequest) {
   try {
     const { judgmentText, summaryLength } = await req.json()
 
-    // Check if API key is configured
     if (!process.env.XAI_API_KEY) {
-      return NextResponse.json({
-        success: true,
-        summary: getMockSummary()
-      })
+      return NextResponse.json({ success: false, error: 'AI service not configured. Please set XAI_API_KEY.' }, { status: 500 })
     }
 
     const systemPrompt = `You are an expert Nigerian legal analyst who specializes in summarizing court judgments. You can identify key legal principles, ratio decidendi, and obiter dicta from Nigerian court decisions.`
@@ -50,14 +46,11 @@ Format clearly with headings.`
     })
   } catch (error: any) {
     console.error('Summarization error:', error)
-    return NextResponse.json({
-      success: true,
-      summary: getMockSummary()
-    })
+    return NextResponse.json({ success: false, error: error.message || 'Summarization failed' }, { status: 500 })
   }
 }
 
-function getMockSummary() {
+function _unusedMockSummary() {
   return {
     title: 'Ariori v. Elemo',
     citation: '(1983) LPELR-SC.71/1982; [1983] 1 SCNLR 1',

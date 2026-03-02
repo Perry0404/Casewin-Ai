@@ -329,8 +329,7 @@ export default function PredictionsPage() {
   const [stats, setStats] = useState({
     totalVolume: 0,
     activeTraders: 0,
-    openMarkets: 0,
-    aiAccuracy: 87
+    openMarkets: 0
   });
 
   const fetchMarkets = useCallback(async () => {
@@ -381,8 +380,7 @@ export default function PredictionsPage() {
       setStats({
         totalVolume: totalVol,
         activeTraders: totalTraders,
-        openMarkets: transformedMarkets.length,
-        aiAccuracy: 87
+        openMarkets: transformedMarkets.length
       });
 
     } catch (err) {
@@ -399,11 +397,9 @@ export default function PredictionsPage() {
       const data = await res.json();
       if (data.balance !== undefined) {
         setUserBalance(data.balance);
-      } else {
-        setUserBalance(50000); // Default starting balance
       }
-    } catch {
-      setUserBalance(50000);
+    } catch (err) {
+      console.error('Failed to fetch balance:', err);
     }
   }, []);
 
@@ -562,7 +558,7 @@ export default function PredictionsPage() {
               </button>
 
               <p className="text-xs text-slate-500 text-center">
-                Demo mode: Funds are simulated for testing purposes
+                Funds are added to your CaseWin wallet
               </p>
             </div>
           </div>
@@ -619,8 +615,8 @@ export default function PredictionsPage() {
               <p className="text-sm text-slate-400">Open Markets</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-white">{stats.aiAccuracy}%</p>
-              <p className="text-sm text-slate-400">AI Accuracy</p>
+              <p className="text-3xl font-bold text-white">{CATEGORIES.length - 1}</p>
+              <p className="text-sm text-slate-400">Categories</p>
             </div>
           </div>
         </div>

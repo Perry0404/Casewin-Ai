@@ -7,12 +7,8 @@ export async function POST(req: NextRequest) {
 
     const position = casePosition === 'plaintiff' ? 'Plaintiff/Claimant' : 'Defendant/Respondent'
 
-    // Check if API key is configured
     if (!process.env.XAI_API_KEY) {
-      return NextResponse.json({
-        success: true,
-        arguments: getMockArguments(casePosition)
-      })
+      return NextResponse.json({ success: false, error: 'AI service not configured. Please set XAI_API_KEY.' }, { status: 500 })
     }
 
     const systemPrompt = `You are an expert Nigerian litigation lawyer with decades of experience in advocacy. You excel at crafting compelling legal arguments supported by Nigerian case law and statutes.`
@@ -52,14 +48,11 @@ Use formal legal language appropriate for Nigerian courts.`
     })
   } catch (error: any) {
     console.error('Arguments generation error:', error)
-    return NextResponse.json({
-      success: true,
-      arguments: getMockArguments('plaintiff')
-    })
+    return NextResponse.json({ success: false, error: error.message || 'Argument generation failed' }, { status: 500 })
   }
 }
 
-function getMockArguments(casePosition: string) {
+function _unusedMockArguments(casePosition: string) {
   const isPlaintiff = casePosition === 'plaintiff'
 
   return {

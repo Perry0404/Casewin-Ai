@@ -75,6 +75,51 @@ const tools = [
     href: '/tools/compliance',
     features: ['CAMA', 'NDPR', 'CBN', 'Tax Laws']
   },
+  {
+    id: 'deadlines',
+    title: 'Deadline Calculator',
+    icon: '📅',
+    description: 'AI calculates statutory deadlines and limitation periods for Nigerian courts',
+    color: 'from-violet-500 to-purple-500',
+    href: '/tools/deadlines',
+    features: ['Limitation Periods', 'Filing Dates', 'Court Rules']
+  },
+  {
+    id: 'billing',
+    title: 'Time & Billing',
+    icon: '💰',
+    description: 'Track billable hours, manage rates, and generate invoices with AI',
+    color: 'from-emerald-500 to-teal-500',
+    href: '/tools/billing',
+    features: ['Timer', 'Invoicing', 'Rate Tracking']
+  },
+  {
+    id: 'cases',
+    title: 'Case Manager',
+    icon: '📁',
+    description: 'Track active cases with suit numbers, courts, parties, and dates',
+    color: 'from-amber-500 to-yellow-500',
+    href: '/tools/cases',
+    features: ['Active Cases', 'Court Dates', 'Status Tracking']
+  },
+  {
+    id: 'filing',
+    title: 'Court Filing Prep',
+    icon: '📝',
+    description: 'Get filing checklists, formatting rules, and fees for Nigerian courts',
+    color: 'from-cyan-500 to-sky-500',
+    href: '/tools/filing',
+    features: ['Checklists', 'Format Rules', 'Fee Schedules']
+  },
+  {
+    id: 'citations',
+    title: 'Citation Generator',
+    icon: '📚',
+    description: 'Format Nigerian legal citations in NWLR, LPELR, SC, and more',
+    color: 'from-indigo-500 to-violet-500',
+    href: '/tools/citations',
+    features: ['NWLR', 'LPELR', 'Batch Format']
+  },
 ]
 
 export default function ToolsPage() {

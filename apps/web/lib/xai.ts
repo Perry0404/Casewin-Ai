@@ -6,7 +6,7 @@ export const xai = new OpenAI({
   baseURL: 'https://api.x.ai/v1',
 })
 
-export const XAI_MODEL = 'grok-beta'
+export const XAI_MODEL = 'grok-4'
 
 export async function generateWithXAI(prompt: string, systemPrompt?: string): Promise<string> {
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = []

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 interface Booking {
   id: string;
@@ -17,10 +19,10 @@ interface Booking {
   meeting_room_id: string;
 }
 
-interface CaseTracker {
+interface CaseItem {
   id: string;
   title: string;
-  status: 'active' | 'resolved' | 'pending_review';
+  status: string;
   lawyer_name: string;
   last_update: string;
   progress: number;
@@ -28,86 +30,98 @@ interface CaseTracker {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'cases' | 'meetings'>('overview');
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [cases, setCases] = useState<CaseItem[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
 
-  const [bookings] = useState<Booking[]>([
-    {
-      id: 'bk-001',
-      lawyer_name: 'Barr. Adebayo Ogunlesi',
-      lawyer_specialization: 'Corporate Law',
-      booking_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      booking_time: '10:00',
-      duration_hours: 2,
-      status: 'confirmed',
-      total_amount: 50000,
-      case_description: 'Company incorporation and regulatory compliance review',
-      meeting_room_id: 'consult-' + Math.random().toString(36).substring(2, 10),
-    },
-    {
-      id: 'bk-002',
-      lawyer_name: 'Barr. Chioma Nwankwo',
-      lawyer_specialization: 'Family Law',
-      booking_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      booking_time: '14:00',
-      duration_hours: 1,
-      status: 'pending',
-      total_amount: 30000,
-      case_description: 'Child custody arrangement consultation',
-      meeting_room_id: 'consult-' + Math.random().toString(36).substring(2, 10),
-    },
-    {
-      id: 'bk-003',
-      lawyer_name: 'Barr. Ibrahim Yusuf',
-      lawyer_specialization: 'Criminal Law',
-      booking_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      booking_time: '09:00',
-      duration_hours: 1,
-      status: 'completed',
-      total_amount: 35000,
-      case_description: 'Bail application review and strategy',
-      meeting_room_id: 'consult-' + Math.random().toString(36).substring(2, 10),
-    },
-  ]);
+  const fetchBookings = useCallback(async () => {
+    if (!user) return;
+    setLoadingBookings(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('lawyer_bookings')
+        .select(`
+          *,
+          lawyer:lawyer_id (
+            id,
+            specializations,
+            hourly_rate,
+            profiles:user_id ( full_name )
+          )
+        `)
+        .eq('client_id', user.id)
+        .order('scheduled_at', { ascending: false });
 
-  const [cases] = useState<CaseTracker[]>([
-    {
-      id: 'case-001',
-      title: 'Company Incorporation \u2014 TechNova Ltd',
-      status: 'active',
-      lawyer_name: 'Barr. Adebayo Ogunlesi',
-      last_update: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      progress: 65,
-    },
-    {
-      id: 'case-002',
-      title: 'Child Custody \u2014 Nwankwo vs Nwankwo',
-      status: 'pending_review',
-      lawyer_name: 'Barr. Chioma Nwankwo',
-      last_update: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      progress: 30,
-    },
-    {
-      id: 'case-003',
-      title: 'Bail Application \u2014 State vs Adamu',
-      status: 'resolved',
-      lawyer_name: 'Barr. Ibrahim Yusuf',
-      last_update: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      progress: 100,
-    },
-  ]);
+      if (error) {
+        console.error('Failed to fetch bookings:', error);
+        setBookings([]);
+        return;
+      }
+
+      const transformed: Booking[] = (data || []).map((b: any) => {
+        const scheduledDate = b.scheduled_at ? new Date(b.scheduled_at) : new Date();
+        return {
+          id: b.id,
+          lawyer_name: b.lawyer?.profiles?.full_name || 'Lawyer',
+          lawyer_specialization: b.lawyer?.specializations?.[0] || b.booking_type || 'Legal',
+          booking_date: scheduledDate.toISOString().split('T')[0],
+          booking_time: scheduledDate.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          duration_hours: Math.ceil(b.amount / (b.lawyer?.hourly_rate || 25000)),
+          status: b.status || 'pending',
+          total_amount: b.amount || 0,
+          case_description: b.notes || '',
+          meeting_room_id: b.meeting_room_id || `consult-${b.id?.substring(0, 8)}`,
+        };
+      });
+
+      setBookings(transformed);
+    } catch (err) {
+      console.error('Error fetching bookings:', err);
+      setBookings([]);
+    } finally {
+      setLoadingBookings(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth/login?redirect=/dashboard');
+      return;
+    }
+    if (user) {
+      fetchBookings();
+    }
+  }, [user, authLoading, router, fetchBookings]);
 
   const upcomingBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
   const completedBookings = bookings.filter(b => b.status === 'completed');
-  const activeCases = cases.filter(c => c.status === 'active' || c.status === 'pending_review');
+  const activeCases = cases.filter(c => c.status === 'active' || c.status === 'pending');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('casewin_cases');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setCases(parsed.map((c: any) => ({
+          id: c.id,
+          title: c.title || 'Untitled Case',
+          status: c.status || 'active',
+          lawyer_name: c.client || 'Client',
+          last_update: c.createdAt || new Date().toISOString(),
+          progress: c.status === 'closed' ? 100 : c.status === 'settled' ? 90 : c.status === 'active' ? 50 : 20,
+        })));
+      }
+    } catch { /* no saved cases */ }
+  }, []);
 
   const statusColors: Record<string, string> = {
     confirmed: 'bg-green-100 text-green-700',
     pending: 'bg-yellow-100 text-yellow-700',
     completed: 'bg-blue-100 text-blue-700',
     cancelled: 'bg-red-100 text-red-700',
-    active: 'bg-green-100 text-green-700',
-    pending_review: 'bg-yellow-100 text-yellow-700',
-    resolved: 'bg-blue-100 text-blue-700',
   };
 
   const Navigation = () => (
@@ -127,6 +141,17 @@ export default function DashboardPage() {
     </nav>
   );
 
+  if (authLoading || (!user && authLoading)) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -141,7 +166,7 @@ export default function DashboardPage() {
           <div className="py-8">
             <h2 className="text-3xl font-bold mb-2">My Dashboard</h2>
             <p className="text-indigo-200">
-              Track your consultations, cases, and upcoming video meetings
+              Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}. Track your consultations and upcoming meetings.
             </p>
           </div>
         </div>
@@ -157,7 +182,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Upcoming Meetings</p>
-                <p className="text-2xl font-bold text-gray-900">{upcomingBookings.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{loadingBookings ? '—' : upcomingBookings.length}</p>
               </div>
             </div>
           </div>
@@ -168,8 +193,8 @@ export default function DashboardPage() {
                 <span className="text-2xl">{"\uD83D\uDCC1"}</span>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Active Cases</p>
-                <p className="text-2xl font-bold text-gray-900">{activeCases.length}</p>
+                <p className="text-sm text-gray-500">Total Bookings</p>
+                <p className="text-2xl font-bold text-gray-900">{loadingBookings ? '—' : bookings.length}</p>
               </div>
             </div>
           </div>
@@ -181,7 +206,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Completed</p>
-                <p className="text-2xl font-bold text-gray-900">{completedBookings.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{loadingBookings ? '—' : completedBookings.length}</p>
               </div>
             </div>
           </div>
@@ -193,7 +218,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Video Calls</p>
-                <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{loadingBookings ? '—' : bookings.filter(b => b.meeting_room_id).length}</p>
               </div>
             </div>
           </div>
@@ -261,14 +286,12 @@ export default function DashboardPage() {
             {/* Quick Actions */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {[
                   { label: 'Hire Lawyer', href: '/marketplace', icon: '\uD83D\uDC68\u200D\u2696\uFE0F', color: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700' },
-                  { label: 'Draft Document', href: '/tools/draft', icon: '\uD83D\uDCDD', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
-                  { label: 'Analyze Contract', href: '/tools/analyze', icon: '\uD83D\uDD0D', color: 'bg-purple-50 hover:bg-purple-100 text-purple-700' },
-                  { label: 'Predict Case', href: '/tools/predict', icon: '\uD83C\uDFAF', color: 'bg-orange-50 hover:bg-orange-100 text-orange-700' },
-                  { label: 'Legal Research', href: '/tools/research', icon: '\uD83D\uDCDA', color: 'bg-blue-50 hover:bg-blue-100 text-blue-700' },
+                  { label: 'AI Tools', href: '/', icon: '\uD83E\uDD16', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Predictions', href: '/predictions', icon: '\uD83D\uDCCA', color: 'bg-pink-50 hover:bg-pink-100 text-pink-700' },
+                  { label: 'Start Video Call', href: `/consultation/instant-${Date.now().toString(36)}`, icon: '\uD83C\uDFA5', color: 'bg-purple-50 hover:bg-purple-100 text-purple-700' },
                 ].map((action) => (
                   <Link
                     key={action.label}
