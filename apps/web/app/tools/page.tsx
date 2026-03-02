@@ -120,6 +120,42 @@ const tools = [
     href: '/tools/citations',
     features: ['NWLR', 'LPELR', 'Batch Format']
   },
+  {
+    id: 'chatbot',
+    title: 'AI Legal Chatbot',
+    icon: '🤖',
+    description: 'Chat with AI about any Nigerian legal question — statutes, case law, and procedures',
+    color: 'from-blue-500 to-indigo-500',
+    href: '/tools/chatbot',
+    features: ['Conversational', 'Nigerian Law', 'Real-time']
+  },
+  {
+    id: 'fees',
+    title: 'Legal Fee Estimator',
+    icon: '💸',
+    description: 'AI estimates legal fees by matter type, court, and complexity using NBA scales',
+    color: 'from-rose-500 to-pink-500',
+    href: '/tools/fees',
+    features: ['Fee Breakdown', 'Court Fees', 'VAT']
+  },
+  {
+    id: 'hearing-prep',
+    title: 'Hearing Prep Assistant',
+    icon: '🎯',
+    description: 'AI generates examination questions, cross-exam strategies, and court prep',
+    color: 'from-violet-500 to-fuchsia-500',
+    href: '/tools/hearing-prep',
+    features: ['Exam-in-Chief', 'Cross-Exam', 'Objections']
+  },
+  {
+    id: 'clauses',
+    title: 'Clause Library',
+    icon: '📚',
+    description: 'Save, search, and reuse Nigerian legal clauses with AI generation',
+    color: 'from-sky-500 to-blue-500',
+    href: '/tools/clauses',
+    features: ['Save & Reuse', 'AI Generate', 'Nigerian Law']
+  },
 ]
 
 export default function ToolsPage() {
@@ -133,14 +169,14 @@ export default function ToolsPage() {
               <span className="text-2xl">⚖️</span>
               <span className="text-xl font-bold text-white">CaseWin AI</span>
             </Link>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4 text-sm">
               <Link href="/predictions" className="text-gray-300 hover:text-white transition">
                 Predictions
               </Link>
               <Link href="/marketplace" className="text-gray-300 hover:text-white transition">
                 Marketplace
               </Link>
-              <Link href="/auth/login" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition">
+              <Link href="/auth/login" className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition text-sm">
                 Sign In
               </Link>
             </div>

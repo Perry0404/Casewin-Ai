@@ -9,20 +9,10 @@ export async function GET(request: Request) {
     const specialty = searchParams.get('specialty')
     const location = searchParams.get('location')
 
-    // Get all lawyer profiles with their user profile data
+    // Get all lawyer profiles - use direct columns (no FK join to profiles needed)
     const { data: lawyerProfiles, error: lawyerError } = await getSupabaseClient()
       .from('lawyer_profiles')
-      .select(`
-        *,
-        profiles:user_id (
-          id,
-          email,
-          full_name,
-          bio,
-          location,
-          avatar_url
-        )
-      `)
+      .select('*')
       .order('rating', { ascending: false })
 
     if (lawyerError) {
@@ -30,15 +20,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ lawyers: [], error: lawyerError.message })
     }
 
-    // Transform and filter data
+    // Transform and filter data - use lawyer_profiles own columns
     let lawyers = (lawyerProfiles || []).map(lp => ({
       id: lp.id,
       user_id: lp.user_id,
-      full_name: lp.profiles?.full_name || 'Anonymous Lawyer',
-      email: lp.profiles?.email || '',
-      bio: lp.profiles?.bio || '',
-      location: lp.profiles?.location || 'Nigeria',
-      avatar_url: lp.profiles?.avatar_url || '',
+      full_name: lp.full_name || 'Anonymous Lawyer',
+      email: lp.email || '',
+      bio: lp.bio || '',
+      location: lp.location || 'Nigeria',
+      avatar_url: lp.avatar_url || '',
       bar_number: lp.bar_number || '',
       years_of_experience: lp.years_of_experience || 0,
       specializations: lp.specializations || [],

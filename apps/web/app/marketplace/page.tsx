@@ -33,17 +33,17 @@ export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const Navigation = () => (
-    <nav className="flex gap-6">
-      <Link href="/" className="text-white hover:text-gray-300 transition-colors font-semibold">
+    <nav className="flex gap-3 sm:gap-6 text-sm sm:text-base overflow-x-auto">
+      <Link href="/" className="text-white hover:text-gray-300 transition-colors font-semibold whitespace-nowrap">
         AI Tools
       </Link>
-      <Link href="/marketplace" className="text-white hover:text-gray-300 transition-colors font-semibold underline">
+      <Link href="/marketplace" className="text-white hover:text-gray-300 transition-colors font-semibold underline whitespace-nowrap">
         Hire Lawyers
       </Link>
-      <Link href="/predictions" className="text-white hover:text-gray-300 transition-colors font-semibold">
+      <Link href="/predictions" className="text-white hover:text-gray-300 transition-colors font-semibold whitespace-nowrap">
         Predictions
       </Link>
-      <Link href="/dashboard" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+      <Link href="/dashboard" className="text-white hover:text-indigo-200 transition-colors font-semibold whitespace-nowrap">
         Dashboard
       </Link>
     </nav>
@@ -193,20 +193,20 @@ export default function MarketplacePage() {
 
       <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6 border-b border-blue-700">
+          <div className="flex items-center justify-between py-4 sm:py-6 border-b border-blue-700">
             <div>
-              <h1 className="text-2xl font-bold">CaseWinAI</h1>
+              <h1 className="text-xl sm:text-2xl font-bold">CaseWinAI</h1>
             </div>
             <Navigation />
           </div>
-          <div className="py-12">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-4xl font-bold">🇳🇬 Hire a Nigerian Lawyer</h2>
+          <div className="py-8 sm:py-12">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <h2 className="text-2xl sm:text-4xl font-bold">🇳🇬 Hire a Nigerian Lawyer</h2>
               <span className="px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-full flex items-center gap-1">
                 🎥 Video Calls
               </span>
             </div>
-            <p className="text-xl text-indigo-100">
+            <p className="text-base sm:text-xl text-indigo-100">
               Browse verified lawyers across all 36 states. Book video consultations in-app!
             </p>
             {isOffline && lastUpdated && (
@@ -303,51 +303,51 @@ export default function MarketplacePage() {
             </div>
           </Link>
 
-          <Link href="/tools/draft" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-blue-600 p-5">
+          <Link href="/tools/chatbot" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-blue-600 p-5">
             <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-blue-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">📄</span>
+              <span className="text-xl group-hover:brightness-200">🤖</span>
             </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Document Generator</h3>
-            <p className="text-xs text-gray-600 mb-3">Generate contracts, agreements, affidavits, petitions, and legal documents with Grok 4 AI.</p>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">AI Legal Chatbot</h3>
+            <p className="text-xs text-gray-600 mb-3">Chat with AI about any Nigerian legal question — statutes, case law, procedures, and practice.</p>
             <div className="flex items-center gap-1.5">
               <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">AI</span>
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">AI Chat</span>
             </div>
           </Link>
 
-          <Link href="/tools/analyze" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-red-600 p-5">
-            <div className="w-11 h-11 bg-red-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-red-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">🔍</span>
+          <Link href="/tools/fees" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-rose-600 p-5">
+            <div className="w-11 h-11 bg-rose-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-rose-600 transition-colors">
+              <span className="text-xl group-hover:brightness-200">💸</span>
             </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Contract Reviewer</h3>
-            <p className="text-xs text-gray-600 mb-3">AI scans contracts for risks, hidden clauses, missing protections. Get a full risk analysis report.</p>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Legal Fee Estimator</h3>
+            <p className="text-xs text-gray-600 mb-3">AI estimates lawyer fees by matter type, court, and complexity — based on NBA fee scales.</p>
             <div className="flex items-center gap-1.5">
               <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full font-medium">AI</span>
+              <span className="text-xs bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-medium">AI</span>
             </div>
           </Link>
 
-          <Link href="/tools/compliance" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-orange-600 p-5">
-            <div className="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-orange-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">✅</span>
+          <Link href="/tools/hearing-prep" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-violet-600 p-5">
+            <div className="w-11 h-11 bg-violet-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-violet-600 transition-colors">
+              <span className="text-xl group-hover:brightness-200">🎯</span>
             </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Compliance Checker</h3>
-            <p className="text-xs text-gray-600 mb-3">Check if your business or document complies with Nigerian regulations — CAMA, FIRS, SEC, CBN, etc.</p>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Hearing Prep Assistant</h3>
+            <p className="text-xs text-gray-600 mb-3">AI generates examination questions, cross-exam strategies, objections, and court prep checklists.</p>
             <div className="flex items-center gap-1.5">
               <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">AI</span>
+              <span className="text-xs bg-violet-100 text-violet-800 px-2 py-0.5 rounded-full font-medium">AI</span>
             </div>
           </Link>
 
-          <Link href="/tools/research" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-teal-600 p-5">
-            <div className="w-11 h-11 bg-teal-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-teal-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">🔬</span>
+          <Link href="/tools/clauses" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-sky-600 p-5">
+            <div className="w-11 h-11 bg-sky-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-sky-600 transition-colors">
+              <span className="text-xl group-hover:brightness-200">📚</span>
             </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Legal Research</h3>
-            <p className="text-xs text-gray-600 mb-3">AI-powered Nigerian legal research — find cases, statutes, constitutional provisions, and authorities.</p>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Clause Library</h3>
+            <p className="text-xs text-gray-600 mb-3">Save, search, and reuse Nigerian legal clauses — with AI generation for custom clause drafting.</p>
             <div className="flex items-center gap-1.5">
               <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-medium">AI</span>
+              <span className="text-xs bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full font-medium">AI + Storage</span>
             </div>
           </Link>
         </div>
