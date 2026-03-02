@@ -5,14 +5,7 @@ export async function GET() {
   try {
     const { data: lawyers, error } = await getSupabaseClient()
       .from('lawyer_profiles')
-      .select(`
-        *,
-        profiles:user_id (
-          full_name,
-          email,
-          location
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -20,13 +13,13 @@ export async function GET() {
       return NextResponse.json({ lawyers: [], error: error.message })
     }
 
-    // Transform data
+    // Transform data - use lawyer_profiles own columns directly
     const transformedLawyers = (lawyers || []).map(l => ({
       id: l.id,
       user_id: l.user_id,
-      full_name: l.profiles?.full_name || 'Unknown',
-      email: l.profiles?.email || '',
-      location: l.profiles?.location || '',
+      full_name: l.full_name || 'Unknown',
+      email: l.email || '',
+      location: l.location || '',
       bar_number: l.bar_number || '',
       specializations: l.specializations || [],
       is_verified: l.is_verified || false,
