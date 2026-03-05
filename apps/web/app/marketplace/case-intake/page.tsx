@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import LawyerGuard from '@/components/LawyerGuard'
 
 interface AIAnalysis {
   specializations: string[]
@@ -87,6 +88,7 @@ export default function CaseIntakePage() {
   }
 
   return (
+    <LawyerGuard>
     <div className="min-h-screen bg-gray-900 text-white">
       <header className="bg-black/40 backdrop-blur-xl border-b border-white/10 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -325,5 +327,6 @@ export default function CaseIntakePage() {
         )}
       </main>
     </div>
+    </LawyerGuard>
   )
 }

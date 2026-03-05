@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Lawyer {
   id: string;
@@ -21,6 +22,8 @@ const CACHE_EXPIRY_KEY = 'casewin_lawyers_cache_expiry';
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
 
 export default function MarketplacePage() {
+  const { profile } = useAuth();
+  const isLawyer = profile?.user_type === 'lawyer' || profile?.user_type === 'law_firm';
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [filteredLawyers, setFilteredLawyers] = useState<Lawyer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,11 +229,33 @@ export default function MarketplacePage() {
               <span className="text-white text-lg">⚡</span>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Law Firm Automation</h2>
+            {!isLawyer && (
+              <span className="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full flex items-center gap-1">
+                🔒 Lawyers & Law Firms Only
+              </span>
+            )}
           </div>
-          <p className="text-gray-600 ml-11">Tools that help lawyers and law firms run more efficiently</p>
+          <p className="text-gray-600 ml-11">
+            {isLawyer
+              ? 'Tools that help lawyers and law firms run more efficiently'
+              : 'These tools are available to registered lawyers and law firms. Sign up as a lawyer to access them.'}
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-12">
+        <div className="relative">
+        {!isLawyer && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 rounded-2xl flex items-center justify-center">
+            <div className="text-center p-6 bg-white rounded-2xl shadow-lg border max-w-sm mx-4">
+              <span className="text-4xl block mb-3">🔒</span>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Lawyers & Law Firms Only</h3>
+              <p className="text-sm text-gray-600 mb-4">Register as a lawyer or law firm to unlock all automation tools.</p>
+              <Link href="/auth/signup?type=lawyer" className="inline-block px-5 py-2.5 bg-green-700 text-white font-semibold rounded-xl hover:bg-green-800 transition-colors text-sm">
+                Register as Lawyer
+              </Link>
+            </div>
+          </div>
+        )}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-12 ${!isLawyer ? 'opacity-50 pointer-events-none select-none' : ''}`}>
           <Link href="/marketplace/case-intake" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-blue-600 p-5">
             <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-blue-600 transition-colors">
               <span className="text-xl group-hover:brightness-200">🎯</span>
@@ -350,6 +375,7 @@ export default function MarketplacePage() {
               <span className="text-xs bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full font-medium">AI + Storage</span>
             </div>
           </Link>
+        </div>
         </div>
 
         {/* Divider */}
