@@ -69,17 +69,14 @@ export async function updateSession(request: NextRequest, requireAuth: boolean =
       }
     )
 
-    // Timeout after 5s to prevent hanging
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 5000)
+    // Use getSession() for speed (local JWT check, no server roundtrip)
+    // getUser() makes a server call which adds 1-3s latency
     let user = null
     try {
-      const { data } = await supabase.auth.getUser()
-      user = data?.user ?? null
+      const { data } = await supabase.auth.getSession()
+      user = data?.session?.user ?? null
     } catch {
       // Ignore errors — page will still load
-    } finally {
-      clearTimeout(timeout)
     }
 
     // If auth is required and user is not logged in, redirect to login

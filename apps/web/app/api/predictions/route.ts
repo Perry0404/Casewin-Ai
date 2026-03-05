@@ -30,13 +30,19 @@ export async function GET(request: Request) {
     // Transform data for frontend with AMM pricing
     const transformedMarkets = (markets || []).map(market => {
       // Get shares from outcome_options or use defaults
-      const yesShares = market.outcome_options?.yes_shares || 10000;
-      const noShares = market.outcome_options?.no_shares || 10000;
+      // Higher default shares = tighter spread, less slippage for low-liquidity markets
+      const yesShares = market.outcome_options?.yes_shares || 20000;
+      const noShares = market.outcome_options?.no_shares || 20000;
       const total = yesShares + noShares;
 
       // Calculate prices using CPMM
-      const yesPrice = noShares / total;
-      const noPrice = yesShares / total;
+      // For low-liquidity markets, cap extreme prices to protect traders
+      let yesPrice = noShares / total;
+      let noPrice = yesShares / total;
+
+      // Clamp prices between 0.10 and 0.90 to prevent extreme odds
+      yesPrice = Math.max(0.10, Math.min(0.90, yesPrice));
+      noPrice = Math.max(0.10, Math.min(0.90, noPrice));
 
       return {
         id: market.id,
@@ -49,7 +55,7 @@ export async function GET(request: Request) {
         yes_price: yesPrice,
         no_price: noPrice,
         total_pool: market.total_pool || 0,
-        liquidity_pool: market.liquidity_pool || 10000,
+        liquidity_pool: market.liquidity_pool || 20000,
         resolved: market.status === 'resolved',
         outcome: market.actual_outcome,
         resolution_source: market.resolution_source,
@@ -76,7 +82,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Title must be at least 10 characters' }, { status: 400 });
     }
 
-    const liquidity = initial_liquidity || 10000;
+    const liquidity = initial_liquidity || 20000;
 
     const { data, error } = await supabase
       .from('prediction_markets')

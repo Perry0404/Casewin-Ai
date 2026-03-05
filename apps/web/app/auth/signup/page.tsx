@@ -90,10 +90,20 @@ export default function SignupPage() {
       if (!formData.hourlyRate) { setError('Hourly rate is required'); setLoading(false); return }
     }
 
-    const { error, user } = await signUp(formData.email, formData.password, formData.fullName, formData.userType)
+    const { error: signUpError, user } = await signUp(formData.email, formData.password, formData.fullName, formData.userType)
 
-    if (error) {
-      setError(error.message)
+    if (signUpError) {
+      // Provide user-friendly error messages
+      const msg = signUpError.message || 'Signup failed'
+      if (msg.includes('duplicate') || msg.includes('already registered') || msg.includes('already exists')) {
+        setError('An account with this email already exists. Please sign in instead.')
+      } else if (msg.includes('Database') || msg.includes('database')) {
+        setError('Account setup encountered an issue. Please try again or contact support.')
+      } else if (msg.includes('rate limit') || msg.includes('too many')) {
+        setError('Too many signup attempts. Please wait a few minutes and try again.')
+      } else {
+        setError(msg)
+      }
       setLoading(false)
     } else {
       if (formData.userType === 'lawyer' && user) {

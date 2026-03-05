@@ -31,6 +31,9 @@ const CATEGORIES = [
   { id: 'corporate', name: 'Corporate', icon: '🏢' },
   { id: 'criminal', name: 'Criminal', icon: '🚨' },
   { id: 'regulatory', name: 'Regulatory', icon: '📋' },
+  { id: 'crypto', name: 'Crypto', icon: '₿' },
+  { id: 'technology', name: 'Technology', icon: '💻' },
+  { id: 'world_politics', name: 'World Politics', icon: '🌍' },
   { id: 'sports', name: 'Sports', icon: '⚽' },
   { id: 'entertainment', name: 'Entertainment', icon: '🎬' },
 ];
@@ -47,10 +50,13 @@ function formatDate(dateStr: string): string {
 }
 
 // Generate AI prediction based on market price
+// Reduced variance for low-liquidity markets to prevent extreme odds
 function generateAIPrediction(yesPrice: number): { prediction: number; confidence: number } {
-  const variance = (Math.random() - 0.5) * 0.12;
-  const prediction = Math.max(0.08, Math.min(0.92, yesPrice + variance));
-  const confidence = 0.70 + Math.random() * 0.22;
+  // Tighter variance (±0.04 instead of ±0.06) to keep odds conservative
+  const variance = (Math.random() - 0.5) * 0.08;
+  // Clamp predictions closer to center (0.20 to 0.80) for low-liquidity protection
+  const prediction = Math.max(0.20, Math.min(0.80, yesPrice + variance));
+  const confidence = 0.60 + Math.random() * 0.20;
   return { prediction, confidence };
 }
 
@@ -63,7 +69,7 @@ interface MarketCardProps {
 
 function MarketCard({ market, onTrade, onInsufficientFunds, userBalance }: MarketCardProps) {
   const [showTrading, setShowTrading] = useState(false);
-  const [shares, setShares] = useState(100);
+  const [shares, setShares] = useState(50);
   const [outcome, setOutcome] = useState<'yes' | 'no'>('yes');
   const [isTrading, setIsTrading] = useState(false);
   const [tradeSuccess, setTradeSuccess] = useState(false);
@@ -228,7 +234,7 @@ function MarketCard({ market, onTrade, onInsufficientFunds, userBalance }: Marke
                 </div>
 
                 <div className="flex gap-2 mb-3">
-                  {[100, 500, 1000, 5000].map((amount) => (
+                  {[50, 100, 250, 500].map((amount) => (
                     <button
                       key={amount}
                       onClick={() => setShares(amount)}
@@ -513,7 +519,7 @@ export default function PredictionsPage() {
               </div>
 
               <div className="grid grid-cols-4 gap-2">
-                {[5000, 10000, 25000, 50000].map((amount) => (
+                {[2000, 5000, 10000, 25000].map((amount) => (
                   <button
                     key={amount}
                     onClick={() => setFundAmount(amount)}

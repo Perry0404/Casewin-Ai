@@ -48,17 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Timeout to prevent hanging if Supabase is unreachable
     const timeout = setTimeout(() => {
       setLoading(false)
-    }, 5000)
+    }, 3000)
 
     // Get initial session
     supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
       clearTimeout(timeout)
       setUser(data.session?.user ?? null)
       if (data.session?.user) {
-        fetchProfile(data.session.user.id)
-        fetchWallet(data.session.user.id)
+        // Fetch profile and wallet in parallel for speed
+        Promise.all([
+          fetchProfile(data.session.user.id),
+          fetchWallet(data.session.user.id)
+        ]).finally(() => setLoading(false))
+      } else {
+        setLoading(false)
       }
-      setLoading(false)
     }).catch(() => {
       clearTimeout(timeout)
       setLoading(false)
@@ -69,8 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event: string, session: any) => {
         setUser(session?.user ?? null)
         if (session?.user) {
-          await fetchProfile(session.user.id)
-          await fetchWallet(session.user.id)
+          // Fetch both in parallel
+          await Promise.all([
+            fetchProfile(session.user.id),
+            fetchWallet(session.user.id)
+          ])
         } else {
           setProfile(null)
           setWallet(null)
