@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -48,7 +47,6 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const { signUp } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -90,22 +88,28 @@ export default function SignupPage() {
       if (!formData.hourlyRate) { setError('Hourly rate is required'); setLoading(false); return }
     }
 
-    const { error: signUpError, user } = await signUp(formData.email, formData.password, formData.fullName, formData.userType)
+    // Use server-side API for signup (uses service role key to bypass trigger/RLS issues)
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.fullName,
+          userType: formData.userType,
+        })
+      })
+      const data = await res.json()
 
-    if (signUpError) {
-      // Provide user-friendly error messages
-      const msg = signUpError.message || 'Signup failed'
-      if (msg.includes('duplicate') || msg.includes('already registered') || msg.includes('already exists')) {
-        setError('An account with this email already exists. Please sign in instead.')
-      } else if (msg.includes('Database') || msg.includes('database')) {
-        setError('Account setup encountered an issue. Please try again or contact support.')
-      } else if (msg.includes('rate limit') || msg.includes('too many')) {
-        setError('Too many signup attempts. Please wait a few minutes and try again.')
-      } else {
-        setError(msg)
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Signup failed. Please try again.')
+        setLoading(false)
+        return
       }
-      setLoading(false)
-    } else {
+
+      const user = data.user
+
       if (formData.userType === 'lawyer' && user) {
         try {
           const res = await fetch('/api/lawyers/register', {
@@ -127,6 +131,10 @@ export default function SignupPage() {
         }
       }
       setSuccess(true)
+    } catch (err) {
+      console.error('Signup error:', err)
+      setError('An unexpected error occurred. Please try again.')
+      setLoading(false)
     }
   }
 

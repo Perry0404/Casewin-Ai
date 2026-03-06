@@ -134,12 +134,12 @@ function MarketCard({ market, onTrade, onInsufficientFunds, userBalance }: Marke
           {market.title}
         </h3>
 
-        {/* AI Prediction Badge */}
+        {/* AI Prediction Badge — AI Oracle powered by Grok */}
         {market.ai_prediction !== null && (
           <div className="flex items-center gap-2 mb-4">
             <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600/20 to-pink-600/20 px-3 py-1.5 rounded-full border border-purple-500/30">
               <span className="text-xs font-medium text-purple-300">
-                🤖 AI: {Math.round(market.ai_prediction * 100)}% YES
+                🧠 Oracle: {Math.round(market.ai_prediction * 100)}% YES
               </span>
               {market.ai_confidence !== null && (
                 <span className="text-xs text-slate-400">
@@ -317,6 +317,238 @@ function MarketCard({ market, onTrade, onInsufficientFunds, userBalance }: Marke
           </Link>
         </div>
       </div>
+    </div>
+  );
+}
+
+// AI Oracle Panel Component
+interface OracleAnalysis {
+  market_id: string;
+  title: string;
+  ai_probability: number;
+  ai_confidence: number;
+  reasoning: string;
+  key_factors: string[];
+  risk_level: 'low' | 'medium' | 'high';
+  recommendation: string;
+  data_sources: string[];
+  last_updated: string;
+}
+
+function AIOracle({ markets }: { markets: Market[] }) {
+  const [analyses, setAnalyses] = useState<OracleAnalysis[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedMarket, setSelectedMarket] = useState<string | null>(null);
+  const [question, setQuestion] = useState('');
+  const [oracleAnswer, setOracleAnswer] = useState<string | null>(null);
+  const [isAsking, setIsAsking] = useState(false);
+  const [oracleError, setOracleError] = useState<string | null>(null);
+
+  const analyzeMarkets = async (category?: string) => {
+    setIsAnalyzing(true);
+    setOracleError(null);
+    try {
+      const params = new URLSearchParams();
+      if (category && category !== 'all') params.set('category', category);
+      const res = await fetch(`/api/predictions/oracle?${params}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setAnalyses(data.analyses || []);
+    } catch (err) {
+      setOracleError(err instanceof Error ? err.message : 'Oracle analysis failed');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const analyzeOne = async (marketId: string) => {
+    setIsAnalyzing(true);
+    setOracleError(null);
+    setSelectedMarket(marketId);
+    try {
+      const res = await fetch(`/api/predictions/oracle?marketId=${marketId}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setAnalyses(data.analyses || []);
+    } catch (err) {
+      setOracleError(err instanceof Error ? err.message : 'Analysis failed');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const askOracle = async () => {
+    if (!selectedMarket || !question.trim()) return;
+    setIsAsking(true);
+    setOracleAnswer(null);
+    try {
+      const res = await fetch('/api/predictions/oracle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marketId: selectedMarket, question }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setOracleAnswer(data.answer);
+    } catch (err) {
+      setOracleAnswer('Oracle could not process your question. Please try again.');
+    } finally {
+      setIsAsking(false);
+    }
+  };
+
+  const riskColor = (level: string) => {
+    switch(level) {
+      case 'low': return 'text-emerald-400 bg-emerald-500/20';
+      case 'high': return 'text-red-400 bg-red-500/20';
+      default: return 'text-yellow-400 bg-yellow-500/20';
+    }
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-3xl p-6 border border-purple-500/30 mb-8">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
+            🧠
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white">AI Oracle</h2>
+            <p className="text-sm text-slate-400">Powered by Grok 4 — Real-time market analysis</p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => analyzeMarkets()}
+          disabled={isAnalyzing}
+          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl font-medium text-sm transition-all disabled:opacity-50 flex items-center gap-2"
+        >
+          {isAnalyzing ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Analyzing...
+            </>
+          ) : (
+            '🔮 Run Oracle Analysis'
+          )}
+        </button>
+      </div>
+
+      {oracleError && (
+        <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-xl">
+          <p className="text-sm text-red-400">{oracleError}</p>
+        </div>
+      )}
+
+      {/* Quick market selector for single analysis */}
+      {markets.length > 0 && (
+        <div className="mb-4">
+          <select
+            value={selectedMarket || ''}
+            onChange={(e) => {
+              setSelectedMarket(e.target.value);
+              if (e.target.value) analyzeOne(e.target.value);
+            }}
+            className="w-full px-4 py-3 bg-slate-800/80 border border-slate-700/50 rounded-xl text-white text-sm"
+          >
+            <option value="">Select a market for deep analysis...</option>
+            {markets.map(m => (
+              <option key={m.id} value={m.id}>{m.title}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Ask Oracle a question */}
+      {selectedMarket && (
+        <div className="mb-6 flex gap-2">
+          <input
+            type="text"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Ask the Oracle anything about this market..."
+            className="flex-1 px-4 py-3 bg-slate-800/80 border border-slate-700/50 rounded-xl text-white text-sm placeholder-slate-400"
+            onKeyDown={(e) => e.key === 'Enter' && askOracle()}
+          />
+          <button
+            onClick={askOracle}
+            disabled={isAsking || !question.trim()}
+            className="px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-medium text-sm disabled:opacity-50"
+          >
+            {isAsking ? '...' : 'Ask'}
+          </button>
+        </div>
+      )}
+
+      {oracleAnswer && (
+        <div className="mb-6 p-4 bg-purple-900/40 border border-purple-500/30 rounded-xl">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-purple-400 font-semibold text-sm">🧠 Oracle Response</span>
+          </div>
+          <p className="text-slate-300 text-sm leading-relaxed">{oracleAnswer}</p>
+        </div>
+      )}
+
+      {/* Analysis Results */}
+      {analyses.length > 0 && (
+        <div className="space-y-4">
+          {analyses.map((analysis) => (
+            <div key={analysis.market_id} className="bg-slate-800/60 rounded-xl p-5 border border-slate-700/50">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h3 className="text-white font-semibold text-sm flex-1">{analysis.title}</h3>
+                <span className={`px-2 py-1 rounded-lg text-xs font-medium ${riskColor(analysis.risk_level)}`}>
+                  {analysis.risk_level.toUpperCase()} RISK
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="bg-slate-900/60 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-purple-400">{Math.round(analysis.ai_probability * 100)}%</p>
+                  <p className="text-xs text-slate-400">AI Probability (YES)</p>
+                </div>
+                <div className="bg-slate-900/60 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-pink-400">{Math.round(analysis.ai_confidence * 100)}%</p>
+                  <p className="text-xs text-slate-400">Confidence</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-slate-300 mb-3 leading-relaxed">{analysis.reasoning}</p>
+
+              {analysis.key_factors.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-slate-400 mb-1.5">Key Factors:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {analysis.key_factors.map((factor, i) => (
+                      <span key={i} className="px-2 py-1 bg-slate-700/60 rounded-lg text-xs text-slate-300">
+                        {factor}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 p-2.5 bg-purple-900/30 rounded-lg border border-purple-500/20">
+                <span className="text-purple-400 text-sm">💡</span>
+                <p className="text-sm text-purple-300">{analysis.recommendation}</p>
+              </div>
+
+              <p className="text-xs text-slate-500 mt-2">
+                Sources: {analysis.data_sources.join(', ')} | Updated: {new Date(analysis.last_updated).toLocaleTimeString()}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {analyses.length === 0 && !isAnalyzing && (
+        <div className="text-center py-6">
+          <p className="text-slate-400 text-sm">Click &quot;Run Oracle Analysis&quot; to get AI-powered insights on top markets</p>
+          <p className="text-slate-500 text-xs mt-1">Or select a specific market for deep analysis</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -666,6 +898,9 @@ export default function PredictionsPage() {
             </button>
           ))}
         </div>
+
+        {/* AI Oracle Section */}
+        <AIOracle markets={markets} />
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
