@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createAuthClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -124,8 +125,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const { DEPOSIT_WALLET, BASE_RPC_URL, ETH_NGN_RATE, USDC_NGN_RATE } = getConfig()
+    
+    // Verify user session from cookies (not from request body)
+    const supabase = await createAuthClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const userId = user?.id || null
+    
     const body = await request.json()
-    const { txHash, userId } = body
+    const { txHash } = body
 
     if (!txHash || !txHash.startsWith('0x')) {
       return NextResponse.json({ error: 'Valid transaction hash (0x...) is required' }, { status: 400 })

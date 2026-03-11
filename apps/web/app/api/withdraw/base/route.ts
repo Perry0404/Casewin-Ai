@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createAuthClient } from '@/lib/supabase/server'
 import { ethers } from 'ethers'
 
 export const dynamic = 'force-dynamic'
@@ -80,11 +81,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, toAddress, token, ngnAmount } = body
+    const { toAddress, token, ngnAmount } = body
 
-    if (!userId) {
+    // Verify user session from cookies (NEVER trust userId from client)
+    const supabase = await createAuthClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
       return NextResponse.json({ error: 'You must be logged in to withdraw' }, { status: 401 })
     }
+    const userId = user.id
 
     if (!toAddress || !isValidBaseAddress(toAddress)) {
       return NextResponse.json(
