@@ -10,12 +10,16 @@ export const dynamic = 'force-dynamic'
 // No admin approval needed. Hot wallet sends crypto directly.
 // ============================================================
 
-const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org'
-const HOT_WALLET_KEY = process.env.BASE_HOT_WALLET_PRIVATE_KEY || '' // Private key of the hot wallet
 const USDC_BASE_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 
-const USDC_NGN_RATE = parseFloat(process.env.USDC_NGN_RATE || '1571')
-const ETH_NGN_RATE = parseFloat(process.env.ETH_NGN_RATE || '5500000')
+function getWithdrawConfig() {
+  return {
+    BASE_RPC_URL: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
+    HOT_WALLET_KEY: process.env.BASE_HOT_WALLET_PRIVATE_KEY || '',
+    USDC_NGN_RATE: parseFloat(process.env.USDC_NGN_RATE || '1571'),
+    ETH_NGN_RATE: parseFloat(process.env.ETH_NGN_RATE || '5500000'),
+  }
+}
 
 const MIN_WITHDRAWAL_NGN = 5000
 const WITHDRAWAL_FEE_PERCENT = 1.5
@@ -48,8 +52,8 @@ export async function GET(request: NextRequest) {
     minWithdrawalNGN: MIN_WITHDRAWAL_NGN,
     feePercent: WITHDRAWAL_FEE_PERCENT,
     rates: {
-      ETH: { ngnRate: ETH_NGN_RATE, symbol: 'ETH', icon: '⟠' },
-      USDC: { ngnRate: USDC_NGN_RATE, symbol: 'USDC', icon: '💲' },
+      ETH: { ngnRate: getWithdrawConfig().ETH_NGN_RATE, symbol: 'ETH', icon: '⟠' },
+      USDC: { ngnRate: getWithdrawConfig().USDC_NGN_RATE, symbol: 'USDC', icon: '💲' },
     },
     mode: 'automatic',
     note: 'Withdrawals are processed instantly on-chain. No admin approval needed.',
@@ -100,6 +104,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    const { HOT_WALLET_KEY, BASE_RPC_URL, ETH_NGN_RATE, USDC_NGN_RATE } = getWithdrawConfig()
 
     if (!HOT_WALLET_KEY) {
       return NextResponse.json(

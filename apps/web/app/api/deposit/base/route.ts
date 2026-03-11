@@ -4,15 +4,18 @@ import { createClient } from '@supabase/supabase-js'
 export const dynamic = 'force-dynamic'
 
 // ============================================================
-// BASE CHAIN CONFIG
+// BASE CHAIN CONFIG (read at runtime, not build time)
 // ============================================================
-const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org'
-const DEPOSIT_WALLET = process.env.BASE_DEPOSIT_WALLET || '' // Our receiving wallet address
 const USDC_BASE_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' // USDC on Base
 
-// NGN rates (in production, fetch from oracle/API)
-const ETH_NGN_RATE = parseFloat(process.env.ETH_NGN_RATE || '5500000') // ~$3500 × ₦1571
-const USDC_NGN_RATE = parseFloat(process.env.USDC_NGN_RATE || '1571') // 1 USDC ≈ ₦1571
+function getConfig() {
+  return {
+    BASE_RPC_URL: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
+    DEPOSIT_WALLET: process.env.BASE_DEPOSIT_WALLET || '',
+    ETH_NGN_RATE: parseFloat(process.env.ETH_NGN_RATE || '5500000'),
+    USDC_NGN_RATE: parseFloat(process.env.USDC_NGN_RATE || '1571'),
+  }
+}
 
 // Minimum deposits
 const MIN_ETH_DEPOSIT = 0.0005 // ~$1.75
@@ -32,8 +35,9 @@ function getAdmin() {
 // ============================================================
 // BASE JSON-RPC HELPERS (zero dependencies)
 // ============================================================
-async function rpcCall(method: string, params: any[]): Promise<any> {
-  const res = await fetch(BASE_RPC_URL, {
+async function rpcCall(method: string, params: any[], rpcUrl?: string): Promise<any> {
+  const url = rpcUrl || process.env.BASE_RPC_URL || 'https://mainnet.base.org'
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
@@ -64,6 +68,7 @@ function hexToUSDC(hex: string): number {
 // GET — Deposit info (wallet address, rates, supported tokens)
 // ============================================================
 export async function GET() {
+  const { DEPOSIT_WALLET, ETH_NGN_RATE, USDC_NGN_RATE } = getConfig()
   return NextResponse.json({
     chain: 'Base',
     chainId: 8453,
@@ -107,6 +112,7 @@ export async function GET() {
 // ============================================================
 export async function POST(request: NextRequest) {
   try {
+    const { DEPOSIT_WALLET, BASE_RPC_URL, ETH_NGN_RATE, USDC_NGN_RATE } = getConfig()
     const body = await request.json()
     const { txHash, userId } = body
 
