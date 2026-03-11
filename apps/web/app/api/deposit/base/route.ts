@@ -12,7 +12,7 @@ const USDC_BASE_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' // USDC 
 function getConfig() {
   return {
     BASE_RPC_URL: process.env.BASE_RPC_URL || 'https://mainnet.base.org',
-    DEPOSIT_WALLET: process.env.BASE_DEPOSIT_WALLET || '',
+    DEPOSIT_WALLET: process.env.BASE_DEPOSIT_WALLET || '0xcc759988e6e7476ba34bbb2e7ea8ad4d47f3550e',
     ETH_NGN_RATE: parseFloat(process.env.ETH_NGN_RATE || '5500000'),
     USDC_NGN_RATE: parseFloat(process.env.USDC_NGN_RATE || '1571'),
   }
