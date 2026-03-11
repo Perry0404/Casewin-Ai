@@ -564,6 +564,12 @@ export default function PredictionsPage() {
   const [showFundWallet, setShowFundWallet] = useState(false);
   const [fundAmount, setFundAmount] = useState(10000);
   const [neededAmount, setNeededAmount] = useState(0);
+  const [depositTab, setDepositTab] = useState<'naira' | 'base'>('base');
+  const [txHash, setTxHash] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [depositResult, setDepositResult] = useState<any>(null);
+  const [depositError, setDepositError] = useState<string | null>(null);
+  const [baseInfo, setBaseInfo] = useState<any>(null);
   const [stats, setStats] = useState({
     totalVolume: 0,
     activeTraders: 0,
@@ -582,12 +588,9 @@ export default function PredictionsPage() {
       }
 
       const transformedMarkets: Market[] = (data.markets || []).map((m: any) => {
-        const yesPrice = m.yes_votes && m.no_votes 
-          ? m.yes_votes / (m.yes_votes + m.no_votes) 
-          : 0.5;
-        const noPrice = m.yes_votes && m.no_votes 
-          ? m.no_votes / (m.yes_votes + m.no_votes) 
-          : 0.5;
+        // Use AMM-computed prices from the API 
+        const yesPrice = m.yes_price || 0.5;
+        const noPrice = m.no_price || 0.5;
         
         // Generate AI prediction for each market
         const ai = generateAIPrediction(yesPrice);
@@ -601,8 +604,8 @@ export default function PredictionsPage() {
           yes_price: yesPrice,
           no_price: noPrice,
           total_volume: m.total_pool || 0,
-          total_traders: Math.floor((m.yes_votes + m.no_votes) / 100) || 0,
-          liquidity_pool: m.total_pool || 0,
+          total_traders: Math.floor(Math.max(m.total_pool || 0, 1) / 500) || 0,
+          liquidity_pool: m.liquidity_pool || m.total_pool || 0,
           resolution_date: m.deadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           ai_prediction: ai.prediction,
           ai_confidence: ai.confidence,
@@ -644,12 +647,40 @@ export default function PredictionsPage() {
   useEffect(() => {
     fetchMarkets();
     fetchUserBalance();
+    // Fetch Base deposit info
+    fetch('/api/deposit/base').then(r => r.json()).then(setBaseInfo).catch(() => {});
   }, [fetchMarkets, fetchUserBalance]);
 
   const handleInsufficientFunds = (needed: number) => {
     setNeededAmount(needed);
     setFundAmount(Math.ceil(needed - userBalance + 5000));
     setShowFundWallet(true);
+  };
+
+  const handleVerifyBaseDeposit = async () => {
+    if (!txHash.trim()) return;
+    setIsVerifying(true);
+    setDepositError(null);
+    setDepositResult(null);
+    try {
+      const res = await fetch('/api/deposit/base', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ txHash: txHash.trim() }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setDepositError(data.error);
+      } else {
+        setDepositResult(data);
+        await fetchUserBalance();
+        setTxHash('');
+      }
+    } catch {
+      setDepositError('Failed to verify transaction. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleFundWallet = async () => {
@@ -725,80 +756,229 @@ export default function PredictionsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
-      {/* Fund Wallet Modal */}
+      {/* Fund Wallet Modal — Base Chain + Naira */}
       {showFundWallet && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-2xl p-6 max-w-md w-full border border-slate-700">
+          <div className="bg-slate-800 rounded-2xl p-6 max-w-lg w-full border border-slate-700 max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-6">
               <div className="text-5xl mb-4">💳</div>
               <h2 className="text-xl font-bold text-white mb-2">Fund Your Wallet</h2>
               <p className="text-slate-400">
                 {neededAmount > 0 
                   ? `You need ₦${neededAmount.toFixed(2)} but have ₦${userBalance.toFixed(2)}`
-                  : 'Add funds to start trading'}
+                  : 'Add funds to start trading on CaseWin Predictions'}
               </p>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">Amount to Add (₦)</label>
-                <input
-                  type="number"
-                  value={fundAmount}
-                  onChange={(e) => setFundAmount(Math.max(100, parseInt(e.target.value) || 0))}
-                  className="w-full px-4 py-3 bg-slate-700 rounded-xl text-white text-lg font-semibold text-center"
-                />
-              </div>
+            {/* Tab Switcher */}
+            <div className="flex bg-slate-900/60 rounded-xl p-1 mb-6">
+              <button
+                onClick={() => { setDepositTab('base'); setDepositResult(null); setDepositError(null); }}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                  depositTab === 'base'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="currentColor"/></svg>
+                Base (Crypto)
+              </button>
+              <button
+                onClick={() => { setDepositTab('naira'); setDepositResult(null); setDepositError(null); }}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                  depositTab === 'naira'
+                    ? 'bg-emerald-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🇳🇬 Naira (Demo)
+              </button>
+            </div>
 
-              <div className="grid grid-cols-4 gap-2">
-                {[2000, 5000, 10000, 25000].map((amount) => (
-                  <button
-                    key={amount}
-                    onClick={() => setFundAmount(amount)}
-                    className={`py-2 rounded-lg text-sm font-medium transition-all ${
-                      fundAmount === amount
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
+            {/* ---- BASE DEPOSIT TAB ---- */}
+            {depositTab === 'base' && (
+              <div className="space-y-4">
+                {/* Base chain info banner */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg width="20" height="20" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="#0052FF"/></svg>
+                    <span className="font-semibold text-blue-400">Deposit via Base Network</span>
+                  </div>
+                  <p className="text-sm text-slate-300">Send ETH or USDC on <strong>Base</strong> chain. Funds are converted to ₦ and credited instantly.</p>
+                </div>
+
+                {/* Supported tokens */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-900/60 rounded-xl p-3 text-center border border-slate-700/50">
+                    <p className="text-2xl mb-1">⟠</p>
+                    <p className="text-white font-semibold text-sm">ETH</p>
+                    <p className="text-xs text-slate-400">Min: 0.0005 ETH</p>
+                    <p className="text-xs text-blue-400">₦{(baseInfo?.supportedTokens?.[0]?.ngnRate || 5500000).toLocaleString()}/ETH</p>
+                  </div>
+                  <div className="bg-slate-900/60 rounded-xl p-3 text-center border border-slate-700/50">
+                    <p className="text-2xl mb-1">💲</p>
+                    <p className="text-white font-semibold text-sm">USDC</p>
+                    <p className="text-xs text-slate-400">Min: 1 USDC</p>
+                    <p className="text-xs text-blue-400">₦{(baseInfo?.supportedTokens?.[1]?.ngnRate || 1571).toLocaleString()}/USDC</p>
+                  </div>
+                </div>
+
+                {/* Deposit address */}
+                {baseInfo?.depositAddress ? (
+                  <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50">
+                    <p className="text-xs text-slate-400 mb-2 font-medium">DEPOSIT ADDRESS (BASE NETWORK):</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-sm text-white bg-slate-800 rounded-lg px-3 py-2 break-all font-mono">
+                        {baseInfo.depositAddress}
+                      </code>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(baseInfo.depositAddress)}
+                        className="px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-xs font-medium whitespace-nowrap"
+                      >
+                        📋 Copy
+                      </button>
+                    </div>
+                    <p className="text-xs text-yellow-400 mt-2">⚠️ Only send on Base network. Other chains will result in lost funds.</p>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                    <p className="text-sm text-yellow-400">⚠️ Deposit address not configured yet. Contact admin to set up Base deposits.</p>
+                  </div>
+                )}
+
+                {/* Verify transaction */}
+                <div>
+                  <p className="text-sm text-slate-300 mb-2 font-medium">After sending, paste your transaction hash:</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={txHash}
+                      onChange={(e) => setTxHash(e.target.value)}
+                      placeholder="0x..."
+                      className="flex-1 px-4 py-3 bg-slate-900/80 border border-slate-700/50 rounded-xl text-white text-sm font-mono placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+                    />
+                    <button
+                      onClick={handleVerifyBaseDeposit}
+                      disabled={isVerifying || !txHash.trim()}
+                      className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium text-sm disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                    >
+                      {isVerifying ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                          Verifying...
+                        </>
+                      ) : '🔍 Verify'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Deposit success */}
+                {depositResult && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">✅</span>
+                      <span className="text-emerald-400 font-semibold">Deposit Verified!</span>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <p className="text-slate-300">Token: <span className="text-white font-medium">{depositResult.deposit.amount} {depositResult.deposit.token}</span></p>
+                      <p className="text-slate-300">Credited: <span className="text-emerald-400 font-bold">₦{depositResult.deposit.ngnAmount.toLocaleString()}</span></p>
+                      <a 
+                        href={depositResult.deposit.explorerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 text-xs underline"
+                      >
+                        View on BaseScan →
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Deposit error */}
+                {depositError && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                    <p className="text-sm text-red-400">❌ {depositError}</p>
+                  </div>
+                )}
+
+                {/* Bridge link */}
+                <div className="text-center">
+                  <p className="text-xs text-slate-500 mb-2">Need to bridge funds to Base?</p>
+                  <a
+                    href="https://bridge.base.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm font-medium"
                   >
-                    ₦{amount >= 1000 ? `${amount/1000}K` : amount}
-                  </button>
-                ))}
-              </div>
-
-              <div className="bg-slate-700/50 rounded-xl p-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-400">Current Balance:</span>
-                  <span className="text-white">₦{userBalance.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-400">Adding:</span>
-                  <span className="text-emerald-400">+₦{fundAmount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm font-semibold border-t border-slate-600 pt-2 mt-2">
-                  <span className="text-slate-400">New Balance:</span>
-                  <span className="text-white">₦{(userBalance + fundAmount).toLocaleString()}</span>
+                    🌉 Base Bridge →
+                  </a>
                 </div>
               </div>
+            )}
 
-              <button
-                onClick={handleFundWallet}
-                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 rounded-xl font-semibold text-white text-lg"
-              >
-                💳 Add ₦{fundAmount.toLocaleString()} to Wallet
-              </button>
+            {/* ---- NAIRA (DEMO) TAB ---- */}
+            {depositTab === 'naira' && (
+              <div className="space-y-4">
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                  <p className="text-sm text-emerald-400">🇳🇬 Demo Mode — Add test funds to your wallet. In production, this will use Paystack/bank transfers.</p>
+                </div>
 
-              <button
-                onClick={() => setShowFundWallet(false)}
-                className="w-full py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-300"
-              >
-                Cancel
-              </button>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">Amount to Add (₦)</label>
+                  <input
+                    type="number"
+                    value={fundAmount}
+                    onChange={(e) => setFundAmount(Math.max(100, parseInt(e.target.value) || 0))}
+                    className="w-full px-4 py-3 bg-slate-700 rounded-xl text-white text-lg font-semibold text-center"
+                  />
+                </div>
 
-              <p className="text-xs text-slate-500 text-center">
-                Funds are added to your CaseWin wallet
-              </p>
-            </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[2000, 5000, 10000, 25000].map((amount) => (
+                    <button
+                      key={amount}
+                      onClick={() => setFundAmount(amount)}
+                      className={`py-2 rounded-lg text-sm font-medium transition-all ${
+                        fundAmount === amount
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      ₦{amount >= 1000 ? `${amount/1000}K` : amount}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="bg-slate-700/50 rounded-xl p-4">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-400">Current Balance:</span>
+                    <span className="text-white">₦{userBalance.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-400">Adding:</span>
+                    <span className="text-emerald-400">+₦{fundAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold border-t border-slate-600 pt-2 mt-2">
+                    <span className="text-slate-400">New Balance:</span>
+                    <span className="text-white">₦{(userBalance + fundAmount).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleFundWallet}
+                  className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 rounded-xl font-semibold text-white text-lg"
+                >
+                  💳 Add ₦{fundAmount.toLocaleString()} to Wallet
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={() => { setShowFundWallet(false); setDepositResult(null); setDepositError(null); setTxHash(''); }}
+              className="w-full mt-4 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-300"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
@@ -821,10 +1001,11 @@ export default function PredictionsPage() {
               </div>
 
               <button
-                onClick={() => { setNeededAmount(0); setShowFundWallet(true); }}
-                className="hidden md:block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium text-sm"
+                onClick={() => { setNeededAmount(0); setDepositTab('base'); setShowFundWallet(true); }}
+                className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium text-sm"
               >
-                + Fund
+                <svg width="14" height="14" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="currentColor"/></svg>
+                Deposit
               </button>
 
               <nav className="hidden md:flex items-center gap-2">
