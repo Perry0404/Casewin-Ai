@@ -1094,13 +1094,22 @@ export default function PredictionsPage() {
                   <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-2xl">✅</span>
-                      <span className="text-emerald-400 font-semibold">Withdrawal Requested!</span>
+                      <span className="text-emerald-400 font-semibold">Withdrawal Sent!</span>
                     </div>
                     <div className="space-y-1 text-sm">
-                      <p className="text-slate-300">Amount: <span className="text-white font-medium">{withdrawResult.withdrawal.cryptoAmount} {withdrawResult.withdrawal.token}</span></p>
+                      <p className="text-slate-300">Sent: <span className="text-white font-medium">{withdrawResult.withdrawal.cryptoAmount} {withdrawResult.withdrawal.token}</span></p>
                       <p className="text-slate-300">To: <span className="text-white font-mono text-xs">{withdrawResult.withdrawal.toAddress}</span></p>
-                      <p className="text-slate-300">Status: <span className="text-yellow-400 font-medium">Processing (5-30 min)</span></p>
                       <p className="text-slate-300">New balance: <span className="text-emerald-400 font-bold">₦{withdrawResult.newBalance?.toLocaleString()}</span></p>
+                      {withdrawResult.withdrawal.txHash && (
+                        <a
+                          href={withdrawResult.withdrawal.explorerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 text-xs underline block mt-1"
+                        >
+                          View on BaseScan: {withdrawResult.withdrawal.txHash.slice(0, 16)}... →
+                        </a>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1112,7 +1121,7 @@ export default function PredictionsPage() {
                   </div>
                 )}
 
-                <p className="text-xs text-slate-500 text-center">Withdrawals are processed within 5-30 minutes during business hours.</p>
+                <p className="text-xs text-slate-500 text-center">Withdrawals are sent instantly on Base chain. No admin approval needed.</p>
               </div>
             )}
 

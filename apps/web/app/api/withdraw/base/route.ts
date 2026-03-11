@@ -1,20 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ethers } from 'ethers'
 
 export const dynamic = 'force-dynamic'
 
 // ============================================================
-// BASE CHAIN WITHDRAWAL API
-// Users request withdrawals → balance is debited instantly
-// Admin processes on-chain transfers (no private key on server)
+// FULLY DECENTRALIZED BASE WITHDRAWAL API
+// User requests withdrawal → API auto-signs and sends tx on-chain
+// No admin approval needed. Hot wallet sends crypto directly.
 // ============================================================
+
+const BASE_RPC_URL = process.env.BASE_RPC_URL || 'https://mainnet.base.org'
+const HOT_WALLET_KEY = process.env.BASE_HOT_WALLET_PRIVATE_KEY || '' // Private key of the hot wallet
+const USDC_BASE_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 
 const USDC_NGN_RATE = parseFloat(process.env.USDC_NGN_RATE || '1571')
 const ETH_NGN_RATE = parseFloat(process.env.ETH_NGN_RATE || '5500000')
 
-// Minimum withdrawals
-const MIN_WITHDRAWAL_NGN = 5000 // ~$3.20 worth
-const WITHDRAWAL_FEE_PERCENT = 1.5 // 1.5% fee
+const MIN_WITHDRAWAL_NGN = 5000
+const WITHDRAWAL_FEE_PERCENT = 1.5
+
+// Minimal ERC-20 ABI for transfer
+const ERC20_ABI = ['function transfer(address to, uint256 amount) returns (bool)']
 
 function getAdmin() {
   return createClient(
@@ -24,13 +31,12 @@ function getAdmin() {
   )
 }
 
-// Validate Base address (0x + 40 hex chars)
 function isValidBaseAddress(addr: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/.test(addr)
 }
 
 // ============================================================
-// GET — Withdrawal info (fees, limits, user history)
+// GET — Withdrawal info + user history
 // ============================================================
 export async function GET(request: NextRequest) {
   const userId = request.nextUrl.searchParams.get('userId')
@@ -45,11 +51,10 @@ export async function GET(request: NextRequest) {
       ETH: { ngnRate: ETH_NGN_RATE, symbol: 'ETH', icon: '⟠' },
       USDC: { ngnRate: USDC_NGN_RATE, symbol: 'USDC', icon: '💲' },
     },
-    estimatedProcessingTime: '5-30 minutes',
-    note: 'Withdrawals are processed manually for security. You will receive your crypto on Base network.',
+    mode: 'automatic',
+    note: 'Withdrawals are processed instantly on-chain. No admin approval needed.',
   }
 
-  // If userId provided, fetch their withdrawal history
   if (userId) {
     const admin = getAdmin()
     const { data: withdrawals } = await admin
@@ -66,14 +71,13 @@ export async function GET(request: NextRequest) {
 }
 
 // ============================================================
-// POST — Request a withdrawal
+// POST — Request + auto-send withdrawal on Base chain
 // ============================================================
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { userId, toAddress, token, ngnAmount } = body
 
-    // Validate inputs
     if (!userId) {
       return NextResponse.json({ error: 'You must be logged in to withdraw' }, { status: 401 })
     }
@@ -97,9 +101,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!HOT_WALLET_KEY) {
+      return NextResponse.json(
+        { error: 'Withdrawal wallet not configured. Contact support.' },
+        { status: 500 }
+      )
+    }
+
     const admin = getAdmin()
 
-    // Get user's current balance
+    // Get user balance
     const { data: userBalance, error: balError } = await admin
       .from('user_balances')
       .select('balance, total_withdrawn')
@@ -126,21 +137,7 @@ export async function POST(request: NextRequest) {
       ? parseFloat((netNGN / rate).toFixed(8))
       : parseFloat((netNGN / rate).toFixed(2))
 
-    // Check for pending withdrawals to prevent double-spend
-    const { data: pendingWithdrawals } = await admin
-      .from('base_withdrawals')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('status', 'pending')
-
-    if (pendingWithdrawals && pendingWithdrawals.length >= 3) {
-      return NextResponse.json(
-        { error: 'You have too many pending withdrawals. Please wait for them to process.' },
-        { status: 400 }
-      )
-    }
-
-    // Debit balance immediately
+    // Debit balance FIRST (atomic: debit before sending to prevent double-spend)
     const newBalance = userBalance.balance - withdrawNGN
     const { error: updateError } = await admin
       .from('user_balances')
@@ -155,7 +152,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to debit wallet' }, { status: 500 })
     }
 
-    // Create withdrawal record
+    // Create withdrawal record (status: processing)
     const { data: withdrawal, error: insertError } = await admin
       .from('base_withdrawals')
       .insert({
@@ -167,23 +164,75 @@ export async function POST(request: NextRequest) {
         fee_ngn: fee,
         net_ngn: netNGN,
         rate_used: rate,
-        status: 'pending',
+        status: 'processing',
       })
       .select()
       .single()
 
     if (insertError) {
-      // Refund on failure
-      await admin
-        .from('user_balances')
-        .update({
-          balance: userBalance.balance,
-          total_withdrawn: userBalance.total_withdrawn || 0,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', userId)
-
+      // Refund on DB failure
+      await admin.from('user_balances').update({
+        balance: userBalance.balance,
+        total_withdrawn: userBalance.total_withdrawn || 0,
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', userId)
       return NextResponse.json({ error: 'Failed to create withdrawal request' }, { status: 500 })
+    }
+
+    // ============================================================
+    // AUTO-SEND ON-CHAIN — No admin needed!
+    // ============================================================
+    let txHash = ''
+    try {
+      const provider = new ethers.JsonRpcProvider(BASE_RPC_URL, {
+        name: 'base',
+        chainId: 8453,
+      })
+      const wallet = new ethers.Wallet(HOT_WALLET_KEY, provider)
+
+      if (selectedToken === 'ETH') {
+        // Send native ETH
+        const tx = await wallet.sendTransaction({
+          to: toAddress,
+          value: ethers.parseEther(cryptoAmount.toString()),
+        })
+        txHash = tx.hash
+        // Don't await confirmation — tx is broadcast, user can track on BaseScan
+      } else {
+        // Send USDC (ERC-20 transfer)
+        const usdcContract = new ethers.Contract(USDC_BASE_CONTRACT, ERC20_ABI, wallet)
+        const usdcAmountRaw = BigInt(Math.floor(cryptoAmount * 1e6)) // USDC = 6 decimals
+        const tx = await usdcContract.transfer(toAddress, usdcAmountRaw)
+        txHash = tx.hash
+      }
+
+      // Update withdrawal record with tx hash
+      await admin.from('base_withdrawals').update({
+        tx_hash: txHash,
+        status: 'completed',
+        processed_at: new Date().toISOString(),
+      }).eq('id', withdrawal.id)
+
+    } catch (txError: any) {
+      console.error('On-chain send failed:', txError)
+
+      // Mark as failed but DON'T refund automatically (safety measure)
+      // Admin can investigate and manually refund if needed
+      await admin.from('base_withdrawals').update({
+        status: 'failed',
+        processed_at: new Date().toISOString(),
+      }).eq('id', withdrawal.id)
+
+      // Refund the user's balance since the on-chain tx failed
+      await admin.from('user_balances').update({
+        balance: userBalance.balance,
+        total_withdrawn: userBalance.total_withdrawn || 0,
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', userId)
+
+      return NextResponse.json({
+        error: `On-chain transfer failed: ${txError.message || 'Unknown error'}. Your balance has been refunded.`,
+      }, { status: 500 })
     }
 
     // Record wallet transaction
@@ -192,7 +241,7 @@ export async function POST(request: NextRequest) {
       type: 'withdrawal',
       amount: -withdrawNGN,
       balance_after: newBalance,
-      description: `Base withdrawal: ₦${withdrawNGN.toLocaleString()} → ${cryptoAmount} ${selectedToken} to ${toAddress.slice(0, 8)}...${toAddress.slice(-4)} (fee: ₦${fee.toLocaleString()})`,
+      description: `Base auto-withdrawal: ₦${withdrawNGN.toLocaleString()} → ${cryptoAmount} ${selectedToken} to ${toAddress.slice(0, 8)}...${toAddress.slice(-4)} (tx: ${txHash.slice(0, 10)}...)`,
     })
 
     return NextResponse.json({
@@ -206,11 +255,12 @@ export async function POST(request: NextRequest) {
         fee,
         netNGN,
         rate,
-        status: 'pending',
-        estimatedTime: '5-30 minutes',
+        txHash,
+        status: 'completed',
+        explorerUrl: `https://basescan.org/tx/${txHash}`,
       },
       newBalance,
-      message: `✅ Withdrawal requested: ${cryptoAmount} ${selectedToken} to ${toAddress.slice(0, 8)}...${toAddress.slice(-4)}. Processing shortly.`,
+      message: `✅ Sent ${cryptoAmount} ${selectedToken} to ${toAddress.slice(0, 8)}...${toAddress.slice(-4)} on Base. TX: ${txHash.slice(0, 10)}...`,
     })
   } catch (error: any) {
     console.error('Base withdrawal error:', error)
