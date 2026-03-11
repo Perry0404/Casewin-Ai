@@ -1,6 +1,6 @@
 -- ============================================================
 -- Migration 007: Clear old markets + seed real markets 
--- Also create base_deposits table for Base chain deposits
+-- Base deposits + withdrawals tables
 -- Run in Supabase SQL Editor
 -- ============================================================
 
@@ -23,13 +23,43 @@ CREATE TABLE IF NOT EXISTS base_deposits (
 -- Enable RLS on base_deposits
 ALTER TABLE base_deposits ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view their own deposits"
-  ON base_deposits FOR SELECT
-  USING (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own deposits' AND tablename = 'base_deposits') THEN
+    CREATE POLICY "Users can view their own deposits" ON base_deposits FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service role can insert deposits' AND tablename = 'base_deposits') THEN
+    CREATE POLICY "Service role can insert deposits" ON base_deposits FOR INSERT WITH CHECK (true);
+  END IF;
+END $$;
 
-CREATE POLICY "Service role can insert deposits"
-  ON base_deposits FOR INSERT
-  WITH CHECK (true);
+-- Create base_withdrawals table for tracking withdrawal requests
+CREATE TABLE IF NOT EXISTS base_withdrawals (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  to_address TEXT NOT NULL,
+  token TEXT NOT NULL, -- 'ETH' or 'USDC'
+  crypto_amount NUMERIC NOT NULL,
+  ngn_amount NUMERIC NOT NULL,
+  fee_ngn NUMERIC DEFAULT 0,
+  net_ngn NUMERIC NOT NULL,
+  rate_used NUMERIC NOT NULL,
+  tx_hash TEXT, -- filled when admin processes it
+  status TEXT DEFAULT 'pending', -- pending, processing, completed, failed
+  processed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS on base_withdrawals
+ALTER TABLE base_withdrawals ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own withdrawals' AND tablename = 'base_withdrawals') THEN
+    CREATE POLICY "Users can view their own withdrawals" ON base_withdrawals FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Service role can manage withdrawals' AND tablename = 'base_withdrawals') THEN
+    CREATE POLICY "Service role can manage withdrawals" ON base_withdrawals FOR ALL WITH CHECK (true);
+  END IF;
+END $$;
 
 -- Create user_balances if not exists (might already exist)
 CREATE TABLE IF NOT EXISTS user_balances (
@@ -62,43 +92,53 @@ DELETE FROM prediction_markets;
 -- SEED REAL MARKETS — March 2026
 -- ============================================================
 
--- ⚽ SPORTS — Today's UCL Quarter-Final (March 11, 2026)
+-- ⚽ SPORTS — Today's UCL Round of 16 Second Legs (March 11, 2026)
+-- 2025/26 UCL new format: 36-team league phase → playoff → R16 → QF → SF → Final
 INSERT INTO prediction_markets (title, description, category, status, closes_at, total_pool, liquidity_pool, outcome_options, resolution_source)
 VALUES
 (
-  'Arsenal to beat Real Madrid in UCL Quarter-Final 1st Leg (March 11)',
-  'UEFA Champions League 2025/26 Quarter-Final 1st Leg: Arsenal vs Real Madrid at the Emirates Stadium. Arsenal topped their group and are unbeaten at home this season. Real Madrid come in as defending champions with Mbappé and Vinícius Jr. in electric form. Kick-off 21:00 CET.',
+  'Liverpool to beat Bayern Munich in UCL R16 2nd Leg (March 11)',
+  'UEFA Champions League 2025/26 Round of 16, 2nd Leg: Liverpool vs Bayern Munich at Anfield. Liverpool won the first leg 2-1 in Munich. Salah and Núñez vs Musiala and Kane in a blockbuster tie. Kick-off 21:00 CET.',
   'sports', 'open',
   '2026-03-11T23:59:00Z',
-  185000, 25000,
-  '{"yes_shares": 22000, "no_shares": 28000}',
+  195000, 25000,
+  '{"yes_shares": 24000, "no_shares": 26000}',
   'UEFA official results'
 ),
 (
-  'Over 2.5 goals in Arsenal vs Real Madrid UCL QF (March 11)',
-  'Will there be 3 or more total goals in the Arsenal vs Real Madrid Champions League quarter-final first leg? Both teams have averaged over 2.5 goals per game in the knockout rounds this season.',
+  'Real Madrid to beat Manchester City in UCL R16 2nd Leg (March 11)',
+  'UEFA Champions League 2025/26 Round of 16, 2nd Leg: Real Madrid vs Manchester City at the Bernabéu. The first leg ended 1-1 at the Etihad. Mbappé and Vinícius Jr. vs Haaland and De Bruyne in this modern classic rivalry. Kick-off 21:00 CET.',
   'sports', 'open',
   '2026-03-11T23:59:00Z',
-  92000, 20000,
+  210000, 28000,
+  '{"yes_shares": 25000, "no_shares": 25000}',
+  'UEFA official results'
+),
+(
+  'Over 2.5 goals in Liverpool vs Bayern Munich UCL R16 (March 11)',
+  'Will there be 3 or more total goals in the Liverpool vs Bayern Munich Champions League R16 second leg at Anfield? First leg produced 3 goals. Both sides have been prolific in Europe this season.',
+  'sports', 'open',
+  '2026-03-11T23:59:00Z',
+  88000, 20000,
   '{"yes_shares": 23000, "no_shares": 17000}',
   'UEFA official match stats'
 ),
 (
-  'Mbappé to score in Arsenal vs Real Madrid UCL QF',
-  'Will Kylian Mbappé score at least one goal in the Arsenal vs Real Madrid Champions League quarter-final first leg at the Emirates?',
+  'Mbappé to score in Real Madrid vs Man City UCL R16',
+  'Will Kylian Mbappé score at least one goal in the Real Madrid vs Manchester City Champions League Round of 16 second leg at the Bernabéu?',
   'sports', 'open',
   '2026-03-11T23:59:00Z',
-  68000, 20000,
+  72000, 20000,
   '{"yes_shares": 18000, "no_shares": 22000}',
   'UEFA official match stats'
 ),
 (
-  'Barcelona to beat PSG in UCL Quarter-Final 1st Leg',
-  'UEFA Champions League 2025/26 Quarter-Final: Barcelona host PSG at Camp Nou. The latest chapter in their European rivalry.',
+  'Atlético Madrid to eliminate Arsenal in UCL R16 (March 11)',
+  'Will Atlético Madrid advance past Arsenal over two legs in the UCL Round of 16? First leg ended 0-0 at the Emirates. Simeone''s side have a strong home record in European knockouts at the Metropolitano.',
   'sports', 'open',
-  '2026-03-12T23:59:00Z',
-  110000, 22000,
-  '{"yes_shares": 24000, "no_shares": 20000}',
+  '2026-03-11T23:59:00Z',
+  105000, 22000,
+  '{"yes_shares": 20000, "no_shares": 24000}',
   'UEFA official results'
 );
 

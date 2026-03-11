@@ -564,12 +564,19 @@ export default function PredictionsPage() {
   const [showFundWallet, setShowFundWallet] = useState(false);
   const [fundAmount, setFundAmount] = useState(10000);
   const [neededAmount, setNeededAmount] = useState(0);
-  const [depositTab, setDepositTab] = useState<'naira' | 'base'>('base');
+  const [depositTab, setDepositTab] = useState<'naira' | 'base' | 'withdraw'>('base');
   const [txHash, setTxHash] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [depositResult, setDepositResult] = useState<any>(null);
   const [depositError, setDepositError] = useState<string | null>(null);
   const [baseInfo, setBaseInfo] = useState<any>(null);
+  // Withdrawal state
+  const [withdrawAddress, setWithdrawAddress] = useState('');
+  const [withdrawToken, setWithdrawToken] = useState<'ETH' | 'USDC'>('USDC');
+  const [withdrawNGN, setWithdrawNGN] = useState(10000);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawResult, setWithdrawResult] = useState<any>(null);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalVolume: 0,
     activeTraders: 0,
@@ -700,6 +707,38 @@ export default function PredictionsPage() {
     }
   };
 
+  const handleBaseWithdraw = async () => {
+    if (!withdrawAddress.trim() || withdrawNGN < 5000) return;
+    setIsWithdrawing(true);
+    setWithdrawError(null);
+    setWithdrawResult(null);
+    try {
+      const res = await fetch('/api/withdraw/base', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: 'current', // API will use auth
+          toAddress: withdrawAddress.trim(),
+          token: withdrawToken,
+          ngnAmount: withdrawNGN,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setWithdrawError(data.error);
+      } else {
+        setWithdrawResult(data);
+        await fetchUserBalance();
+        setWithdrawAddress('');
+        setWithdrawNGN(10000);
+      }
+    } catch {
+      setWithdrawError('Failed to process withdrawal. Please try again.');
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
   const handleTrade = async (marketId: string, outcome: 'yes' | 'no', shares: number) => {
     const market = markets.find(m => m.id === marketId);
     if (!market) throw new Error('Market not found');
@@ -773,25 +812,35 @@ export default function PredictionsPage() {
             {/* Tab Switcher */}
             <div className="flex bg-slate-900/60 rounded-xl p-1 mb-6">
               <button
-                onClick={() => { setDepositTab('base'); setDepositResult(null); setDepositError(null); }}
+                onClick={() => { setDepositTab('base'); setDepositResult(null); setDepositError(null); setWithdrawResult(null); setWithdrawError(null); }}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                   depositTab === 'base'
                     ? 'bg-blue-600 text-white shadow-lg'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <svg width="16" height="16" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="currentColor"/></svg>
-                Base (Crypto)
+                <svg width="14" height="14" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="currentColor"/></svg>
+                Deposit
               </button>
               <button
-                onClick={() => { setDepositTab('naira'); setDepositResult(null); setDepositError(null); }}
+                onClick={() => { setDepositTab('withdraw'); setDepositResult(null); setDepositError(null); setWithdrawResult(null); setWithdrawError(null); }}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                  depositTab === 'withdraw'
+                    ? 'bg-orange-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                💸 Withdraw
+              </button>
+              <button
+                onClick={() => { setDepositTab('naira'); setDepositResult(null); setDepositError(null); setWithdrawResult(null); setWithdrawError(null); }}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                   depositTab === 'naira'
                     ? 'bg-emerald-600 text-white shadow-lg'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                🇳🇬 Naira (Demo)
+                🇳🇬 Demo
               </button>
             </div>
 
@@ -916,6 +965,157 @@ export default function PredictionsPage() {
               </div>
             )}
 
+            {/* ---- WITHDRAW TAB ---- */}
+            {depositTab === 'withdraw' && (
+              <div className="space-y-4">
+                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">💸</span>
+                    <span className="font-semibold text-orange-400">Withdraw to Base Network</span>
+                  </div>
+                  <p className="text-sm text-slate-300">Convert your ₦ balance to ETH or USDC and receive on Base chain. 1.5% fee applies.</p>
+                </div>
+
+                {/* Current balance */}
+                <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50 text-center">
+                  <p className="text-xs text-slate-400 mb-1">Available Balance</p>
+                  <p className="text-2xl font-bold text-emerald-400">₦{userBalance.toLocaleString()}</p>
+                </div>
+
+                {/* Token selector */}
+                <div>
+                  <p className="text-sm text-slate-300 mb-2 font-medium">Receive as:</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setWithdrawToken('USDC')}
+                      className={`p-3 rounded-xl border text-center transition-all ${
+                        withdrawToken === 'USDC'
+                          ? 'bg-blue-600/20 border-blue-500/50 ring-2 ring-blue-500/30'
+                          : 'bg-slate-900/60 border-slate-700/50 hover:border-slate-600'
+                      }`}
+                    >
+                      <p className="text-xl mb-1">💲</p>
+                      <p className="text-white font-semibold text-sm">USDC</p>
+                      <p className="text-xs text-blue-400">₦{(baseInfo?.supportedTokens?.[1]?.ngnRate || 1571).toLocaleString()}/USDC</p>
+                    </button>
+                    <button
+                      onClick={() => setWithdrawToken('ETH')}
+                      className={`p-3 rounded-xl border text-center transition-all ${
+                        withdrawToken === 'ETH'
+                          ? 'bg-blue-600/20 border-blue-500/50 ring-2 ring-blue-500/30'
+                          : 'bg-slate-900/60 border-slate-700/50 hover:border-slate-600'
+                      }`}
+                    >
+                      <p className="text-xl mb-1">⟠</p>
+                      <p className="text-white font-semibold text-sm">ETH</p>
+                      <p className="text-xs text-blue-400">₦{(baseInfo?.supportedTokens?.[0]?.ngnRate || 5500000).toLocaleString()}/ETH</p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <p className="text-sm text-slate-300 mb-2 font-medium">Amount to withdraw (₦)</p>
+                  <input
+                    type="number"
+                    value={withdrawNGN}
+                    onChange={(e) => setWithdrawNGN(Math.max(5000, parseInt(e.target.value) || 0))}
+                    min={5000}
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-slate-700/50 rounded-xl text-white text-lg font-semibold text-center focus:outline-none focus:border-orange-500/50"
+                  />
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    {[5000, 10000, 25000, 50000].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setWithdrawNGN(amt)}
+                        className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                          withdrawNGN === amt ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        ₦{amt >= 1000 ? `${amt/1000}K` : amt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Base address */}
+                <div>
+                  <p className="text-sm text-slate-300 mb-2 font-medium">Your Base wallet address:</p>
+                  <input
+                    type="text"
+                    value={withdrawAddress}
+                    onChange={(e) => setWithdrawAddress(e.target.value)}
+                    placeholder="0x..."
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-slate-700/50 rounded-xl text-white text-sm font-mono placeholder-slate-500 focus:outline-none focus:border-orange-500/50"
+                  />
+                </div>
+
+                {/* Summary */}
+                <div className="bg-slate-700/50 rounded-xl p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Withdraw:</span>
+                    <span className="text-white">₦{withdrawNGN.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Fee (1.5%):</span>
+                    <span className="text-red-400">-₦{Math.ceil(withdrawNGN * 0.015).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-600 pt-2">
+                    <span className="text-slate-400">You receive:</span>
+                    <span className="text-orange-400 font-bold">
+                      {withdrawToken === 'USDC'
+                        ? `${((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / (baseInfo?.supportedTokens?.[1]?.ngnRate || 1571)).toFixed(2)} USDC`
+                        : `${((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / (baseInfo?.supportedTokens?.[0]?.ngnRate || 5500000)).toFixed(6)} ETH`
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                {/* Submit */}
+                <button
+                  onClick={handleBaseWithdraw}
+                  disabled={isWithdrawing || !withdrawAddress.trim() || withdrawNGN < 5000 || withdrawNGN > userBalance}
+                  className="w-full py-4 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 rounded-xl font-semibold text-white text-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isWithdrawing ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                      Processing...
+                    </>
+                  ) : withdrawNGN > userBalance ? (
+                    'Insufficient Balance'
+                  ) : (
+                    `💸 Withdraw ₦${withdrawNGN.toLocaleString()}`
+                  )}
+                </button>
+
+                {/* Withdrawal success */}
+                {withdrawResult && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">✅</span>
+                      <span className="text-emerald-400 font-semibold">Withdrawal Requested!</span>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <p className="text-slate-300">Amount: <span className="text-white font-medium">{withdrawResult.withdrawal.cryptoAmount} {withdrawResult.withdrawal.token}</span></p>
+                      <p className="text-slate-300">To: <span className="text-white font-mono text-xs">{withdrawResult.withdrawal.toAddress}</span></p>
+                      <p className="text-slate-300">Status: <span className="text-yellow-400 font-medium">Processing (5-30 min)</span></p>
+                      <p className="text-slate-300">New balance: <span className="text-emerald-400 font-bold">₦{withdrawResult.newBalance?.toLocaleString()}</span></p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Withdrawal error */}
+                {withdrawError && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                    <p className="text-sm text-red-400">❌ {withdrawError}</p>
+                  </div>
+                )}
+
+                <p className="text-xs text-slate-500 text-center">Withdrawals are processed within 5-30 minutes during business hours.</p>
+              </div>
+            )}
+
             {/* ---- NAIRA (DEMO) TAB ---- */}
             {depositTab === 'naira' && (
               <div className="space-y-4">
@@ -1006,6 +1206,13 @@ export default function PredictionsPage() {
               >
                 <svg width="14" height="14" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="currentColor"/></svg>
                 Deposit
+              </button>
+
+              <button
+                onClick={() => { setNeededAmount(0); setDepositTab('withdraw'); setShowFundWallet(true); }}
+                className="hidden md:flex items-center gap-1.5 px-3 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-medium text-sm"
+              >
+                💸 Withdraw
               </button>
 
               <nav className="hidden md:flex items-center gap-2">
