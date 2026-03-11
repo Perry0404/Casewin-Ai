@@ -2,7 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'standalone',
   compress: true,
   images: {
     formats: ['image/avif', 'image/webp'],

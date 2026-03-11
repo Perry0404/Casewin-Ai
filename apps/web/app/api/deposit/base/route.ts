@@ -69,10 +69,16 @@ function hexToUSDC(hex: string): number {
 // ============================================================
 export async function GET() {
   const { DEPOSIT_WALLET, ETH_NGN_RATE, USDC_NGN_RATE } = getConfig()
-  return NextResponse.json({
+  
+  const response = NextResponse.json({
     chain: 'Base',
     chainId: 8453,
     depositAddress: DEPOSIT_WALLET,
+    _debug: {
+      hasWallet: !!DEPOSIT_WALLET,
+      walletLength: DEPOSIT_WALLET.length,
+      deployedAt: '2026-03-11T15:30:00Z',
+    },
     supportedTokens: [
       {
         symbol: 'ETH',
@@ -105,6 +111,11 @@ export async function GET() {
       bridgeUrl: 'https://bridge.base.org',
     },
   })
+  
+  // Force no-cache on this response
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+  response.headers.set('Pragma', 'no-cache')
+  return response
 }
 
 // ============================================================
