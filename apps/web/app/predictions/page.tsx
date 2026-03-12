@@ -564,7 +564,7 @@ export default function PredictionsPage() {
   const [showFundWallet, setShowFundWallet] = useState(false);
   const [fundAmount, setFundAmount] = useState(10000);
   const [neededAmount, setNeededAmount] = useState(0);
-  const [depositTab, setDepositTab] = useState<'naira' | 'base' | 'withdraw'>('base');
+  const [depositTab, setDepositTab] = useState<'naira' | 'base' | 'withdraw' | 'bank'>('base');
   const [txHash, setTxHash] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [depositResult, setDepositResult] = useState<any>(null);
@@ -582,6 +582,17 @@ export default function PredictionsPage() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawResult, setWithdrawResult] = useState<any>(null);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  // Naira bank payout state
+  const [payoutAmount, setPayoutAmount] = useState(5000);
+  const [payoutBank, setPayoutBank] = useState('');
+  const [payoutAccount, setPayoutAccount] = useState('');
+  const [payoutName, setPayoutName] = useState('');
+  const [isPaying, setIsPaying] = useState(false);
+  const [payoutResult, setPayoutResult] = useState<any>(null);
+  const [payoutError, setPayoutError] = useState<string | null>(null);
+  const [bankList, setBankList] = useState<{code: string; name: string}[]>([]);
+  // Live rates
+  const [liveRates, setLiveRates] = useState<{ ethNGN: number; usdcNGN: number; source: string } | null>(null);
   const [stats, setStats] = useState({
     totalVolume: 0,
     activeTraders: 0,
@@ -780,8 +791,8 @@ export default function PredictionsPage() {
           toAddress: withdrawAddress.trim(),
           token: withdrawToken,
           amount: withdrawToken === 'USDC'
-            ? ((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / 1571).toFixed(2)
-            : ((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / 5500000).toFixed(8),
+            ? ((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / (liveRates?.usdcNGN || 1571)).toFixed(2)
+            : ((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / (liveRates?.ethNGN || 5500000)).toFixed(8),
         }),
       });
       const data = await res.json();
@@ -797,6 +808,45 @@ export default function PredictionsPage() {
       setWithdrawError('Failed to process withdrawal. Please try again.');
     } finally {
       setIsWithdrawing(false);
+    }
+  };
+
+  // Fetch bank list and live rates
+  useEffect(() => {
+    fetch('/api/wallet/payout').then(r => r.json()).then(d => setBankList(d.banks || [])).catch(() => {});
+    fetch('/api/wallet/rates').then(r => r.json()).then(d => setLiveRates(d)).catch(() => {});
+  }, []);
+
+  const handleNairaPayout = async () => {
+    if (!payoutBank || !payoutAccount || !payoutName || payoutAmount < 1000) return;
+    setIsPaying(true);
+    setPayoutError(null);
+    setPayoutResult(null);
+    try {
+      const res = await fetch('/api/wallet/payout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: payoutAmount,
+          bankCode: payoutBank,
+          accountNumber: payoutAccount,
+          accountName: payoutName,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setPayoutError(data.error);
+      } else {
+        setPayoutResult(data);
+        await fetchUserBalance();
+        setPayoutAccount('');
+        setPayoutName('');
+        setPayoutAmount(5000);
+      }
+    } catch {
+      setPayoutError('Payout failed. Please try again.');
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -874,28 +924,38 @@ export default function PredictionsPage() {
             <div className="flex bg-slate-900/60 rounded-xl p-1 mb-6">
               <button
                 onClick={() => { setDepositTab('base'); setDepositResult(null); setDepositError(null); setWithdrawResult(null); setWithdrawError(null); }}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   depositTab === 'base'
                     ? 'bg-blue-600 text-white shadow-lg'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <svg width="14" height="14" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="currentColor"/></svg>
+                <svg width="12" height="12" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="currentColor"/></svg>
                 Deposit
               </button>
               <button
                 onClick={() => { setDepositTab('withdraw'); setDepositResult(null); setDepositError(null); setWithdrawResult(null); setWithdrawError(null); }}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1 ${
                   depositTab === 'withdraw'
                     ? 'bg-orange-600 text-white shadow-lg'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                💸 Withdraw
+                💸 Crypto
+              </button>
+              <button
+                onClick={() => { setDepositTab('bank'); setPayoutResult(null); setPayoutError(null); }}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1 ${
+                  depositTab === 'bank'
+                    ? 'bg-green-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🏦 Bank
               </button>
               <button
                 onClick={() => { setDepositTab('naira'); setDepositResult(null); setDepositError(null); setWithdrawResult(null); setWithdrawError(null); }}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                className={`flex-1 py-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1 ${
                   depositTab === 'naira'
                     ? 'bg-emerald-600 text-white shadow-lg'
                     : 'text-slate-400 hover:text-white'
@@ -914,7 +974,7 @@ export default function PredictionsPage() {
                     <svg width="20" height="20" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="#0052FF"/></svg>
                     <span className="font-semibold text-blue-400">Your Personal Base Wallet</span>
                   </div>
-                  <p className="text-sm text-slate-300">Each user gets their own <strong>non-custodial</strong> wallet on Base. No private keys stored — powered by Coinbase CDP.</p>
+                  <p className="text-sm text-slate-300">Each user gets their own <strong>non-custodial</strong> wallet on Base. Send USDC or ETH — balances read directly from chain.</p>
                 </div>
 
                 {cdpWallet?.walletAddress ? (
@@ -1067,7 +1127,7 @@ export default function PredictionsPage() {
                     >
                       <p className="text-xl mb-1">💲</p>
                       <p className="text-white font-semibold text-sm">USDC</p>
-                      <p className="text-xs text-blue-400">₦{(baseInfo?.supportedTokens?.[1]?.ngnRate || 1571).toLocaleString()}/USDC</p>
+                      <p className="text-xs text-blue-400">₦{(liveRates?.usdcNGN || 1571).toLocaleString()}/USDC</p>
                     </button>
                     <button
                       onClick={() => setWithdrawToken('ETH')}
@@ -1079,7 +1139,7 @@ export default function PredictionsPage() {
                     >
                       <p className="text-xl mb-1">⟠</p>
                       <p className="text-white font-semibold text-sm">ETH</p>
-                      <p className="text-xs text-blue-400">₦{(baseInfo?.supportedTokens?.[0]?.ngnRate || 5500000).toLocaleString()}/ETH</p>
+                      <p className="text-xs text-blue-400">₦{(liveRates?.ethNGN || 5500000).toLocaleString()}/ETH</p>
                     </button>
                   </div>
                 </div>
@@ -1135,8 +1195,8 @@ export default function PredictionsPage() {
                     <span className="text-slate-400">You receive:</span>
                     <span className="text-orange-400 font-bold">
                       {withdrawToken === 'USDC'
-                        ? `${((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / (baseInfo?.supportedTokens?.[1]?.ngnRate || 1571)).toFixed(2)} USDC`
-                        : `${((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / (baseInfo?.supportedTokens?.[0]?.ngnRate || 5500000)).toFixed(6)} ETH`
+                        ? `${((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / (liveRates?.usdcNGN || 1571)).toFixed(2)} USDC`
+                        : `${((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / (liveRates?.ethNGN || 5500000)).toFixed(6)} ETH`
                       }
                     </span>
                   </div>
@@ -1193,6 +1253,154 @@ export default function PredictionsPage() {
                 )}
 
                 <p className="text-xs text-slate-500 text-center">Withdrawals are sent instantly on Base chain. No admin approval needed.</p>
+              </div>
+            )}
+
+            {/* ---- BANK PAYOUT TAB ---- */}
+            {depositTab === 'bank' && (
+              <div className="space-y-4">
+                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">🏦</span>
+                    <span className="font-semibold text-green-400">Cash Out to Nigerian Bank</span>
+                  </div>
+                  <p className="text-sm text-slate-300">Convert your trading balance to Naira and receive it directly in your bank account via Korapay.</p>
+                </div>
+
+                {/* Current balance */}
+                <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50 text-center">
+                  <p className="text-xs text-slate-400 mb-1">Available Balance</p>
+                  <p className="text-2xl font-bold text-emerald-400">₦{userBalance.toLocaleString()}</p>
+                </div>
+
+                {/* Live rates */}
+                {liveRates && (
+                  <div className="bg-slate-900/60 rounded-xl p-3 border border-slate-700/50 flex justify-between text-xs">
+                    <span className="text-slate-400">Live rates:</span>
+                    <span className="text-blue-400">₦{liveRates.ethNGN.toLocaleString()}/ETH • ₦{liveRates.usdcNGN.toLocaleString()}/USDC</span>
+                  </div>
+                )}
+
+                {/* Amount */}
+                <div>
+                  <p className="text-sm text-slate-300 mb-2 font-medium">Amount to cash out (₦)</p>
+                  <input
+                    type="number"
+                    value={payoutAmount}
+                    onChange={(e) => setPayoutAmount(Math.max(1000, parseInt(e.target.value) || 0))}
+                    min={1000}
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-slate-700/50 rounded-xl text-white text-lg font-semibold text-center focus:outline-none focus:border-green-500/50"
+                  />
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    {[5000, 10000, 25000, 50000].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setPayoutAmount(amt)}
+                        className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                          payoutAmount === amt ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        ₦{amt >= 1000 ? `${amt/1000}K` : amt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bank selection */}
+                <div>
+                  <p className="text-sm text-slate-300 mb-2 font-medium">Select Bank</p>
+                  <select
+                    value={payoutBank}
+                    onChange={(e) => setPayoutBank(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-green-500/50 appearance-none"
+                  >
+                    <option value="">Choose your bank...</option>
+                    {bankList.map((b) => (
+                      <option key={b.code} value={b.code}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Account number */}
+                <div>
+                  <p className="text-sm text-slate-300 mb-2 font-medium">Account Number</p>
+                  <input
+                    type="text"
+                    value={payoutAccount}
+                    onChange={(e) => setPayoutAccount(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="0123456789"
+                    maxLength={10}
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-slate-700/50 rounded-xl text-white text-lg font-mono text-center placeholder-slate-500 focus:outline-none focus:border-green-500/50"
+                  />
+                </div>
+
+                {/* Account name */}
+                <div>
+                  <p className="text-sm text-slate-300 mb-2 font-medium">Account Name</p>
+                  <input
+                    type="text"
+                    value={payoutName}
+                    onChange={(e) => setPayoutName(e.target.value)}
+                    placeholder="John Doe"
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-green-500/50"
+                  />
+                </div>
+
+                {/* Summary */}
+                <div className="bg-slate-700/50 rounded-xl p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Cash out:</span>
+                    <span className="text-white">₦{payoutAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-600 pt-2">
+                    <span className="text-slate-400">You receive:</span>
+                    <span className="text-green-400 font-bold">₦{payoutAmount.toLocaleString()}</span>
+                  </div>
+                  <p className="text-xs text-slate-500">Arrives in your bank in 1-5 minutes</p>
+                </div>
+
+                {/* Submit */}
+                <button
+                  onClick={handleNairaPayout}
+                  disabled={isPaying || !payoutBank || !payoutAccount || payoutAccount.length !== 10 || !payoutName || payoutAmount < 1000 || payoutAmount > userBalance}
+                  className="w-full py-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 rounded-xl font-semibold text-white text-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isPaying ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                      Sending to bank...
+                    </>
+                  ) : payoutAmount > userBalance ? (
+                    'Insufficient Balance'
+                  ) : (
+                    `🏦 Send ₦${payoutAmount.toLocaleString()} to Bank`
+                  )}
+                </button>
+
+                {/* Payout success */}
+                {payoutResult && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">✅</span>
+                      <span className="text-emerald-400 font-semibold">Payout Sent!</span>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <p className="text-slate-300">Amount: <span className="text-white font-medium">₦{payoutResult.amount?.toLocaleString()}</span></p>
+                      <p className="text-slate-300">To: <span className="text-white">{payoutResult.bankDetails}</span></p>
+                      <p className="text-slate-300">New balance: <span className="text-emerald-400 font-bold">₦{payoutResult.newBalance?.toLocaleString()}</span></p>
+                      <p className="text-slate-300">Ref: <span className="text-white font-mono text-xs">{payoutResult.reference}</span></p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payout error */}
+                {payoutError && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                    <p className="text-sm text-red-400">❌ {payoutError}</p>
+                  </div>
+                )}
+
+                <p className="text-xs text-slate-500 text-center">Powered by Korapay. Payouts are processed 24/7 to all Nigerian banks.</p>
               </div>
             )}
 

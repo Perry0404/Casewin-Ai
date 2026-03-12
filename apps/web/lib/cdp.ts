@@ -1,5 +1,5 @@
 import { ethers } from 'ethers'
-import { createClient } from '@supabase/supabase-js'
+import { getLiveRates } from './rates'
 
 // ============================================================
 // Wallet Service — Per-user Base wallets using ethers.js
@@ -75,8 +75,11 @@ export async function getWalletBalance(walletId: string, seed: string): Promise<
     console.error('Failed to read USDC balance:', e)
   }
 
-  const ETH_NGN_RATE = 5500000
-  const USDC_NGN_RATE = 1571
+  // Live exchange rates from CoinGecko
+  const rates = await getLiveRates()
+
+  const ETH_NGN_RATE = rates.ethNGN
+  const USDC_NGN_RATE = rates.usdcNGN
 
   const ethNGN = Math.floor(ethBalance * ETH_NGN_RATE)
   const usdcNGN = Math.floor(usdcBalance * USDC_NGN_RATE)

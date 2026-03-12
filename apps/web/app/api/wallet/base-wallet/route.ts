@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createAuthClient } from '@/lib/supabase/server'
 import { createUserWallet, getWalletBalance, transferFromWallet } from '@/lib/cdp'
+import { getLiveRates } from '@/lib/rates'
 
 export const dynamic = 'force-dynamic'
 
@@ -154,11 +155,12 @@ export async function POST(request: NextRequest) {
       const lastSyncedETH = parseFloat(wallet.last_synced_eth || '0')
       const lastSyncedUSDC = parseFloat(wallet.last_synced_usdc || '0')
 
-      // Calculate new deposits since last sync
+      // Calculate new deposits since last sync (using live rates)
+      const rates = await getLiveRates()
       const newETH = Math.max(0, onChain.eth - lastSyncedETH)
       const newUSDC = Math.max(0, onChain.usdc - lastSyncedUSDC)
-      const newNGN = Math.floor(newETH * parseFloat(process.env.ETH_NGN_RATE || '5500000'))
-        + Math.floor(newUSDC * parseFloat(process.env.USDC_NGN_RATE || '1571'))
+      const newNGN = Math.floor(newETH * rates.ethNGN)
+        + Math.floor(newUSDC * rates.usdcNGN)
 
       if (newNGN > 0) {
         // Credit trading balance
