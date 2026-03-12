@@ -570,6 +570,11 @@ export default function PredictionsPage() {
   const [depositResult, setDepositResult] = useState<any>(null);
   const [depositError, setDepositError] = useState<string | null>(null);
   const [baseInfo, setBaseInfo] = useState<any>(null);
+  // CDP Wallet state
+  const [cdpWallet, setCdpWallet] = useState<any>(null);
+  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
   // Withdrawal state
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [withdrawToken, setWithdrawToken] = useState<'ETH' | 'USDC'>('USDC');
@@ -654,9 +659,63 @@ export default function PredictionsPage() {
   useEffect(() => {
     fetchMarkets();
     fetchUserBalance();
-    // Fetch Base deposit info
+    // Fetch Base deposit info (legacy fallback)
     fetch('/api/deposit/base').then(r => r.json()).then(setBaseInfo).catch(() => {});
+    // Fetch CDP embedded wallet
+    fetch('/api/wallet/base-wallet').then(r => r.json()).then((data) => {
+      if (data.walletAddress) setCdpWallet(data);
+    }).catch(() => {});
   }, [fetchMarkets, fetchUserBalance]);
+
+  // Create CDP wallet for user
+  const handleCreateWallet = async () => {
+    setIsCreatingWallet(true);
+    setDepositError(null);
+    try {
+      const res = await fetch('/api/wallet/base-wallet');
+      const data = await res.json();
+      if (data.error) {
+        setDepositError(data.error);
+      } else {
+        setCdpWallet(data);
+      }
+    } catch {
+      setDepositError('Failed to create wallet. Please try again.');
+    } finally {
+      setIsCreatingWallet(false);
+    }
+  };
+
+  // Sync on-chain balance to trading balance
+  const handleSyncBalance = async () => {
+    setIsSyncing(true);
+    setSyncResult(null);
+    setDepositError(null);
+    try {
+      const res = await fetch('/api/wallet/base-wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync' }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setDepositError(data.error);
+      } else {
+        setSyncResult(data);
+        if (data.credited > 0) {
+          await fetchUserBalance();
+          // Refresh wallet data
+          const walletRes = await fetch('/api/wallet/base-wallet');
+          const walletData = await walletRes.json();
+          if (walletData.walletAddress) setCdpWallet(walletData);
+        }
+      }
+    } catch {
+      setDepositError('Failed to sync balance. Please try again.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleInsufficientFunds = (needed: number) => {
     setNeededAmount(needed);
@@ -713,14 +772,16 @@ export default function PredictionsPage() {
     setWithdrawError(null);
     setWithdrawResult(null);
     try {
-      const res = await fetch('/api/withdraw/base', {
+      const res = await fetch('/api/wallet/base-wallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: 'current', // API will use auth
+          action: 'withdraw',
           toAddress: withdrawAddress.trim(),
           token: withdrawToken,
-          ngnAmount: withdrawNGN,
+          amount: withdrawToken === 'USDC'
+            ? ((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / 1571).toFixed(2)
+            : ((withdrawNGN - Math.ceil(withdrawNGN * 0.015)) / 5500000).toFixed(8),
         }),
       });
       const data = await res.json();
@@ -844,101 +905,111 @@ export default function PredictionsPage() {
               </button>
             </div>
 
-            {/* ---- BASE DEPOSIT TAB ---- */}
+            {/* ---- BASE DEPOSIT TAB (CDP Embedded Wallet) ---- */}
             {depositTab === 'base' && (
               <div className="space-y-4">
                 {/* Base chain info banner */}
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <svg width="20" height="20" viewBox="0 0 111 111" fill="none"><path d="M54.921 110.034C85.359 110.034 110.034 85.402 110.034 55.017C110.034 24.6319 85.359 0 54.921 0C26.0432 0 2.35281 22.1714 0 50.3923H72.8467V59.6416H0C2.35281 87.8625 26.0432 110.034 54.921 110.034Z" fill="#0052FF"/></svg>
-                    <span className="font-semibold text-blue-400">Deposit via Base Network</span>
+                    <span className="font-semibold text-blue-400">Your Personal Base Wallet</span>
                   </div>
-                  <p className="text-sm text-slate-300">Send ETH or USDC on <strong>Base</strong> chain. Funds are converted to ₦ and credited instantly.</p>
+                  <p className="text-sm text-slate-300">Each user gets their own <strong>non-custodial</strong> wallet on Base. No private keys stored — powered by Coinbase CDP.</p>
                 </div>
 
-                {/* Supported tokens */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-900/60 rounded-xl p-3 text-center border border-slate-700/50">
-                    <p className="text-2xl mb-1">⟠</p>
-                    <p className="text-white font-semibold text-sm">ETH</p>
-                    <p className="text-xs text-slate-400">Min: 0.0005 ETH</p>
-                    <p className="text-xs text-blue-400">₦{(baseInfo?.supportedTokens?.[0]?.ngnRate || 5500000).toLocaleString()}/ETH</p>
-                  </div>
-                  <div className="bg-slate-900/60 rounded-xl p-3 text-center border border-slate-700/50">
-                    <p className="text-2xl mb-1">💲</p>
-                    <p className="text-white font-semibold text-sm">USDC</p>
-                    <p className="text-xs text-slate-400">Min: 1 USDC</p>
-                    <p className="text-xs text-blue-400">₦{(baseInfo?.supportedTokens?.[1]?.ngnRate || 1571).toLocaleString()}/USDC</p>
-                  </div>
-                </div>
-
-                {/* Deposit address */}
-                {baseInfo?.depositAddress ? (
-                  <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50">
-                    <p className="text-xs text-slate-400 mb-2 font-medium">DEPOSIT ADDRESS (BASE NETWORK):</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm text-white bg-slate-800 rounded-lg px-3 py-2 break-all font-mono">
-                        {baseInfo.depositAddress}
-                      </code>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(baseInfo.depositAddress)}
-                        className="px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-xs font-medium whitespace-nowrap"
-                      >
-                        📋 Copy
-                      </button>
-                    </div>
-                    <p className="text-xs text-yellow-400 mt-2">⚠️ Only send on Base network. Other chains will result in lost funds.</p>
-                  </div>
-                ) : (
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
-                    <p className="text-sm text-yellow-400">⚠️ Deposit address not configured yet. Contact admin to set up Base deposits.</p>
-                  </div>
-                )}
-
-                {/* Verify transaction */}
-                <div>
-                  <p className="text-sm text-slate-300 mb-2 font-medium">After sending, paste your transaction hash:</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={txHash}
-                      onChange={(e) => setTxHash(e.target.value)}
-                      placeholder="0x..."
-                      className="flex-1 px-4 py-3 bg-slate-900/80 border border-slate-700/50 rounded-xl text-white text-sm font-mono placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
-                    />
-                    <button
-                      onClick={handleVerifyBaseDeposit}
-                      disabled={isVerifying || !txHash.trim()}
-                      className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium text-sm disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-                    >
-                      {isVerifying ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                          Verifying...
-                        </>
-                      ) : '🔍 Verify'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Deposit success */}
-                {depositResult && (
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-2xl">✅</span>
-                      <span className="text-emerald-400 font-semibold">Deposit Verified!</span>
-                    </div>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-slate-300">Token: <span className="text-white font-medium">{depositResult.deposit.amount} {depositResult.deposit.token}</span></p>
-                      <p className="text-slate-300">Credited: <span className="text-emerald-400 font-bold">₦{depositResult.deposit.ngnAmount.toLocaleString()}</span></p>
+                {cdpWallet?.walletAddress ? (
+                  <>
+                    {/* User's unique deposit address */}
+                    <div className="bg-slate-900/60 rounded-xl p-4 border border-blue-500/30">
+                      <p className="text-xs text-blue-400 mb-2 font-medium uppercase tracking-wider">Your Deposit Address (Base Network)</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-sm text-white bg-slate-800 rounded-lg px-3 py-2 break-all font-mono">
+                          {cdpWallet.walletAddress}
+                        </code>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(cdpWallet.walletAddress)}
+                          className="px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-xs font-medium whitespace-nowrap"
+                        >
+                          📋 Copy
+                        </button>
+                      </div>
+                      <p className="text-xs text-yellow-400 mt-2">⚠️ Only send on Base network. Other chains = lost funds.</p>
                       <a 
-                        href={depositResult.deposit.explorerUrl}
+                        href={cdpWallet.explorer}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 text-xs underline"
+                        className="text-blue-400 hover:text-blue-300 text-xs underline mt-1 inline-block"
                       >
                         View on BaseScan →
                       </a>
+                    </div>
+
+                    {/* On-chain balance */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-900/60 rounded-xl p-3 text-center border border-slate-700/50">
+                        <p className="text-xl mb-1">💲</p>
+                        <p className="text-white font-semibold text-sm">USDC</p>
+                        <p className="text-lg font-bold text-blue-400">{cdpWallet.onChainBalance?.usdc?.toFixed(2) || '0.00'}</p>
+                        <p className="text-xs text-slate-400">≈ ₦{(cdpWallet.onChainBalance?.usdcNGN || 0).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-slate-900/60 rounded-xl p-3 text-center border border-slate-700/50">
+                        <p className="text-xl mb-1">⟠</p>
+                        <p className="text-white font-semibold text-sm">ETH</p>
+                        <p className="text-lg font-bold text-blue-400">{cdpWallet.onChainBalance?.eth?.toFixed(6) || '0.000000'}</p>
+                        <p className="text-xs text-slate-400">≈ ₦{(cdpWallet.onChainBalance?.ethNGN || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    {/* Sync button */}
+                    <button
+                      onClick={handleSyncBalance}
+                      disabled={isSyncing}
+                      className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 rounded-xl font-semibold text-white text-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isSyncing ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                          Syncing on-chain balance...
+                        </>
+                      ) : (
+                        '🔄 Sync Deposits to Trading Balance'
+                      )}
+                    </button>
+                    <p className="text-xs text-slate-500 text-center">After sending crypto to your address, click sync to credit your trading balance.</p>
+
+                    {/* Sync result */}
+                    {syncResult && (
+                      <div className={`${syncResult.credited > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-700/30 border-slate-600'} border rounded-xl p-4`}>
+                        <p className={`text-sm ${syncResult.credited > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                          {syncResult.message}
+                        </p>
+                        {syncResult.credited > 0 && (
+                          <p className="text-lg font-bold text-emerald-400 mt-1">+₦{syncResult.credited.toLocaleString()}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* No wallet yet — create one */
+                  <div className="text-center space-y-4">
+                    <div className="bg-slate-900/60 rounded-xl p-6 border border-slate-700/50">
+                      <p className="text-4xl mb-3">🔐</p>
+                      <p className="text-white font-semibold mb-2">Create Your Base Wallet</p>
+                      <p className="text-sm text-slate-400 mb-4">Get a unique deposit address powered by Coinbase. Non-custodial — we never hold your private keys.</p>
+                      <button
+                        onClick={handleCreateWallet}
+                        disabled={isCreatingWallet}
+                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl font-semibold text-white text-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isCreatingWallet ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                            Creating wallet on Base...
+                          </>
+                        ) : (
+                          '🚀 Create My Wallet'
+                        )}
+                      </button>
                     </div>
                   </div>
                 )}

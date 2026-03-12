@@ -9,6 +9,7 @@
         "lint": "next lint"
     },
     "dependencies": {
+        "@coinbase/coinbase-sdk": "^0.25.0",
         "@coral-xyz/anchor": "^0.28.0",
         "@solana/web3.js": "^1.87.6",
         "@supabase/auth-helpers-nextjs": "^0.8.7",
