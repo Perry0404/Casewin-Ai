@@ -1,25 +1,50 @@
 import { Coinbase, Wallet } from '@coinbase/coinbase-sdk'
+import { createClient } from '@supabase/supabase-js'
 
 // ============================================================
 // CDP (Coinbase Developer Platform) Wallet Service
 // Creates non-custodial embedded wallets per user on Base
 // No private keys in our env — Coinbase manages via MPC
+// Reads CDP credentials from Supabase app_config (Vercel env
+// vars are unreliable, Supabase connection always works)
 // ============================================================
 
 let initialized = false
 
-function initCDP() {
+function getAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
+
+async function initCDP() {
   if (initialized) return
 
-  const apiKeyName = process.env.CDP_API_KEY_NAME || ''
-  const apiKeyPrivateKey = process.env.CDP_API_KEY_PRIVATE_KEY || ''
+  // Try env vars first, fallback to Supabase app_config table
+  let apiKeyName = process.env.CDP_API_KEY_NAME || ''
+  let privateKey = process.env.CDP_API_KEY_PRIVATE_KEY || ''
 
-  if (!apiKeyName || !apiKeyPrivateKey) {
-    throw new Error('CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY must be set')
+  if (!apiKeyName || !privateKey) {
+    // Load from Supabase app_config table (reliable)
+    const admin = getAdmin()
+    const { data: configs } = await admin
+      .from('app_config')
+      .select('key, value')
+      .in('key', ['CDP_API_KEY_NAME', 'CDP_API_KEY_PRIVATE_KEY'])
+
+    if (configs) {
+      for (const cfg of configs) {
+        if (cfg.key === 'CDP_API_KEY_NAME') apiKeyName = cfg.value
+        if (cfg.key === 'CDP_API_KEY_PRIVATE_KEY') privateKey = cfg.value
+      }
+    }
   }
 
-  // The private key from CDP comes with \n escaped — unescape it
-  const privateKey = apiKeyPrivateKey.replace(/\\n/g, '\n')
+  if (!apiKeyName || !privateKey) {
+    throw new Error('CDP credentials not found in env vars or app_config table')
+  }
 
   new Coinbase({
     apiKeyName,
@@ -38,7 +63,7 @@ export async function createUserWallet(): Promise<{
   address: string
   seed: string
 }> {
-  initCDP()
+  await initCDP()
 
   const wallet = await Wallet.create({
     networkId: Coinbase.networks.BaseMainnet,
@@ -62,7 +87,7 @@ export async function createUserWallet(): Promise<{
  * Used to perform operations (transfers, balance checks) on a user's wallet.
  */
 export async function loadUserWallet(walletId: string, seed: string): Promise<Wallet> {
-  initCDP()
+  await initCDP()
 
   const wallet = await Wallet.import({
     walletId,
