@@ -81,16 +81,18 @@ export async function GET(request: NextRequest) {
     })
 
     // Create user_balances row if it doesn't exist
-    await admin.from('user_balances').upsert(
-      {
+    const { data: existingBalance } = await admin.from('user_balances')
+      .select('user_id').eq('user_id', user.id).single()
+    
+    if (!existingBalance) {
+      await admin.from('user_balances').insert({
         user_id: user.id,
         balance: 0,
         total_deposited: 0,
         total_withdrawn: 0,
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' }
-    )
+      })
+    }
 
     return NextResponse.json({
       walletAddress: address.toLowerCase(),
@@ -171,15 +173,13 @@ export async function POST(request: NextRequest) {
           .single()
 
         const newBalance = (currentBalance?.balance || 0) + newNGN
-        await admin.from('user_balances').upsert(
+        await admin.from('user_balances').update(
           {
-            user_id: user.id,
             balance: newBalance,
             total_deposited: (currentBalance?.total_deposited || 0) + newNGN,
             updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id' }
-        )
+          }
+        ).eq('user_id', user.id)
 
         // Update last synced amounts
         await admin.from('user_wallets').update({

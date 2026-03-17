@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
+
+function getAdmin() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
 
 // AMM Functions (Constant Product Market Maker)
 function calculatePrice(yesShares: number, noShares: number) {
@@ -89,6 +98,11 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    if (!user) {
+      return NextResponse.json({ error: 'Login required to trade' }, { status: 401 });
+    }
+
+    const admin = getAdmin();
     const body = await request.json();
     const { marketId, action, outcome, shares } = body;
 
@@ -142,49 +156,45 @@ export async function POST(request: NextRequest) {
 
       totalAmount = result.cost;
 
-      // Check user balance
-      if (user) {
-        const { data: userBalance } = await supabase
-          .from('user_balances')
-          .select('balance')
-          .eq('user_id', user.id)
-          .single();
+      // Check user balance (service role for reliable access)
+      const { data: userBalance } = await admin
+        .from('user_balances')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
 
-        const balance = userBalance?.balance || 0;
-        if (totalAmount > balance) {
-          return NextResponse.json({ 
-            error: 'Insufficient balance',
-            required: totalAmount,
-            available: balance
-          }, { status: 400 });
-        }
+      const balance = userBalance?.balance || 0;
+      if (totalAmount > balance) {
+        return NextResponse.json({ 
+          error: 'Insufficient balance. Deposit crypto to fund your account.',
+          required: totalAmount,
+          available: balance
+        }, { status: 400 });
       }
 
     } else {
       // Selling - check user has shares
-      if (user) {
-        const { data: position } = await supabase
-          .from('positions')
-          .select('shares')
-          .eq('user_id', user.id)
-          .eq('market_id', marketId)
-          .eq('outcome', normalizedOutcome)
-          .single();
+      const { data: position } = await admin
+        .from('positions')
+        .select('shares')
+        .eq('user_id', user.id)
+        .eq('market_id', marketId)
+        .eq('outcome', normalizedOutcome)
+        .single();
 
-        if (!position || position.shares < shares) {
-          return NextResponse.json({ 
-            error: 'Insufficient shares',
-            available: position?.shares || 0
-          }, { status: 400 });
-        }
+      if (!position || position.shares < shares) {
+        return NextResponse.json({ 
+          error: 'Insufficient shares',
+          available: position?.shares || 0
+        }, { status: 400 });
       }
 
       result = calculateSellReturn(yesShares, noShares, normalizedOutcome, shares);
       totalAmount = result.returns;
     }
 
-    // Update market AMM state
-    const { error: updateError } = await supabase
+    // Update market AMM state (service role for reliable write)
+    const { error: updateError } = await admin
       .from('prediction_markets')
       .update({
         outcome_options: {
@@ -200,113 +210,102 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to execute trade' }, { status: 500 });
     }
 
-    // Update user data if authenticated
-    if (user) {
-      if (action === 'buy') {
-        // Deduct balance
-        const { data: currentBalance } = await supabase
-          .from('user_balances')
-          .select('balance')
-          .eq('user_id', user.id)
-          .single();
+    // Update user balance + positions
+    if (action === 'buy') {
+      // Deduct balance
+      const { data: currentBalance } = await admin
+        .from('user_balances')
+        .select('balance, total_trades')
+        .eq('user_id', user.id)
+        .single();
 
-        await supabase
-          .from('user_balances')
-          .upsert({
-            user_id: user.id,
-            balance: (currentBalance?.balance || 50000) - totalAmount,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id' });
+      await admin
+        .from('user_balances')
+        .update({
+          balance: (currentBalance?.balance || 0) - totalAmount,
+          total_trades: (currentBalance?.total_trades || 0) + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
 
-        // Add/update position
-        const { data: existingPosition } = await supabase
+      // Add/update position
+      const { data: existingPosition } = await admin
+        .from('positions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('market_id', marketId)
+        .eq('outcome', normalizedOutcome)
+        .single();
+
+      if (existingPosition) {
+        const totalShares = existingPosition.shares + shares;
+        const totalCost = (existingPosition.shares * existingPosition.avg_price) + (shares * (totalAmount / shares));
+        const newAvgPrice = totalCost / totalShares;
+
+        await admin
           .from('positions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('market_id', marketId)
-          .eq('outcome', normalizedOutcome)
-          .single();
-
-        if (existingPosition) {
-          // Update existing position with weighted average
-          const totalShares = existingPosition.shares + shares;
-          const totalCost = (existingPosition.shares * existingPosition.avg_price) + (shares * (totalAmount / shares));
-          const newAvgPrice = totalCost / totalShares;
-
-          await supabase
-            .from('positions')
-            .update({
-              shares: totalShares,
-              avg_price: newAvgPrice
-            })
-            .eq('id', existingPosition.id);
-        } else {
-          // Create new position
-          await supabase
-            .from('positions')
-            .insert({
-              user_id: user.id,
-              market_id: marketId,
-              outcome: normalizedOutcome,
-              shares: shares,
-              avg_price: totalAmount / shares
-            });
-        }
-
+          .update({ shares: totalShares, avg_price: newAvgPrice })
+          .eq('id', existingPosition.id);
       } else {
-        // Selling - add balance
-        const { data: currentBalance } = await supabase
-          .from('user_balances')
-          .select('balance')
-          .eq('user_id', user.id)
-          .single();
-
-        await supabase
-          .from('user_balances')
-          .update({
-            balance: (currentBalance?.balance || 0) + totalAmount,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
-
-        // Reduce position
-        const { data: position } = await supabase
+        await admin
           .from('positions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('market_id', marketId)
-          .eq('outcome', normalizedOutcome)
-          .single();
-
-        if (position) {
-          const newShares = position.shares - shares;
-          if (newShares <= 0) {
-            await supabase
-              .from('positions')
-              .delete()
-              .eq('id', position.id);
-          } else {
-            await supabase
-              .from('positions')
-              .update({ shares: newShares })
-              .eq('id', position.id);
-          }
-        }
+          .insert({
+            user_id: user.id,
+            market_id: marketId,
+            outcome: normalizedOutcome,
+            shares: shares,
+            avg_price: totalAmount / shares
+          });
       }
 
-      // Record trade
-      await supabase
-        .from('trades')
-        .insert({
-          user_id: user.id,
-          market_id: marketId,
-          action,
-          outcome: normalizedOutcome,
-          shares,
-          price: totalAmount / shares,
-          total: totalAmount
-        });
+    } else {
+      // Selling - add balance back
+      const { data: currentBalance } = await admin
+        .from('user_balances')
+        .select('balance, total_trades')
+        .eq('user_id', user.id)
+        .single();
+
+      await admin
+        .from('user_balances')
+        .update({
+          balance: (currentBalance?.balance || 0) + totalAmount,
+          total_trades: (currentBalance?.total_trades || 0) + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      // Reduce position
+      const { data: position } = await admin
+        .from('positions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('market_id', marketId)
+        .eq('outcome', normalizedOutcome)
+        .single();
+
+      if (position) {
+        const newShares = position.shares - shares;
+        if (newShares <= 0) {
+          await admin.from('positions').delete().eq('id', position.id);
+        } else {
+          await admin.from('positions').update({ shares: newShares }).eq('id', position.id);
+        }
+      }
     }
+
+    // Record trade
+    await admin
+      .from('trades')
+      .insert({
+        user_id: user.id,
+        market_id: marketId,
+        action,
+        outcome: normalizedOutcome,
+        shares,
+        price: totalAmount / shares,
+        total: totalAmount
+      });
 
     return NextResponse.json({
       success: true,

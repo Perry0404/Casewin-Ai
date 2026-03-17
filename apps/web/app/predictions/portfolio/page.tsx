@@ -54,7 +54,7 @@ export default function PortfolioPage() {
       // Fetch balance
       const balanceRes = await fetch('/api/wallet');
       const balanceData = await balanceRes.json();
-      setUserBalance(balanceData.balance || 50000);
+      setUserBalance(balanceData.balance || 0);
 
       // Fetch positions
       const positionsRes = await fetch('/api/wallet/positions');
