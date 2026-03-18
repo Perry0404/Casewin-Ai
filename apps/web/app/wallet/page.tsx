@@ -1,253 +1,328 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { createClient } from '@/lib/supabase/client'
-import Link from 'next/link'
-import { Transaction } from '@/types/database'
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
+
+interface WalletData {
+  walletAddress: string;
+  onChainBalance: {
+    eth: number;
+    usdc: number;
+    ethNGN: number;
+    usdcNGN: number;
+    totalNGN: number;
+  };
+  tradingBalance: number;
+  totalDeposited: number;
+  totalWithdrawn: number;
+  explorer: string;
+  isNew?: boolean;
+  message?: string;
+}
+
+interface WalletTransaction {
+  id: string;
+  type: string;
+  amount: number;
+  balance_after: number;
+  description: string;
+  created_at: string;
+}
 
 export default function WalletPage() {
-  const { user, wallet, loading, refreshWallet } = useAuth()
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loadingTx, setLoadingTx] = useState(true)
-  const [showFundModal, setShowFundModal] = useState(false)
-  const [fundAmount, setFundAmount] = useState('')
-  const [processing, setProcessing] = useState(false)
+  const { user, loading: authLoading } = useAuth();
+  const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchWallet = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const res = await fetch('/api/wallet/base-wallet');
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to load wallet');
+        return;
+      }
+      setWalletData(data);
+      if (data.message) setSyncMessage(data.message);
+    } catch (err) {
+      setError('Failed to connect. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchTransactions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/wallet');
+      const data = await res.json();
+      // Also fetch wallet_transactions from the wallet API for history
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (user) {
-      fetchTransactions()
+      fetchWallet();
     }
-  }, [user])
+  }, [user, fetchWallet]);
 
-  const fetchTransactions = async () => {
-    if (!user) return
-    const supabase = createClient()
-    
-    const { data } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20)
-
-    setTransactions(data || [])
-    setLoadingTx(false)
-  }
-
-  const handleFundWallet = async () => {
-    if (!fundAmount || parseFloat(fundAmount) < 100) {
-      alert('Minimum funding amount is ₦100')
-      return
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncMessage('');
+    try {
+      const res = await fetch('/api/wallet/base-wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync' })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncMessage(data.message);
+        if (data.credited > 0) {
+          // Refresh wallet data to show new balance
+          await fetchWallet();
+        } else {
+          // Still refresh on-chain data
+          setWalletData(prev => prev ? {
+            ...prev,
+            onChainBalance: data.onChainBalance || prev.onChainBalance
+          } : prev);
+        }
+      } else {
+        setSyncMessage(data.error || 'Sync failed');
+      }
+    } catch {
+      setSyncMessage('Sync failed. Please try again.');
+    } finally {
+      setSyncing(false);
     }
+  };
 
-    setProcessing(true)
-    
-    // For now, simulate funding (Korapay will be integrated when approved)
-    // In production, this will call the Korapay API
-    setTimeout(async () => {
-      const supabase = createClient()
-      
-      // Create a pending transaction
-      await supabase.from('transactions').insert({
-        user_id: user?.id,
-        wallet_id: wallet?.id,
-        type: 'deposit',
-        amount: parseFloat(fundAmount),
-        status: 'pending',
-        reference: `DEP-${Date.now()}`,
-        description: 'Wallet funding via Korapay',
-      })
+  const copyAddress = () => {
+    if (walletData?.walletAddress) {
+      navigator.clipboard.writeText(walletData.walletAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
-      alert('Payment integration pending. Once Korapay KYC is approved, you can fund your wallet.')
-      setShowFundModal(false)
-      setFundAmount('')
-      setProcessing(false)
-    }, 1000)
-  }
-
-  if (loading) {
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="animate-spin h-12 w-12 border-4 border-green-500 border-t-transparent rounded-full" />
       </div>
-    )
+    );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Please Log In</h1>
-          <p className="text-gray-400 mb-6">You need to be logged in to view your wallet.</p>
-          <Link href="/auth/login" className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700">
-            Go to Login
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-center bg-slate-800/50 rounded-2xl p-8 border border-slate-700/50 max-w-md">
+          <p className="text-4xl mb-4">🔐</p>
+          <h1 className="text-xl font-bold text-white mb-2">Login Required</h1>
+          <p className="text-slate-400 text-sm mb-4">Log in to access your wallet and start trading.</p>
+          <Link href="/auth/login" className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-500 font-medium">
+            Log In
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 py-12">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">My Wallet</h1>
-          <p className="text-gray-400 mt-2">Manage your funds and transactions</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Header */}
+      <header className="border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-xl">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
+              My Wallet
+            </h1>
+            <p className="text-xs text-slate-400">Base Chain · Deposit &amp; Trade</p>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/predictions" className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-500">
+              🎯 Bet Now
+            </Link>
+            <Link href="/" className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-sm hover:bg-slate-700">
+              Home
+            </Link>
+          </div>
         </div>
+      </header>
 
-        <div className="grid gap-6">
-          {/* Balance Card */}
-          <div className="bg-gradient-to-r from-green-600 to-emerald-700 rounded-xl p-8">
-            <p className="text-green-100 text-sm mb-2">Available Balance</p>
-            <div className="flex items-baseline gap-2 mb-6">
-              <span className="text-5xl font-bold text-white">
-                ₦{wallet?.balance?.toLocaleString() || '0'}
-              </span>
-              <span className="text-green-200 text-2xl">.00</span>
-            </div>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setShowFundModal(true)}
-                className="flex-1 bg-white text-green-700 py-3 rounded-lg font-semibold hover:bg-green-50 transition"
-              >
-                + Fund Wallet
-              </button>
-              <button
-                className="flex-1 bg-green-500/30 text-white py-3 rounded-lg font-semibold hover:bg-green-500/40 transition border border-green-400/30"
-              >
-                Withdraw
-              </button>
-            </div>
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
+            <p className="text-red-400 text-sm">{error}</p>
+            <button onClick={fetchWallet} className="text-sm text-red-300 hover:text-white underline">Retry</button>
           </div>
+        )}
 
-          {/* Quick Actions */}
-          <div className="grid md:grid-cols-3 gap-4">
-            <Link href="/predictions" className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-green-500 transition">
-              <div className="text-3xl mb-3">📊</div>
-              <h3 className="font-semibold text-white">Bet on Cases</h3>
-              <p className="text-gray-400 text-sm mt-1">Use your balance to predict case outcomes</p>
-            </Link>
-            <Link href="/marketplace" className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-green-500 transition">
-              <div className="text-3xl mb-3">👨‍⚖️</div>
-              <h3 className="font-semibold text-white">Hire a Lawyer</h3>
-              <p className="text-gray-400 text-sm mt-1">Pay for legal consultations</p>
-            </Link>
-            <Link href="/tools" className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-green-500 transition">
-              <div className="text-3xl mb-3">🤖</div>
-              <h3 className="font-semibold text-white">AI Tools</h3>
-              <p className="text-gray-400 text-sm mt-1">Premium features coming soon</p>
-            </Link>
+        {loading ? (
+          <div className="text-center py-20">
+            <div className="animate-spin h-12 w-12 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4" />
+            <p className="text-slate-400">Setting up your Base wallet...</p>
           </div>
-
-          {/* Transaction History */}
-          <div className="bg-gray-800 rounded-xl border border-gray-700">
-            <div className="p-6 border-b border-gray-700">
-              <h3 className="text-lg font-semibold text-white">Transaction History</h3>
-            </div>
-            
-            {loadingTx ? (
-              <div className="p-6 text-center text-gray-400">Loading transactions...</div>
-            ) : transactions.length === 0 ? (
-              <div className="p-12 text-center">
-                <div className="text-4xl mb-4">💳</div>
-                <p className="text-gray-400">No transactions yet</p>
-                <p className="text-gray-500 text-sm mt-1">Fund your wallet to get started</p>
+        ) : walletData ? (
+          <>
+            {/* Trading Balance Card */}
+            <div className="bg-gradient-to-r from-green-600/90 to-emerald-700/90 rounded-2xl p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-10 translate-x-10" />
+              <p className="text-green-100 text-sm mb-1">Trading Balance</p>
+              <p className="text-4xl font-bold text-white mb-1">
+                ₦{(walletData.tradingBalance || 0).toLocaleString()}
+              </p>
+              <p className="text-green-200 text-xs mb-4">This is your balance for betting on prediction markets</p>
+              <div className="flex gap-3">
+                <Link href="/predictions" className="flex-1 bg-white text-green-700 py-3 rounded-xl font-semibold hover:bg-green-50 text-center text-sm">
+                  🎯 Place Bets
+                </Link>
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  className="flex-1 bg-green-500/30 text-white py-3 rounded-xl font-semibold hover:bg-green-500/40 border border-green-400/30 text-sm disabled:opacity-50"
+                >
+                  {syncing ? '⏳ Syncing...' : '🔄 Sync Deposits'}
+                </button>
               </div>
-            ) : (
-              <div className="divide-y divide-gray-700">
-                {transactions.map((tx) => (
-                  <div key={tx.id} className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        tx.type === 'deposit' || tx.type === 'win' || tx.type === 'refund' 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {tx.type === 'deposit' || tx.type === 'win' || tx.type === 'refund' ? '↓' : '↑'}
-                      </div>
-                      <div>
-                        <p className="text-white font-medium capitalize">{tx.type}</p>
-                        <p className="text-gray-400 text-sm">{tx.description || tx.reference}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-semibold ${
-                        tx.type === 'deposit' || tx.type === 'win' || tx.type === 'refund'
-                          ? 'text-green-400' 
-                          : 'text-red-400'
-                      }`}>
-                        {tx.type === 'deposit' || tx.type === 'win' || tx.type === 'refund' ? '+' : '-'}₦{tx.amount.toLocaleString()}
-                      </p>
-                      <p className="text-gray-500 text-sm">
-                        {new Date(tx.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+            </div>
+
+            {syncMessage && (
+              <div className={`rounded-xl p-4 text-sm ${
+                syncMessage.includes('✅') || syncMessage.includes('credited')
+                  ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                  : syncMessage.includes('No new')
+                  ? 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400'
+                  : 'bg-blue-500/10 border border-blue-500/30 text-blue-400'
+              }`}>
+                {syncMessage}
               </div>
             )}
-          </div>
-        </div>
-      </div>
 
-      {/* Fund Wallet Modal */}
-      {showFundModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-white mb-4">Fund Your Wallet</h3>
-            
-            <div className="mb-6">
-              <label className="block text-sm text-gray-400 mb-2">Amount (₦)</label>
-              <input
-                type="number"
-                value={fundAmount}
-                onChange={(e) => setFundAmount(e.target.value)}
-                placeholder="Enter amount"
-                min="100"
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-lg focus:outline-none focus:border-green-500"
-              />
-              <p className="text-gray-500 text-sm mt-2">Minimum: ₦100</p>
-            </div>
+            {/* Deposit Address */}
+            <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
+              <h3 className="font-bold text-white mb-1">📥 Deposit Address (Base Chain)</h3>
+              <p className="text-xs text-slate-400 mb-4">Send USDC or ETH on Base network to this address. Then tap "Sync Deposits" above.</p>
 
-            {/* Quick amounts */}
-            <div className="grid grid-cols-3 gap-2 mb-6">
-              {[1000, 5000, 10000, 20000, 50000, 100000].map((amount) => (
+              <div className="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3 border border-slate-600/50">
+                <code className="flex-1 text-green-400 text-sm font-mono break-all select-all">
+                  {walletData.walletAddress}
+                </code>
                 <button
-                  key={amount}
-                  onClick={() => setFundAmount(amount.toString())}
-                  className="py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 text-sm"
+                  onClick={copyAddress}
+                  className="px-3 py-1.5 bg-slate-700 text-white rounded-lg text-xs hover:bg-slate-600 whitespace-nowrap"
                 >
-                  ₦{amount.toLocaleString()}
+                  {copied ? '✓ Copied!' : '📋 Copy'}
                 </button>
-              ))}
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <div className="bg-slate-900/30 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-400">ETH</p>
+                  <p className="text-sm font-bold text-white">{walletData.onChainBalance.eth.toFixed(6)}</p>
+                  <p className="text-xs text-slate-500">≈ ₦{walletData.onChainBalance.ethNGN.toLocaleString()}</p>
+                </div>
+                <div className="bg-slate-900/30 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-400">USDC</p>
+                  <p className="text-sm font-bold text-white">{walletData.onChainBalance.usdc.toFixed(2)}</p>
+                  <p className="text-xs text-slate-500">≈ ₦{walletData.onChainBalance.usdcNGN.toLocaleString()}</p>
+                </div>
+                <div className="bg-slate-900/30 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-400">Total On-Chain</p>
+                  <p className="text-sm font-bold text-green-400">₦{walletData.onChainBalance.totalNGN.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <a
+                href={walletData.explorer}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-3 text-xs text-blue-400 hover:text-blue-300"
+              >
+                View on BaseScan ↗
+              </a>
             </div>
 
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
-              <p className="text-yellow-400 text-sm">
-                ⚠️ Payment integration is pending Korapay KYC approval. You'll be able to fund your wallet once approved.
-              </p>
+            {/* How It Works */}
+            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
+              <h3 className="font-bold text-white mb-4">🔄 How It Works</h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <span className="text-green-400 font-bold">1</span>
+                  </div>
+                  <p className="text-white text-sm font-medium">Send Crypto</p>
+                  <p className="text-slate-400 text-xs mt-1">Send USDC or ETH to your deposit address above (on Base chain)</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <span className="text-blue-400 font-bold">2</span>
+                  </div>
+                  <p className="text-white text-sm font-medium">Sync Balance</p>
+                  <p className="text-slate-400 text-xs mt-1">Tap "Sync Deposits" to convert on-chain balance to Naira trading balance</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <span className="text-purple-400 font-bold">3</span>
+                  </div>
+                  <p className="text-white text-sm font-medium">Place Bets</p>
+                  <p className="text-slate-400 text-xs mt-1">Use your NGN balance to bet on Nigerian legal case outcomes</p>
+                </div>
+              </div>
             </div>
 
-            <div className="flex gap-4">
-              <button
-                onClick={() => setShowFundModal(false)}
-                className="flex-1 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleFundWallet}
-                disabled={processing}
-                className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-              >
-                {processing ? 'Processing...' : 'Continue'}
-              </button>
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
+                <p className="text-xs text-slate-400">Total Deposited</p>
+                <p className="text-xl font-bold text-green-400">₦{(walletData.totalDeposited || 0).toLocaleString()}</p>
+              </div>
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
+                <p className="text-xs text-slate-400">Total Withdrawn</p>
+                <p className="text-xl font-bold text-red-400">₦{(walletData.totalWithdrawn || 0).toLocaleString()}</p>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+
+            {/* Quick Actions */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <Link href="/predictions" className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 hover:border-purple-500/50 transition group">
+                <p className="text-2xl mb-2">🎯</p>
+                <h3 className="font-semibold text-white group-hover:text-purple-400 transition">Prediction Markets</h3>
+                <p className="text-slate-400 text-xs mt-1">Bet on case outcomes with your balance</p>
+              </Link>
+              <Link href="/predictions/portfolio" className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 hover:border-green-500/50 transition group">
+                <p className="text-2xl mb-2">📊</p>
+                <h3 className="font-semibold text-white group-hover:text-green-400 transition">My Portfolio</h3>
+                <p className="text-slate-400 text-xs mt-1">View your positions and P&amp;L</p>
+              </Link>
+              <Link href="/predictions/leaderboard" className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 hover:border-yellow-500/50 transition group">
+                <p className="text-2xl mb-2">🏆</p>
+                <h3 className="font-semibold text-white group-hover:text-yellow-400 transition">Leaderboard</h3>
+                <p className="text-slate-400 text-xs mt-1">See top traders and rankings</p>
+              </Link>
+            </div>
+
+            {/* Important Info */}
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+              <p className="text-yellow-400 text-sm font-medium mb-1">⚠️ Important</p>
+              <ul className="text-yellow-300/80 text-xs space-y-1">
+                <li>• Only send assets on <strong>Base</strong> network (Chain ID: 8453). Other networks will result in loss.</li>
+                <li>• USDC and ETH are supported. Balances are converted to Naira at live rates.</li>
+                <li>• After sending, tap "Sync Deposits" to credit your trading balance.</li>
+                <li>• Platform charges 2% fee on trades and 1.5% on bank withdrawals.</li>
+              </ul>
+            </div>
+          </>
+        ) : null}
+      </div>
     </div>
-  )
+  );
 }

@@ -93,8 +93,6 @@ export default function MarketDetailPage() {
   const [isTrading, setIsTrading] = useState(false);
   const [tradeSuccess, setTradeSuccess] = useState(false);
   const [tradeError, setTradeError] = useState<string | null>(null);
-  const [showFundWallet, setShowFundWallet] = useState(false);
-  const [fundAmount, setFundAmount] = useState(10000);
   const [aiAnalysis, setAiAnalysis] = useState<{ prediction: number; confidence: number; reasoning: string[] } | null>(null);
   const [comments] = useState<Comment[]>([
     { id: '1', user: 'LegalEagle_NG', content: 'Based on similar cases, I think YES has strong fundamentals here.', timestamp: '2026-02-17T10:30:00Z', likes: 24 },
@@ -158,35 +156,27 @@ export default function MarketDetailPage() {
     }
   }, [marketId]);
 
-  // Load user balance
-  useEffect(() => {
-    const savedBalance = localStorage.getItem('casewin_balance');
-    setUserBalance(savedBalance ? parseFloat(savedBalance) : 50000);
+  // Load real user balance from API
+  const fetchBalance = useCallback(async () => {
+    try {
+      const res = await fetch('/api/wallet');
+      const data = await res.json();
+      setUserBalance(data.balance || 0);
+    } catch {
+      setUserBalance(0);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
 
   useEffect(() => {
     fetchMarket();
   }, [fetchMarket]);
 
-  const handleFundWallet = () => {
-    const newBalance = userBalance + fundAmount;
-    setUserBalance(newBalance);
-    localStorage.setItem('casewin_balance', newBalance.toString());
-    setShowFundWallet(false);
-    setTradeError(null);
-  };
-
   const handleTrade = async () => {
     if (!market) return;
-
-    const price = outcome === 'yes' ? market.yes_price : market.no_price;
-    const cost = shares * price;
-
-    if (cost > userBalance) {
-      setShowFundWallet(true);
-      setFundAmount(Math.ceil(cost - userBalance + 1000));
-      return;
-    }
 
     setIsTrading(true);
     setTradeError(null);
@@ -206,32 +196,19 @@ export default function MarketDetailPage() {
       const data = await res.json();
       
       if (!res.ok || data.error) {
-        throw new Error(data.error || 'Trade failed');
+        const errorMsg = data.error || 'Trade failed';
+        // If insufficient balance, show helpful message
+        if (errorMsg.includes('Insufficient balance') || errorMsg.includes('insufficient')) {
+          throw new Error('Insufficient balance. Deposit crypto at /wallet first, then sync your balance.');
+        }
+        throw new Error(errorMsg);
       }
-
-      // Update local balance
-      const newBalance = userBalance - cost;
-      setUserBalance(newBalance);
-      localStorage.setItem('casewin_balance', newBalance.toString());
-
-      // Save position to localStorage
-      const positions = JSON.parse(localStorage.getItem('casewin_positions') || '[]');
-      positions.push({
-        id: Date.now().toString(),
-        marketId: market.id,
-        marketTitle: market.title,
-        outcome,
-        shares,
-        avgPrice: price,
-        purchaseDate: new Date().toISOString()
-      });
-      localStorage.setItem('casewin_positions', JSON.stringify(positions));
 
       setTradeSuccess(true);
       setTimeout(() => setTradeSuccess(false), 3000);
 
-      // Refresh market data
-      await fetchMarket();
+      // Refresh real balance from API + market data
+      await Promise.all([fetchBalance(), fetchMarket()]);
 
     } catch (err) {
       setTradeError(err instanceof Error ? err.message : 'Trade failed');
@@ -278,82 +255,6 @@ export default function MarketDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
-      {/* Fund Wallet Modal */}
-      {showFundWallet && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-2xl p-6 max-w-md w-full border border-slate-700">
-            <div className="text-center mb-6">
-              <div className="text-5xl mb-4">💳</div>
-              <h2 className="text-xl font-bold text-white mb-2">Fund Your Wallet</h2>
-              <p className="text-slate-400">
-                You need ₦{cost.toFixed(2)} but have ₦{userBalance.toFixed(2)}
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">Amount to Add (₦)</label>
-                <input
-                  type="number"
-                  value={fundAmount}
-                  onChange={(e) => setFundAmount(Math.max(100, parseInt(e.target.value) || 0))}
-                  className="w-full px-4 py-3 bg-slate-700 rounded-xl text-white text-lg font-semibold text-center"
-                />
-              </div>
-
-              <div className="grid grid-cols-4 gap-2">
-                {[5000, 10000, 25000, 50000].map((amount) => (
-                  <button
-                    key={amount}
-                    onClick={() => setFundAmount(amount)}
-                    className={`py-2 rounded-lg text-sm font-medium transition-all ${
-                      fundAmount === amount
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    ₦{amount >= 1000 ? `${amount/1000}K` : amount}
-                  </button>
-                ))}
-              </div>
-
-              <div className="bg-slate-700/50 rounded-xl p-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-400">Current Balance:</span>
-                  <span className="text-white">₦{userBalance.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-400">Adding:</span>
-                  <span className="text-emerald-400">+₦{fundAmount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm font-semibold border-t border-slate-600 pt-2 mt-2">
-                  <span className="text-slate-400">New Balance:</span>
-                  <span className="text-white">₦{(userBalance + fundAmount).toLocaleString()}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleFundWallet}
-                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 rounded-xl font-semibold text-white text-lg"
-              >
-                💳 Add ₦{fundAmount.toLocaleString()} to Wallet
-              </button>
-
-              <button
-                onClick={() => setShowFundWallet(false)}
-                className="w-full py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-300"
-              >
-                Cancel
-              </button>
-
-              <p className="text-xs text-slate-500 text-center">
-                Demo mode: Funds are simulated for testing purposes
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <header className="border-b border-slate-700/50 backdrop-blur-xl bg-slate-900/80 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -371,12 +272,12 @@ export default function MarketDetailPage() {
                 <span className="text-slate-400 text-sm">Balance:</span>
                 <span className="text-emerald-400 font-bold">₦{userBalance.toLocaleString()}</span>
               </div>
-              <button
-                onClick={() => setShowFundWallet(true)}
+              <Link
+                href="/wallet"
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium text-sm"
               >
-                + Fund Wallet
-              </button>
+                💰 Deposit
+              </Link>
             </div>
           </div>
         </div>
@@ -713,12 +614,12 @@ export default function MarketDetailPage() {
 
               {/* Balance Warning */}
               {cost > userBalance && (
-                <button
-                  onClick={() => setShowFundWallet(true)}
-                  className="w-full mt-3 py-3 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 rounded-xl text-yellow-400 font-medium"
+                <Link
+                  href="/wallet"
+                  className="block w-full mt-3 py-3 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 rounded-xl text-yellow-400 font-medium text-center"
                 >
-                  💳 Fund Wallet to Trade
-                </button>
+                  💰 Deposit Crypto to Trade
+                </Link>
               )}
 
               <p className="text-xs text-slate-500 text-center mt-4">
