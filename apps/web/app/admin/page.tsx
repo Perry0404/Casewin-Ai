@@ -1,493 +1,426 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 
-interface Market {
-  id: string
-  title: string
-  description: string
-  category: string
-  total_pool: number
-  status: string
-  closes_at: string
-  outcome_options: { yes_votes: number; no_votes: number }
+interface RevenueData {
+  period: number;
+  revenue: {
+    total: number;
+    tradeFees: number;
+    withdrawalFees: number;
+    byDay: Record<string, number>;
+    recentEvents: any[];
+  };
+  transactions: {
+    summary: {
+      totalDeposits: number;
+      totalTradeBuys: number;
+      totalTradeSells: number;
+      totalPayouts: number;
+      totalFees: number;
+      count: number;
+    };
+    recent: any[];
+  };
+  users: {
+    total: number;
+    activeTraders: number;
+    totalUsersBalance: number;
+    totalDeposited: number;
+    totalWithdrawn: number;
+  };
+  markets: {
+    total: number;
+    open: number;
+    totalPoolValue: number;
+  };
+  topTraders: any[];
 }
 
-interface Lawyer {
-  id: string
-  user_id: string
-  full_name: string
-  is_verified: boolean
-  bar_number: string
-  specializations: string[]
+function formatMoney(amount: number) {
+  return `₦${Math.abs(amount).toLocaleString()}`;
 }
 
-const ADMIN_PASSWORD = 'casewin2024admin'
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleString('en-NG', {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+}
 
-export default function AdminPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  
-  const [activeTab, setActiveTab] = useState<'markets' | 'lawyers' | 'create'>('markets')
-  const [markets, setMarkets] = useState<Market[]>([])
-  const [lawyers, setLawyers] = useState<Lawyer[]>([])
-  const [loading, setLoading] = useState(true)
+export default function AdminDashboard() {
+  const [data, setData] = useState<RevenueData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [period, setPeriod] = useState(30);
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'traders'>('overview');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [addingAdmin, setAddingAdmin] = useState(false);
 
-  // New market form
-  const [newMarket, setNewMarket] = useState({
-    title: '',
-    description: '',
-    case_reference: '',
-    court: '',
-    category: 'high_court',
-    closes_at: ''
-  })
-  const [creating, setCreating] = useState(false)
-
-  useEffect(() => {
-    // Check if already authenticated in this session
-    const auth = sessionStorage.getItem('admin_auth')
-    if (auth === 'true') {
-      setIsAuthenticated(true)
-      fetchData()
-    } else {
-      setLoading(false)
-    }
-  }, [])
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (password === ADMIN_PASSWORD) {
-      sessionStorage.setItem('admin_auth', 'true')
-      setIsAuthenticated(true)
-      setError('')
-      fetchData()
-    } else {
-      setError('Invalid password')
-    }
-  }
-
-  const fetchData = async () => {
-    setLoading(true)
+  const fetchData = useCallback(async () => {
     try {
-      const [marketsRes, lawyersRes] = await Promise.all([
-        fetch('/api/admin/markets'),
-        fetch('/api/admin/lawyers')
-      ])
-      
-      const marketsData = await marketsRes.json()
-      const lawyersData = await lawyersRes.json()
-      
-      setMarkets(marketsData.markets || [])
-      setLawyers(lawyersData.lawyers || [])
-    } catch (error) {
-      console.error('Error fetching data:', error)
+      setIsLoading(true);
+      const res = await fetch(`/api/admin/revenue?period=${period}`);
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || 'Access denied');
+        return;
+      }
+      setData(json);
+      setError('');
+    } catch (err) {
+      setError('Failed to load dashboard data');
     } finally {
-      setLoading(false)
+      setIsLoading(false);
     }
-  }
+  }, [period]);
 
-  const handleCreateMarket = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCreating(true)
-    
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleAddAdmin = async () => {
+    if (!adminEmail) return;
+    setAddingAdmin(true);
     try {
-      const response = await fetch('/api/admin/markets', {
+      const res = await fetch('/api/admin/revenue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newMarket)
-      })
+        body: JSON.stringify({ action: 'add_admin', email: adminEmail })
+      });
+      const json = await res.json();
+      alert(res.ok ? json.message : json.error);
+      if (res.ok) setAdminEmail('');
+    } catch { alert('Failed'); } finally { setAddingAdmin(false); }
+  };
 
-      if (response.ok) {
-        alert('Market created successfully!')
-        setNewMarket({
-          title: '',
-          description: '',
-          case_reference: '',
-          court: '',
-          category: 'high_court',
-          closes_at: ''
-        })
-        fetchData()
-        setActiveTab('markets')
-      } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to create market')
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Failed to create market')
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const handleResolveMarket = async (marketId: string, outcome: 'yes' | 'no') => {
-    if (!confirm(`Are you sure you want to resolve this market as "${outcome.toUpperCase()}"? This cannot be undone.`)) {
-      return
-    }
-
-    try {
-      const response = await fetch('/api/admin/markets/resolve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ market_id: marketId, outcome })
-      })
-
-      if (response.ok) {
-        alert('Market resolved successfully!')
-        fetchData()
-      } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to resolve market')
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Failed to resolve market')
-    }
-  }
-
-  const handleVerifyLawyer = async (lawyerId: string, verify: boolean) => {
-    try {
-      const response = await fetch('/api/admin/lawyers/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lawyer_id: lawyerId, is_verified: verify })
-      })
-
-      if (response.ok) {
-        alert(verify ? 'Lawyer verified!' : 'Verification removed')
-        fetchData()
-      } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to update lawyer')
-      }
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Failed to update lawyer')
-    }
-  }
-
-  // Login screen
-  if (!isAuthenticated) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center bg-gray-800 p-8 rounded-xl max-w-md w-full mx-4">
-          <h1 className="text-2xl font-bold text-white mb-2">🔐 Admin Panel</h1>
-          <p className="text-gray-400 mb-6">Enter admin password to continue</p>
-          
-          <form onSubmit={handleLogin} className="space-y-4">
-            {error && (
-              <div className="bg-red-500/20 text-red-400 px-4 py-2 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-            
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter admin password"
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
-              autoFocus
-            />
-            
-            <button
-              type="submit"
-              className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700"
-            >
-              Access Admin Panel
-            </button>
-          </form>
-          
-          <Link href="/" className="inline-block mt-4 text-gray-400 hover:text-white text-sm">
-            ← Back to Home
-          </Link>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900/10 to-slate-900 flex items-center justify-center">
+        <div className="bg-slate-800/50 rounded-2xl p-8 border border-red-500/30 text-center max-w-md">
+          <p className="text-4xl mb-4">🔒</p>
+          <h1 className="text-xl font-bold text-red-400 mb-2">Access Denied</h1>
+          <p className="text-slate-400 text-sm mb-4">{error}</p>
+          <Link href="/predictions" className="text-purple-400 hover:text-purple-300 text-sm">Back to Markets</Link>
         </div>
       </div>
-    )
+    );
   }
 
-  // Admin view
+  if (isLoading || !data) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/10 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-slate-400">Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/10 to-slate-900">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
+      <header className="border-b border-slate-700/50 backdrop-blur-xl bg-slate-900/80 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="text-2xl font-bold text-white">
-                CaseWin <span className="text-green-500">AI</span>
-              </Link>
-              <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                ADMIN
-              </span>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
+                Admin Dashboard
+              </h1>
+              <p className="text-xs text-slate-400">Revenue &amp; Transaction Monitoring</p>
             </div>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => {
-                  sessionStorage.removeItem('admin_auth')
-                  setIsAuthenticated(false)
-                }}
-                className="text-gray-400 hover:text-white text-sm"
+            <div className="flex items-center gap-3">
+              <select
+                value={period}
+                onChange={(e) => setPeriod(parseInt(e.target.value))}
+                className="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm"
               >
-                Logout
+                <option value={7}>Last 7 days</option>
+                <option value={30}>Last 30 days</option>
+                <option value={90}>Last 90 days</option>
+                <option value={365}>Last year</option>
+              </select>
+              <button onClick={fetchData} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-500">
+                Refresh
               </button>
-              <Link href="/" className="text-gray-300 hover:text-white">
-                ← Back to Site
+              <Link href="/predictions" className="px-3 py-1.5 text-slate-300 bg-slate-800 rounded-lg text-sm hover:bg-slate-700">
+                Markets
               </Link>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8 flex-wrap">
-          <button
-            onClick={() => setActiveTab('markets')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              activeTab === 'markets' 
-                ? 'bg-green-600 text-white' 
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            📊 Prediction Markets ({markets.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('lawyers')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              activeTab === 'lawyers' 
-                ? 'bg-green-600 text-white' 
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            👨‍⚖️ Lawyers ({lawyers.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('create')}
-            className={`px-6 py-3 rounded-lg font-semibold transition ${
-              activeTab === 'create' 
-                ? 'bg-green-600 text-white' 
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            ➕ Create Market
-          </button>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Revenue Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-2xl p-5 border border-green-500/30">
+            <p className="text-xs text-slate-400 mb-1">Total Revenue</p>
+            <p className="text-2xl font-bold text-green-400">{formatMoney(data.revenue.total)}</p>
+            <p className="text-xs text-slate-500 mt-1">Last {data.period} days</p>
+          </div>
+          <div className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 rounded-2xl p-5 border border-blue-500/30">
+            <p className="text-xs text-slate-400 mb-1">Trade Fees</p>
+            <p className="text-2xl font-bold text-blue-400">{formatMoney(data.revenue.tradeFees)}</p>
+            <p className="text-xs text-slate-500 mt-1">2% per trade</p>
+          </div>
+          <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-2xl p-5 border border-purple-500/30">
+            <p className="text-xs text-slate-400 mb-1">Withdrawal Fees</p>
+            <p className="text-2xl font-bold text-purple-400">{formatMoney(data.revenue.withdrawalFees)}</p>
+            <p className="text-xs text-slate-500 mt-1">1.5% per payout</p>
+          </div>
+          <div className="bg-gradient-to-br from-orange-600/20 to-amber-600/20 rounded-2xl p-5 border border-orange-500/30">
+            <p className="text-xs text-slate-400 mb-1">Trading Volume</p>
+            <p className="text-2xl font-bold text-orange-400">
+              {formatMoney(data.transactions.summary.totalTradeBuys + data.transactions.summary.totalTradeSells)}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">{data.transactions.summary.count} transactions</p>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-20">
-            <div className="inline-block w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-gray-400 mt-4">Loading data...</p>
+        {/* Platform Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
+            <p className="text-xl font-bold text-white">{data.users.total}</p>
+            <p className="text-xs text-slate-400">Total Users</p>
           </div>
-        ) : (
-          <>
-            {/* Markets Tab */}
-            {activeTab === 'markets' && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-white mb-6">Prediction Markets</h2>
-                {markets.length === 0 ? (
-                  <div className="bg-gray-800 rounded-xl p-8 text-center">
-                    <p className="text-gray-400">No markets yet. Create one!</p>
-                  </div>
-                ) : (
-                  markets.map(market => (
-                    <div key={market.id} className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            market.status === 'open' ? 'bg-green-500/20 text-green-400' : 
-                            market.status === 'resolved' ? 'bg-blue-500/20 text-blue-400' : 
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
-                            {market.status.toUpperCase()}
-                          </span>
-                          <span className="ml-2 px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-xs">
-                            {market.category?.replace('_', ' ')}
-                          </span>
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
+            <p className="text-xl font-bold text-green-400">{data.users.activeTraders}</p>
+            <p className="text-xs text-slate-400">Active Traders</p>
+          </div>
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
+            <p className="text-xl font-bold text-blue-400">{formatMoney(data.users.totalDeposited)}</p>
+            <p className="text-xs text-slate-400">Total Deposited</p>
+          </div>
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
+            <p className="text-xl font-bold text-red-400">{formatMoney(data.users.totalWithdrawn)}</p>
+            <p className="text-xs text-slate-400">Total Withdrawn</p>
+          </div>
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
+            <p className="text-xl font-bold text-yellow-400">{data.markets.open}/{data.markets.total}</p>
+            <p className="text-xs text-slate-400">Open Markets</p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-4 border-b border-slate-700/50 pb-2">
+          {(['overview', 'transactions', 'traders'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-all ${
+                activeTab === tab
+                  ? 'bg-slate-800 text-white border-b-2 border-green-400'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {tab === 'overview' ? '📊 Revenue Overview' : tab === 'transactions' ? '💸 All Transactions' : '🏆 Top Traders'}
+            </button>
+          ))}
+        </div>
+
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Daily Revenue Chart */}
+            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
+              <h3 className="font-bold text-white mb-4">Daily Revenue</h3>
+              {Object.keys(data.revenue.byDay).length === 0 ? (
+                <p className="text-slate-400 text-sm">No revenue recorded yet. Revenue comes from trade fees (2%) and withdrawal fees (1.5%).</p>
+              ) : (
+                <div className="space-y-2">
+                  {Object.entries(data.revenue.byDay)
+                    .sort((a, b) => b[0].localeCompare(a[0]))
+                    .slice(0, 14)
+                    .map(([day, amount]) => {
+                      const maxAmount = Math.max(...Object.values(data.revenue.byDay));
+                      const width = maxAmount > 0 ? (amount / maxAmount * 100) : 0;
+                      return (
+                        <div key={day} className="flex items-center gap-3">
+                          <span className="text-xs text-slate-400 w-20">{day.slice(5)}</span>
+                          <div className="flex-1 h-6 bg-slate-700/30 rounded overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded flex items-center px-2"
+                              style={{ width: `${Math.max(2, width)}%` }}
+                            >
+                              <span className="text-xs text-white font-bold whitespace-nowrap">
+                                {formatMoney(amount)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <span className="text-gray-400 text-sm">
-                          Closes: {new Date(market.closes_at).toLocaleDateString()}
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Revenue Events */}
+            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
+              <h3 className="font-bold text-white mb-4">Recent Revenue Events</h3>
+              {(data.revenue.recentEvents || []).length === 0 ? (
+                <p className="text-slate-400 text-sm">No revenue events yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {data.revenue.recentEvents.map((e: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-slate-700/30">
+                      <div>
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium mr-2 ${
+                          e.type === 'trade_fee' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
+                        }`}>
+                          {e.type === 'trade_fee' ? 'Trade Fee' : 'Withdrawal Fee'}
                         </span>
+                        <span className="text-sm text-slate-300">{e.description}</span>
                       </div>
-
-                      <h3 className="text-xl font-bold text-white mb-2">{market.title}</h3>
-                      <p className="text-gray-400 text-sm mb-4">{market.description}</p>
-
-                      <div className="flex items-center justify-between flex-wrap gap-4">
-                        <div className="flex gap-4 text-sm">
-                          <span className="text-green-400">
-                            YES: {market.outcome_options?.yes_votes || 0}
-                          </span>
-                          <span className="text-red-400">
-                            NO: {market.outcome_options?.no_votes || 0}
-                          </span>
-                          <span className="text-yellow-400">
-                            Pool: ₦{(market.total_pool || 0).toLocaleString()}
-                          </span>
-                        </div>
-
-                        {market.status === 'open' && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleResolveMarket(market.id, 'yes')}
-                              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
-                            >
-                              Resolve YES
-                            </button>
-                            <button
-                              onClick={() => handleResolveMarket(market.id, 'no')}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
-                            >
-                              Resolve NO
-                            </button>
-                          </div>
-                        )}
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-green-400">+{formatMoney(e.amount)}</p>
+                        <p className="text-xs text-slate-500">{formatDate(e.created_at)}</p>
                       </div>
                     </div>
-                  ))
-                )}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Admin Management */}
+            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
+              <h3 className="font-bold text-white mb-4">Admin Management</h3>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="user@email.com"
+                  className="flex-1 px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm"
+                />
+                <button
+                  onClick={handleAddAdmin}
+                  disabled={addingAdmin || !adminEmail}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-500 disabled:opacity-50"
+                >
+                  {addingAdmin ? 'Adding...' : 'Add Admin'}
+                </button>
               </div>
-            )}
-
-            {/* Lawyers Tab */}
-            {activeTab === 'lawyers' && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-white mb-6">Registered Lawyers</h2>
-                {lawyers.length === 0 ? (
-                  <div className="bg-gray-800 rounded-xl p-8 text-center">
-                    <p className="text-gray-400">No lawyers registered yet.</p>
-                  </div>
-                ) : (
-                  lawyers.map(lawyer => (
-                    <div key={lawyer.id} className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                      <div className="flex justify-between items-center flex-wrap gap-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-lg font-bold text-white">{lawyer.full_name || 'Unknown'}</h3>
-                            {lawyer.is_verified && (
-                              <span className="text-green-400">✓ Verified</span>
-                            )}
-                          </div>
-                          <p className="text-gray-400 text-sm">
-                            Bar: {lawyer.bar_number || 'Not provided'} • 
-                            Specializations: {lawyer.specializations?.join(', ') || 'None'}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleVerifyLawyer(lawyer.id, !lawyer.is_verified)}
-                          className={`px-4 py-2 rounded-lg text-sm ${
-                            lawyer.is_verified 
-                              ? 'bg-gray-600 text-white hover:bg-gray-700' 
-                              : 'bg-green-600 text-white hover:bg-green-700'
-                          }`}
-                        >
-                          {lawyer.is_verified ? 'Remove Verification' : 'Verify Lawyer'}
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* Create Market Tab */}
-            {activeTab === 'create' && (
-              <div className="max-w-2xl">
-                <h2 className="text-2xl font-bold text-white mb-6">Create Prediction Market</h2>
-                <form onSubmit={handleCreateMarket} className="space-y-6">
-                  <div>
-                    <label className="block text-gray-300 mb-2">Market Question *</label>
-                    <input
-                      type="text"
-                      value={newMarket.title}
-                      onChange={(e) => setNewMarket({ ...newMarket, title: e.target.value })}
-                      placeholder="Will the Supreme Court uphold the conviction of..."
-                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-300 mb-2">Description *</label>
-                    <textarea
-                      value={newMarket.description}
-                      onChange={(e) => setNewMarket({ ...newMarket, description: e.target.value })}
-                      placeholder="Detailed description of the case and what the market is predicting..."
-                      rows={4}
-                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-gray-300 mb-2">Case Reference</label>
-                      <input
-                        type="text"
-                        value={newMarket.case_reference}
-                        onChange={(e) => setNewMarket({ ...newMarket, case_reference: e.target.value })}
-                        placeholder="SC/CV/123/2024"
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-300 mb-2">Court</label>
-                      <input
-                        type="text"
-                        value={newMarket.court}
-                        onChange={(e) => setNewMarket({ ...newMarket, court: e.target.value })}
-                        placeholder="Supreme Court of Nigeria"
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-gray-300 mb-2">Category *</label>
-                      <select
-                        value={newMarket.category}
-                        onChange={(e) => setNewMarket({ ...newMarket, category: e.target.value })}
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
-                        required
-                      >
-                        <option value="supreme_court">Supreme Court</option>
-                        <option value="appeal">Court of Appeal</option>
-                        <option value="high_court">High Court</option>
-                        <option value="tribunal">Tribunal</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-gray-300 mb-2">Closes At *</label>
-                      <input
-                        type="datetime-local"
-                        value={newMarket.closes_at}
-                        onChange={(e) => setNewMarket({ ...newMarket, closes_at: e.target.value })}
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={creating}
-                    className="w-full py-4 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {creating ? 'Creating...' : 'Create Market'}
-                  </button>
-                </form>
-              </div>
-            )}
-          </>
+              <p className="text-xs text-slate-500 mt-2">Add admins by email. They can view this dashboard and manage settings.</p>
+            </div>
+          </div>
         )}
+
+        {/* Transactions Tab */}
+        {activeTab === 'transactions' && (
+          <div className="bg-slate-800/30 rounded-2xl border border-slate-700/50 overflow-hidden">
+            <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs font-semibold text-slate-400 uppercase bg-slate-800/50 border-b border-slate-700/50">
+              <div className="col-span-2">Type</div>
+              <div className="col-span-2 text-right">Amount</div>
+              <div className="col-span-2 text-right">Fee</div>
+              <div className="col-span-1 text-center">Status</div>
+              <div className="col-span-3">Description</div>
+              <div className="col-span-2 text-right">Time</div>
+            </div>
+            {(data.transactions.recent || []).length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-sm">No transactions recorded yet.</div>
+            ) : (
+              data.transactions.recent.map((tx: any, i: number) => (
+                <div key={i} className="grid grid-cols-12 gap-2 px-4 py-2.5 border-b border-slate-700/30 hover:bg-slate-700/20 text-sm">
+                  <div className="col-span-2">
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                      tx.type === 'crypto_deposit' ? 'bg-green-500/20 text-green-400' :
+                      tx.type === 'trade_buy' ? 'bg-blue-500/20 text-blue-400' :
+                      tx.type === 'trade_sell' ? 'bg-cyan-500/20 text-cyan-400' :
+                      tx.type === 'bank_payout' ? 'bg-red-500/20 text-red-400' :
+                      'bg-slate-500/20 text-slate-400'
+                    }`}>
+                      {tx.type.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <div className="col-span-2 text-right font-mono">
+                    <span className={
+                      tx.type.includes('deposit') || tx.type === 'trade_sell'
+                        ? 'text-green-400'
+                        : 'text-red-400'
+                    }>
+                      {tx.type.includes('deposit') || tx.type === 'trade_sell' ? '+' : '-'}
+                      {formatMoney(tx.amount)}
+                    </span>
+                  </div>
+                  <div className="col-span-2 text-right font-mono text-yellow-400">
+                    {tx.fee > 0 ? formatMoney(tx.fee) : '-'}
+                  </div>
+                  <div className="col-span-1 text-center">
+                    <span className={`text-xs ${
+                      tx.status === 'completed' ? 'text-green-400' :
+                      tx.status === 'pending' ? 'text-yellow-400' :
+                      'text-red-400'
+                    }`}>
+                      {tx.status === 'completed' ? '✓' : tx.status}
+                    </span>
+                  </div>
+                  <div className="col-span-3 text-slate-300 truncate text-xs">{tx.description}</div>
+                  <div className="col-span-2 text-right text-xs text-slate-500">{formatDate(tx.created_at)}</div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Top Traders Tab */}
+        {activeTab === 'traders' && (
+          <div className="bg-slate-800/30 rounded-2xl border border-slate-700/50 overflow-hidden">
+            <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs font-semibold text-slate-400 uppercase bg-slate-800/50 border-b border-slate-700/50">
+              <div className="col-span-1">#</div>
+              <div className="col-span-2">Trader</div>
+              <div className="col-span-2 text-right">Deposited</div>
+              <div className="col-span-2 text-right">Balance</div>
+              <div className="col-span-1 text-right">Trades</div>
+              <div className="col-span-1 text-right">Wins</div>
+              <div className="col-span-1 text-right">Withdrawn</div>
+              <div className="col-span-2 text-right">XP</div>
+            </div>
+            {(data.topTraders || []).map((t: any, i: number) => (
+              <div key={i} className="grid grid-cols-12 gap-2 px-4 py-2.5 border-b border-slate-700/30 hover:bg-slate-700/20 text-sm">
+                <div className="col-span-1 text-slate-400 font-mono">{i + 1}</div>
+                <div className="col-span-2 text-white font-medium truncate">{t.displayName}</div>
+                <div className="col-span-2 text-right text-green-400">{formatMoney(t.deposited)}</div>
+                <div className="col-span-2 text-right text-blue-400">{formatMoney(t.balance)}</div>
+                <div className="col-span-1 text-right text-slate-300">{t.trades}</div>
+                <div className="col-span-1 text-right text-emerald-400">{t.wins}</div>
+                <div className="col-span-1 text-right text-red-400">{formatMoney(t.withdrawn)}</div>
+                <div className="col-span-2 text-right text-purple-400">{(t.xp || 0).toLocaleString()}</div>
+              </div>
+            ))}
+            {(data.topTraders || []).length === 0 && (
+              <div className="p-8 text-center text-slate-400 text-sm">No traders yet.</div>
+            )}
+          </div>
+        )}
+
+        {/* Platform Money Flow */}
+        <div className="mt-6 bg-gradient-to-br from-slate-800/50 to-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
+          <h3 className="font-bold text-white mb-4">💰 Platform Money Flow</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <p className="text-3xl mb-2">📥</p>
+              <p className="text-lg font-bold text-green-400">{formatMoney(data.users.totalDeposited)}</p>
+              <p className="text-xs text-slate-400">Total Deposits</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl mb-2">🏛️</p>
+              <p className="text-lg font-bold text-blue-400">{formatMoney(data.markets.totalPoolValue)}</p>
+              <p className="text-xs text-slate-400">In Market Pools</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl mb-2">📤</p>
+              <p className="text-lg font-bold text-red-400">{formatMoney(data.users.totalWithdrawn)}</p>
+              <p className="text-xs text-slate-400">Total Payouts</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl mb-2">🏆</p>
+              <p className="text-lg font-bold text-green-400">{formatMoney(data.revenue.total)}</p>
+              <p className="text-xs text-slate-400">Platform Revenue</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 }
 

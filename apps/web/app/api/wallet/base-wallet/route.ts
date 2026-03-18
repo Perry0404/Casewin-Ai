@@ -197,6 +197,20 @@ export async function POST(request: NextRequest) {
           description: `Auto-sync: ${newETH > 0 ? `${newETH.toFixed(6)} ETH` : ''}${newETH > 0 && newUSDC > 0 ? ' + ' : ''}${newUSDC > 0 ? `${newUSDC.toFixed(2)} USDC` : ''} → ₦${newNGN.toLocaleString()}`,
         })
 
+        // Log to transaction monitor
+        await admin.from('transaction_log').insert({
+          user_id: user.id,
+          type: 'crypto_deposit',
+          amount: newNGN,
+          fee: 0,
+          net_amount: newNGN,
+          status: 'completed',
+          balance_before: currentBalance?.balance || 0,
+          balance_after: newBalance,
+          description: `Crypto deposit synced: ${newETH > 0 ? `${newETH.toFixed(6)} ETH` : ''}${newETH > 0 && newUSDC > 0 ? ' + ' : ''}${newUSDC > 0 ? `${newUSDC.toFixed(2)} USDC` : ''}`,
+          metadata: { eth: newETH, usdc: newUSDC, ethRate: rates.ethNGN, usdcRate: rates.usdcNGN, walletAddress: wallet.wallet_address }
+        })
+
         return NextResponse.json({
           success: true,
           credited: newNGN,

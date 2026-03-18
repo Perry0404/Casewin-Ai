@@ -110,36 +110,67 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Deduct from user's trading balance
-    const newBalance = balance.balance - amount
+    // Deduct from user's trading balance  
+    const withdrawalFee = Math.ceil(amount * 1.5 / 100) // 1.5% withdrawal fee
+    const totalDeduction = amount + withdrawalFee
+    
+    if (balance.balance < totalDeduction) {
+      return NextResponse.json({
+        error: `Insufficient balance. ₦${amount.toLocaleString()} + ₦${withdrawalFee.toLocaleString()} fee = ₦${totalDeduction.toLocaleString()} needed. You have ₦${balance.balance.toLocaleString()}.`,
+      }, { status: 400 })
+    }
+
+    const newBalance = balance.balance - totalDeduction
     await admin.from('user_balances').update({
       balance: newBalance,
       total_withdrawn: (balance.total_withdrawn || 0) + amount,
       updated_at: new Date().toISOString(),
     }).eq('user_id', user.id)
 
-    // Record transaction
+    // Record wallet transaction
     await admin.from('wallet_transactions').insert({
       user_id: user.id,
       type: 'naira_payout',
       amount: -amount,
       balance_after: newBalance,
       description: `Naira payout: ₦${amount.toLocaleString()} → ${bankCode} ${accountNumber.slice(0, 3)}****${accountNumber.slice(-3)}`,
-      metadata: {
-        reference,
-        bankCode,
-        accountNumber: `${accountNumber.slice(0, 3)}****${accountNumber.slice(-3)}`,
-        korapayRef: korapayData.data?.reference,
-      },
     })
+
+    // Log to transaction monitor
+    await admin.from('transaction_log').insert({
+      user_id: user.id,
+      type: 'bank_payout',
+      amount: amount,
+      fee: withdrawalFee,
+      net_amount: totalDeduction,
+      status: 'completed',
+      balance_before: balance.balance,
+      balance_after: newBalance,
+      reference,
+      description: `Bank payout: ₦${amount.toLocaleString()} to ${bankCode} ****${accountNumber.slice(-4)}`,
+      metadata: { bankCode, accountNumber: `****${accountNumber.slice(-4)}`, accountName, korapayRef: korapayData.data?.reference }
+    })
+
+    // Record platform revenue from withdrawal fee
+    if (withdrawalFee > 0) {
+      await admin.from('platform_revenue').insert({
+        type: 'withdrawal_fee',
+        amount: withdrawalFee,
+        user_id: user.id,
+        description: `1.5% withdrawal fee on ₦${amount.toLocaleString()} payout`,
+        metadata: { payoutAmount: amount, feePercent: 1.5, reference }
+      })
+    }
 
     return NextResponse.json({
       success: true,
       reference,
       amount,
+      fee: withdrawalFee,
+      totalDeducted: totalDeduction,
       newBalance,
       bankDetails: `${bankCode} ${accountNumber.slice(0, 3)}****${accountNumber.slice(-3)}`,
-      message: `✅ ₦${amount.toLocaleString()} sent to your bank account! Arrives in 1-5 minutes.`,
+      message: `✅ ₦${amount.toLocaleString()} sent to your bank! (₦${withdrawalFee.toLocaleString()} fee). Arrives in 1-5 minutes.`,
     })
   } catch (error: any) {
     console.error('Naira payout error:', error)

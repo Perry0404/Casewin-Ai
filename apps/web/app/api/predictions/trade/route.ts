@@ -4,6 +4,8 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
+const TRADE_FEE_PERCENT = 2; // 2% platform fee on each trade
+
 function getAdmin() {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -156,6 +158,10 @@ export async function POST(request: NextRequest) {
 
       totalAmount = result.cost;
 
+      // Calculate platform fee
+      const fee = Math.ceil(totalAmount * TRADE_FEE_PERCENT / 100);
+      const totalWithFee = totalAmount + fee;
+
       // Check user balance (service role for reliable access)
       const { data: userBalance } = await admin
         .from('user_balances')
@@ -164,11 +170,12 @@ export async function POST(request: NextRequest) {
         .single();
 
       const balance = userBalance?.balance || 0;
-      if (totalAmount > balance) {
+      if (totalWithFee > balance) {
         return NextResponse.json({ 
           error: 'Insufficient balance. Deposit crypto to fund your account.',
-          required: totalAmount,
-          available: balance
+          required: totalWithFee,
+          available: balance,
+          breakdown: { cost: totalAmount, fee }
         }, { status: 400 });
       }
 
@@ -210,19 +217,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to execute trade' }, { status: 500 });
     }
 
+    // Calculate fee for this trade
+    const tradeFee = Math.ceil(totalAmount * TRADE_FEE_PERCENT / 100);
+
     // Update user balance + positions
     if (action === 'buy') {
-      // Deduct balance
+      // Deduct balance (cost + fee)
       const { data: currentBalance } = await admin
         .from('user_balances')
         .select('balance, total_trades')
         .eq('user_id', user.id)
         .single();
 
+      const balanceBefore = currentBalance?.balance || 0;
+      const balanceAfter = balanceBefore - totalAmount - tradeFee;
+
       await admin
         .from('user_balances')
         .update({
-          balance: (currentBalance?.balance || 0) - totalAmount,
+          balance: balanceAfter,
           total_trades: (currentBalance?.total_trades || 0) + 1,
           updated_at: new Date().toISOString()
         })
@@ -259,17 +272,20 @@ export async function POST(request: NextRequest) {
       }
 
     } else {
-      // Selling - add balance back
+      // Selling - add balance back (minus fee)
       const { data: currentBalance } = await admin
         .from('user_balances')
         .select('balance, total_trades')
         .eq('user_id', user.id)
         .single();
 
+      const balanceBefore = currentBalance?.balance || 0;
+      const balanceAfter = balanceBefore + totalAmount - tradeFee;
+
       await admin
         .from('user_balances')
         .update({
-          balance: (currentBalance?.balance || 0) + totalAmount,
+          balance: balanceAfter,
           total_trades: (currentBalance?.total_trades || 0) + 1,
           updated_at: new Date().toISOString()
         })
@@ -295,7 +311,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Record trade
-    await admin
+    const { data: tradeRecord } = await admin
       .from('trades')
       .insert({
         user_id: user.id,
@@ -305,7 +321,35 @@ export async function POST(request: NextRequest) {
         shares,
         price: totalAmount / shares,
         total: totalAmount
+      })
+      .select('id')
+      .single();
+
+    // Record platform revenue (fee)
+    if (tradeFee > 0) {
+      await admin.from('platform_revenue').insert({
+        type: 'trade_fee',
+        amount: tradeFee,
+        user_id: user.id,
+        market_id: marketId,
+        trade_id: tradeRecord?.id,
+        description: `${TRADE_FEE_PERCENT}% fee on ${action} ${shares} ${normalizedOutcome} shares`,
+        metadata: { action, outcome: normalizedOutcome, shares, tradeTotal: totalAmount, feePercent: TRADE_FEE_PERCENT }
       });
+    }
+
+    // Log transaction for monitoring
+    await admin.from('transaction_log').insert({
+      user_id: user.id,
+      type: action === 'buy' ? 'trade_buy' : 'trade_sell',
+      amount: totalAmount,
+      fee: tradeFee,
+      net_amount: action === 'buy' ? totalAmount + tradeFee : totalAmount - tradeFee,
+      status: 'completed',
+      reference: tradeRecord?.id,
+      description: `${action.toUpperCase()} ${shares} ${normalizedOutcome} shares @ ₦${(totalAmount / shares).toFixed(2)}`,
+      metadata: { marketId, marketTitle: market.title, outcome: normalizedOutcome, shares, price: totalAmount / shares }
+    });
 
     return NextResponse.json({
       success: true,
@@ -314,7 +358,9 @@ export async function POST(request: NextRequest) {
         outcome: normalizedOutcome,
         shares,
         price: totalAmount / shares,
-        total: totalAmount
+        total: totalAmount,
+        fee: tradeFee,
+        totalCharged: action === 'buy' ? totalAmount + tradeFee : totalAmount - tradeFee
       },
       newPrices: {
         yes: result.newPrices.yes,
