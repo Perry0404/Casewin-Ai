@@ -1,18 +1,32 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { ReactNode } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 
 interface LawyerGuardProps {
   children: ReactNode
 }
 
+interface Profile {
+  user_type?: string
+}
+
 export default function LawyerGuard({ children }: LawyerGuardProps) {
-  const { user, profile, loading } = useAuth()
+  const { user, loading } = useAuth()
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profileLoading, setProfileLoading] = useState(true)
+
+  useEffect(() => {
+    if (!user) { setProfileLoading(false); return }
+    const supabase = createClient()
+    supabase.from('profiles').select('user_type').eq('id', user.id).single()
+      .then(({ data }) => { if (data) setProfile(data); setProfileLoading(false) })
+  }, [user])
 
   // Still loading auth state
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
