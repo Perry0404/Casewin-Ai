@@ -1,156 +1,114 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import type { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { User } from '@supabase/supabase-js'
-import { Profile, Wallet } from '@/types/database'
 
-interface AuthContextType {
+const SESSION_MARKER_KEY = 'casewin_session_active'
+
+type AuthContextValue = {
   user: User | null
-  profile: Profile | null
-  wallet: Wallet | null
+  session: Session | null
   loading: boolean
-  signUp: (email: string, password: string, fullName: string, userType: string) => Promise<{ error: any; user: User | null }>
-  signIn: (email: string, password: string) => Promise<{ error: any }>
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signUp: (email: string, password: string, metadata?: Record<string, unknown>) => Promise<{ error: string | null; needsEmailConfirm?: boolean }>
   signOut: () => Promise<void>
-  refreshProfile: () => Promise<void>
-  refreshWallet: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const supabase = useMemo(() => createClient(), [])
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [wallet, setWallet] = useState<Wallet | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
-
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    setProfile(data)
-  }
-
-  const fetchWallet = async (userId: string) => {
-    const { data } = await supabase
-      .from('wallets')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-    setWallet(data)
-  }
 
   useEffect(() => {
-    // Timeout to prevent hanging if Supabase is unreachable
-    const timeout = setTimeout(() => {
-      setLoading(false)
-    }, 3000)
+    let mounted = true
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
-      clearTimeout(timeout)
-      setUser(data.session?.user ?? null)
-      if (data.session?.user) {
-        // Fetch profile and wallet in parallel for speed
-        Promise.all([
-          fetchProfile(data.session.user.id),
-          fetchWallet(data.session.user.id)
-        ]).finally(() => setLoading(false))
-      } else {
-        setLoading(false)
+    const init = async () => {
+      const { data, error } = await supabase.auth.getSession()
+      if (!mounted) return
+
+      // Force re-login if browser was closed (sessionStorage cleared)
+      const marker = typeof window !== 'undefined' ? sessionStorage.getItem(SESSION_MARKER_KEY) : null
+
+      if (!error && data.session) {
+        if (!marker) {
+          // Browser was reopened — force sign out for security
+          await supabase.auth.signOut()
+          setSession(null)
+          setUser(null)
+          setLoading(false)
+          return
+        }
+        setSession(data.session)
+        setUser(data.session.user)
       }
-    }).catch(() => {
-      clearTimeout(timeout)
       setLoading(false)
+    }
+
+    init()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession)
+      setUser(newSession?.user ?? null)
     })
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: string, session: any) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          // Fetch both in parallel
-          await Promise.all([
-            fetchProfile(session.user.id),
-            fetchWallet(session.user.id)
-          ])
-        } else {
-          setProfile(null)
-          setWallet(null)
-        }
-        setLoading(false)
-      }
-    )
+    return () => {
+      mounted = false
+      listener?.subscription?.unsubscribe()
+    }
+  }, [supabase])
 
-    return () => subscription.unsubscribe()
-  }, [])
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!error && typeof window !== 'undefined') {
+      sessionStorage.setItem(SESSION_MARKER_KEY, 'true')
+    }
+    return { error: error?.message ?? null }
+  }
 
-  const signUp = async (email: string, password: string, fullName: string, userType: string) => {
+  const signUp = async (email: string, password: string, metadata?: Record<string, unknown>) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          full_name: fullName,
-          user_type: userType,
-        },
+        data: metadata,
       },
     })
-    return { error, user: data?.user ?? null }
-  }
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { error }
+    if (error) {
+      return { error: error.message }
+    }
+
+    const needsEmailConfirm = !data.session
+    if (!needsEmailConfirm && typeof window !== 'undefined') {
+      sessionStorage.setItem(SESSION_MARKER_KEY, 'true')
+    }
+    return { error: null, needsEmailConfirm }
   }
 
   const signOut = async () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(SESSION_MARKER_KEY)
+    }
     await supabase.auth.signOut()
     setUser(null)
-    setProfile(null)
-    setWallet(null)
-  }
-
-  const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.id)
-    }
-  }
-
-  const refreshWallet = async () => {
-    if (user) {
-      await fetchWallet(user.id)
-    }
+    setSession(null)
   }
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      wallet,
-      loading,
-      signUp,
-      signIn,
-      signOut,
-      refreshProfile,
-      refreshWallet,
-    }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+export const useAuth = () => {
+  const ctx = useContext(AuthContext)
+  if (!ctx) {
+    throw new Error('useAuth must be used within AuthProvider')
   }
-  return context
+  return ctx
 }

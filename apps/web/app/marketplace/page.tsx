@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import MobileNav from '@/components/MobileNav';
 
 interface Lawyer {
   id: string;
@@ -17,65 +17,107 @@ interface Lawyer {
   bio: string;
 }
 
+// Cache keys for offline storage
 const LAWYERS_CACHE_KEY = 'casewin_lawyers_cache';
 const CACHE_EXPIRY_KEY = 'casewin_lawyers_cache_expiry';
-const CACHE_DURATION = 24 * 60 * 60 * 1000;
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 export default function MarketplacePage() {
-  const { profile } = useAuth();
-  const isLawyer = profile?.user_type === 'lawyer' || profile?.user_type === 'law_firm';
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [filteredLawyers, setFilteredLawyers] = useState<Lawyer[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
+  // Filters
   const [selectedSpecialization, setSelectedSpecialization] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [maxRate, setMaxRate] = useState(100000);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Navigation component
   const Navigation = () => (
-    <nav className="flex gap-3 sm:gap-6 text-sm sm:text-base overflow-x-auto">
-      <Link href="/" className="text-white hover:text-gray-300 transition-colors font-semibold whitespace-nowrap">
-        AI Tools
-      </Link>
-      <Link href="/marketplace" className="text-white hover:text-gray-300 transition-colors font-semibold underline whitespace-nowrap">
-        Hire Lawyers
-      </Link>
-      <Link href="/predictions" className="text-white hover:text-gray-300 transition-colors font-semibold whitespace-nowrap">
-        Predictions
-      </Link>
-      <Link href="/dashboard" className="text-white hover:text-indigo-200 transition-colors font-semibold whitespace-nowrap">
-        Dashboard
-      </Link>
-    </nav>
+    <MobileNav currentPath="/marketplace" />
   );
 
   const specializations = [
-    'Criminal Law', 'Corporate Law', 'Family Law', 'Real Estate', 'Immigration',
-    'Intellectual Property', 'Labour Law', 'Tax Law', 'Constitutional Law',
-    'Human Rights', 'Maritime Law', 'Oil & Gas', 'Banking & Finance',
-    'Insurance Law', 'Media & Entertainment'
+    'Criminal Law',
+    'Corporate Law',
+    'Family Law',
+    'Real Estate',
+    'Immigration',
+    'Intellectual Property',
+    'Labour Law',
+    'Tax Law',
+    'Constitutional Law',
+    'Human Rights',
+    'Maritime Law',
+    'Oil & Gas',
+    'Banking & Finance',
+    'Insurance Law',
+    'Media & Entertainment'
   ];
 
+  // All 36 Nigerian States + FCT
   const locations = [
-    'Lagos', 'Ogun', 'Oyo', 'Osun', 'Ondo', 'Ekiti',
-    'Enugu', 'Anambra', 'Imo', 'Abia', 'Ebonyi',
-    'Rivers', 'Port Harcourt', 'Delta', 'Bayelsa', 'Cross River', 'Akwa Ibom', 'Edo',
-    'FCT Abuja', 'Abuja', 'Kwara', 'Kogi', 'Niger', 'Benue', 'Plateau', 'Nasarawa',
-    'Kano', 'Kaduna', 'Katsina', 'Sokoto', 'Zamfara', 'Kebbi', 'Jigawa',
-    'Borno', 'Yobe', 'Adamawa', 'Bauchi', 'Gombe', 'Taraba'
+    // South West
+    'Lagos',
+    'Ogun',
+    'Oyo',
+    'Osun',
+    'Ondo',
+    'Ekiti',
+    // South East
+    'Enugu',
+    'Anambra',
+    'Imo',
+    'Abia',
+    'Ebonyi',
+    // South South
+    'Rivers',
+    'Port Harcourt',
+    'Delta',
+    'Bayelsa',
+    'Cross River',
+    'Akwa Ibom',
+    'Edo',
+    // North Central
+    'FCT Abuja',
+    'Abuja',
+    'Kwara',
+    'Kogi',
+    'Niger',
+    'Benue',
+    'Plateau',
+    'Nasarawa',
+    // North West
+    'Kano',
+    'Kaduna',
+    'Katsina',
+    'Sokoto',
+    'Zamfara',
+    'Kebbi',
+    'Jigawa',
+    // North East
+    'Borno',
+    'Yobe',
+    'Adamawa',
+    'Bauchi',
+    'Gombe',
+    'Taraba'
   ];
 
+  // Check online status
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
+
     if (typeof window !== 'undefined') {
       setIsOffline(!navigator.onLine);
       window.addEventListener('online', handleOnline);
       window.addEventListener('offline', handleOffline);
     }
+
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('online', handleOnline);
@@ -84,6 +126,7 @@ export default function MarketplacePage() {
     };
   }, []);
 
+  // Save lawyers to localStorage for offline access
   const saveLawyersToCache = (lawyersData: Lawyer[]) => {
     try {
       if (typeof window !== 'undefined') {
@@ -96,14 +139,18 @@ export default function MarketplacePage() {
     }
   };
 
+  // Load lawyers from localStorage
   const loadLawyersFromCache = (): Lawyer[] | null => {
     try {
       if (typeof window !== 'undefined') {
         const cached = localStorage.getItem(LAWYERS_CACHE_KEY);
         const expiry = localStorage.getItem(CACHE_EXPIRY_KEY);
+        
         if (cached && expiry) {
           const expiryTime = parseInt(expiry, 10);
-          if (Date.now() < expiryTime) return JSON.parse(cached);
+          if (Date.now() < expiryTime) {
+            return JSON.parse(cached);
+          }
         }
       }
       return null;
@@ -123,6 +170,7 @@ export default function MarketplacePage() {
 
   const fetchLawyers = async () => {
     try {
+      // Try to load from cache first if offline
       if (typeof window !== 'undefined' && !navigator.onLine) {
         const cachedLawyers = loadLawyersFromCache();
         if (cachedLawyers) {
@@ -132,15 +180,21 @@ export default function MarketplacePage() {
           return;
         }
       }
+
+      // Fetch from API
       const response = await fetch('/api/marketplace/lawyers');
       const data = await response.json();
+      
       if (data.success) {
         setLawyers(data.lawyers);
         setFilteredLawyers(data.lawyers);
+        // Cache for offline use
         saveLawyersToCache(data.lawyers);
       }
     } catch (error) {
       console.error('Error fetching lawyers:', error);
+      
+      // Try to load from cache on error
       const cachedLawyers = loadLawyersFromCache();
       if (cachedLawyers) {
         setLawyers(cachedLawyers);
@@ -154,16 +208,20 @@ export default function MarketplacePage() {
 
   const filterLawyers = () => {
     let filtered = [...lawyers];
+
     if (selectedSpecialization !== 'all') {
       filtered = filtered.filter(l => l.specialization === selectedSpecialization);
     }
+
     if (selectedLocation !== 'all') {
       filtered = filtered.filter(l => 
         l.location.toLowerCase().includes(selectedLocation.toLowerCase()) ||
         selectedLocation.toLowerCase().includes(l.location.toLowerCase())
       );
     }
+
     filtered = filtered.filter(l => l.hourly_rate <= maxRate);
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(l =>
@@ -172,6 +230,7 @@ export default function MarketplacePage() {
         l.specialization.toLowerCase().includes(query)
       );
     }
+
     setFilteredLawyers(filtered);
   };
 
@@ -179,7 +238,7 @@ export default function MarketplacePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading lawyers...</p>
         </div>
       </div>
@@ -188,238 +247,89 @@ export default function MarketplacePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Offline Banner */}
       {isOffline && (
         <div className="bg-yellow-500 text-yellow-900 px-4 py-2 text-center text-sm font-medium">
-          You are offline - Showing cached lawyers. Some features may be limited.
+          📶 You're offline - Showing cached lawyers. Some features may be limited.
         </div>
       )}
 
-      <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white">
+      {/* Header with Navigation */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4 sm:py-6 border-b border-blue-700">
+          <div className="flex items-center justify-between py-6 border-b border-indigo-400">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">CaseWinAI</h1>
+              <h1 className="text-2xl font-bold">⚖️ CaseWin-NG</h1>
             </div>
             <Navigation />
           </div>
-          <div className="py-8 sm:py-12">
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <h2 className="text-2xl sm:text-4xl font-bold">🇳🇬 Hire a Nigerian Lawyer</h2>
+          <div className="py-12">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-4xl font-bold">🇳🇬 Hire a Nigerian Lawyer</h2>
               <span className="px-3 py-1 bg-green-500 text-white text-sm font-semibold rounded-full flex items-center gap-1">
                 🎥 Video Calls
               </span>
             </div>
-            <p className="text-base sm:text-xl text-indigo-100">
+            <p className="text-xl text-indigo-100">
               Browse verified lawyers across all 36 states. Book video consultations in-app!
             </p>
             {isOffline && lastUpdated && (
-              <p className="text-sm text-gray-300 mt-2">
-                Offline Mode - Last updated: {lastUpdated}
+              <p className="text-sm text-indigo-200 mt-2">
+                📱 Offline Mode - Last updated: {lastUpdated}
               </p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Law Firm Automation Services */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-blue-900 rounded-lg flex items-center justify-center">
-              <span className="text-white text-lg">⚡</span>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">Law Firm Automation</h2>
-            {!isLawyer && (
-              <span className="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full flex items-center gap-1">
-                🔒 Lawyers & Law Firms Only
-              </span>
-            )}
-          </div>
-          <p className="text-gray-600 ml-11">
-            {isLawyer
-              ? 'Tools that help lawyers and law firms run more efficiently'
-              : 'These tools are available to registered lawyers and law firms. Sign up as a lawyer to access them.'}
-          </p>
-        </div>
-
-        <div className="relative">
-        {!isLawyer && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 rounded-2xl flex items-center justify-center">
-            <div className="text-center p-6 bg-white rounded-2xl shadow-lg border max-w-sm mx-4">
-              <span className="text-4xl block mb-3">🔒</span>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Lawyers & Law Firms Only</h3>
-              <p className="text-sm text-gray-600 mb-4">Register as a lawyer or law firm to unlock all automation tools.</p>
-              <Link href="/auth/signup?type=lawyer" className="inline-block px-5 py-2.5 bg-green-700 text-white font-semibold rounded-xl hover:bg-green-800 transition-colors text-sm">
-                Register as Lawyer
-              </Link>
-            </div>
-          </div>
-        )}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-12 ${!isLawyer ? 'opacity-50 pointer-events-none select-none' : ''}`}>
-          <Link href="/marketplace/case-intake" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-blue-600 p-5">
-            <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-blue-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">🎯</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Client Intake</h3>
-            <p className="text-xs text-gray-600 mb-3">Auto-collect client info, conflict checks, and engagement letters before the first meeting.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">AI</span>
-            </div>
-          </Link>
-
-          <Link href="/tools/deadlines" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-purple-600 p-5">
-            <div className="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-purple-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">📅</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Deadline Calculator</h3>
-            <p className="text-xs text-gray-600 mb-3">AI calculates statutory deadlines, limitation periods, and filing timelines for Nigerian courts.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-medium">AI</span>
-            </div>
-          </Link>
-
-          <Link href="/tools/billing" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-emerald-600 p-5">
-            <div className="w-11 h-11 bg-emerald-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-emerald-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">💰</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Time & Billing</h3>
-            <p className="text-xs text-gray-600 mb-3">Track billable hours, manage rates per case, and auto-generate professional invoices with AI.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium">Timer</span>
-            </div>
-          </Link>
-
-          <Link href="/tools/cases" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-amber-600 p-5">
-            <div className="w-11 h-11 bg-amber-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-amber-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">📁</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Case Manager</h3>
-            <p className="text-xs text-gray-600 mb-3">Track active cases with suit numbers, court dates, parties, status, and notes — all organized.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">CRUD</span>
-            </div>
-          </Link>
-
-          <Link href="/tools/filing" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-cyan-600 p-5">
-            <div className="w-11 h-11 bg-cyan-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-cyan-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">📝</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Court Filing Prep</h3>
-            <p className="text-xs text-gray-600 mb-3">Get formatting rules, checklists, fees, and cover pages for FHC, State HC, CA, SC, and NIC.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded-full font-medium">AI</span>
-            </div>
-          </Link>
-
-          <Link href="/tools/citations" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-indigo-600 p-5">
-            <div className="w-11 h-11 bg-indigo-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-indigo-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">📚</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Citation Generator</h3>
-            <p className="text-xs text-gray-600 mb-3">Format citations in NWLR, LPELR, FWLR, SC standards. Extract and batch-format from pasted text.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-medium">AI</span>
-            </div>
-          </Link>
-
-          <Link href="/tools/chatbot" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-blue-600 p-5">
-            <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-blue-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">🤖</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">AI Legal Chatbot</h3>
-            <p className="text-xs text-gray-600 mb-3">Chat with AI about any Nigerian legal question — statutes, case law, procedures, and practice.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">AI Chat</span>
-            </div>
-          </Link>
-
-          <Link href="/tools/fees" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-rose-600 p-5">
-            <div className="w-11 h-11 bg-rose-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-rose-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">💸</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Legal Fee Estimator</h3>
-            <p className="text-xs text-gray-600 mb-3">AI estimates lawyer fees by matter type, court, and complexity — based on NBA fee scales.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-medium">AI</span>
-            </div>
-          </Link>
-
-          <Link href="/tools/hearing-prep" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-violet-600 p-5">
-            <div className="w-11 h-11 bg-violet-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-violet-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">🎯</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Hearing Prep Assistant</h3>
-            <p className="text-xs text-gray-600 mb-3">AI generates examination questions, cross-exam strategies, objections, and court prep checklists.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-violet-100 text-violet-800 px-2 py-0.5 rounded-full font-medium">AI</span>
-            </div>
-          </Link>
-
-          <Link href="/tools/clauses" className="group bg-white rounded-xl shadow-sm hover:shadow-lg transition-all border border-gray-200 hover:border-sky-600 p-5">
-            <div className="w-11 h-11 bg-sky-100 rounded-xl flex items-center justify-center mb-3 group-hover:bg-sky-600 transition-colors">
-              <span className="text-xl group-hover:brightness-200">📚</span>
-            </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Clause Library</h3>
-            <p className="text-xs text-gray-600 mb-3">Save, search, and reuse Nigerian legal clauses — with AI generation for custom clause drafting.</p>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">Free</span>
-              <span className="text-xs bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full font-medium">AI + Storage</span>
-            </div>
-          </Link>
-        </div>
-        </div>
-
-        {/* Divider */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="flex-1 h-px bg-gray-300"></div>
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-lg">👨‍⚖️</span>
-            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Or Hire a Lawyer</span>
-          </div>
-          <div className="flex-1 h-px bg-gray-300"></div>
-        </div>
-      </div>
-
+      {/* Legal Disclaimer */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 mb-4">
-          <p className="text-sm text-green-800">
-            <strong>Legal Notice:</strong> CaseWinAI is a technology platform connecting clients with independent legal practitioners. All lawyers listed are verified members of the Nigerian Bar Association.
-          </p>
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-green-800">
+                <strong className="font-semibold">Legal Notice:</strong> CaseWin-NG is a technology platform connecting clients with independent legal practitioners. We do not provide legal advice. All lawyers listed are verified members of the Nigerian Bar Association with current practicing certificates. Clients are free to choose any lawyer. Platform compliant with NBA Rules of Professional Conduct 2007.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
+          {/* Filters Sidebar */}
           <aside className="lg:w-72 flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
-              <h2 className="text-lg font-semibold mb-4">Search & Filter</h2>
+              <h2 className="text-lg font-semibold mb-4">🔍 Search & Filter</h2>
 
+              {/* Search */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Search Lawyers</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search Lawyers
+                </label>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Name, specialty, or keyword..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
 
+              {/* Specialization Filter */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Specialization</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Specialization
+                </label>
                 <select
                   value={selectedSpecialization}
                   onChange={(e) => setSelectedSpecialization(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
                   <option value="all">All Specializations</option>
                   {specializations.map(spec => (
@@ -428,12 +338,15 @@ export default function MarketplacePage() {
                 </select>
               </div>
 
+              {/* Location Filter */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">State / Location</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  State / Location
+                </label>
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
                   <option value="all">All States (36 + FCT)</option>
                   {locations.map(loc => (
@@ -442,6 +355,7 @@ export default function MarketplacePage() {
                 </select>
               </div>
 
+              {/* Hourly Rate Filter */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Max Hourly Rate: ₦{maxRate.toLocaleString()}
@@ -455,6 +369,10 @@ export default function MarketplacePage() {
                   onChange={(e) => setMaxRate(Number(e.target.value))}
                   className="w-full"
                 />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>₦5,000</span>
+                  <span>₦100,000</span>
+                </div>
               </div>
 
               <button
@@ -464,11 +382,12 @@ export default function MarketplacePage() {
                   setMaxRate(100000);
                   setSearchQuery('');
                 }}
-                className="w-full py-2 text-sm text-blue-900 hover:text-blue-700 font-medium"
+                className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
               >
                 Reset Filters
               </button>
 
+              {/* Offline Status */}
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <span className={`w-3 h-3 rounded-full ${isOffline ? 'bg-yellow-500' : 'bg-green-500'}`}></span>
@@ -479,13 +398,14 @@ export default function MarketplacePage() {
                     onClick={fetchLawyers}
                     className="mt-2 w-full py-2 text-xs text-gray-500 hover:text-gray-700"
                   >
-                    Refresh & Cache Data
+                    ↻ Refresh & Cache Data
                   </button>
                 )}
               </div>
             </div>
           </aside>
 
+          {/* Lawyers Grid */}
           <main className="flex-1">
             <div className="mb-6 flex justify-between items-center">
               <p className="text-gray-600">
@@ -506,7 +426,7 @@ export default function MarketplacePage() {
                     setMaxRate(100000);
                     setSearchQuery('');
                   }}
-                  className="mt-4 text-blue-900 hover:text-blue-700 font-medium"
+                  className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium"
                 >
                   Clear all filters
                 </button>
@@ -517,23 +437,25 @@ export default function MarketplacePage() {
                   <Link
                     key={lawyer.id}
                     href={`/marketplace/lawyer/${lawyer.id}`}
-                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200 hover:border-blue-900"
+                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200 hover:border-indigo-300"
                   >
                     <div className="flex items-start gap-4">
+                      {/* Profile Image */}
                       <div className="flex-shrink-0">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-900 to-blue-700 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                           {lawyer.full_name.charAt(0)}
                         </div>
                       </div>
 
+                      {/* Details */}
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">
                           {lawyer.full_name}
                         </h3>
-                        <p className="text-blue-900 text-sm font-medium mb-2">
+                        <p className="text-indigo-600 text-sm font-medium mb-2">
                           {lawyer.specialization}
                         </p>
-
+                        
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                           <span className="flex items-center gap-1">
                             📍 {lawyer.location}

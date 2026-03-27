@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import MobileNav from '@/components/MobileNav';
 import { useAuth } from '@/contexts/AuthContext';
-import { createClient } from '@/lib/supabase/client';
+import { useNotification } from '@/components/Notifications';
 
 interface Booking {
   id: string;
@@ -19,10 +20,10 @@ interface Booking {
   meeting_room_id: string;
 }
 
-interface CaseItem {
+interface CaseTracker {
   id: string;
   title: string;
-  status: string;
+  status: 'active' | 'resolved' | 'pending_review';
   lawyer_name: string;
   last_update: string;
   progress: number;
@@ -30,127 +31,32 @@ interface CaseItem {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
+  const { notify } = useNotification();
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'cases' | 'meetings'>('overview');
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [cases, setCases] = useState<CaseItem[]>([]);
-  const [loadingBookings, setLoadingBookings] = useState(true);
 
-  const fetchBookings = useCallback(async () => {
-    if (!user) return;
-    setLoadingBookings(true);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('lawyer_bookings')
-        .select(`
-          *,
-          lawyer:lawyer_id (
-            id,
-            specializations,
-            hourly_rate,
-            profiles:user_id ( full_name )
-          )
-        `)
-        .eq('client_id', user.id)
-        .order('scheduled_at', { ascending: false });
+  // Bookings and cases will be fetched from Supabase when available
+  const [bookings] = useState<Booking[]>([]);
 
-      if (error) {
-        console.error('Failed to fetch bookings:', error);
-        setBookings([]);
-        return;
-      }
-
-      const transformed: Booking[] = (data || []).map((b: any) => {
-        const scheduledDate = b.scheduled_at ? new Date(b.scheduled_at) : new Date();
-        return {
-          id: b.id,
-          lawyer_name: b.lawyer?.profiles?.full_name || 'Lawyer',
-          lawyer_specialization: b.lawyer?.specializations?.[0] || b.booking_type || 'Legal',
-          booking_date: scheduledDate.toISOString().split('T')[0],
-          booking_time: scheduledDate.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit', hour12: false }),
-          duration_hours: Math.ceil(b.amount / (b.lawyer?.hourly_rate || 25000)),
-          status: b.status || 'pending',
-          total_amount: b.amount || 0,
-          case_description: b.notes || '',
-          meeting_room_id: b.meeting_room_id || `consult-${b.id?.substring(0, 8)}`,
-        };
-      });
-
-      setBookings(transformed);
-    } catch (err) {
-      console.error('Error fetching bookings:', err);
-      setBookings([]);
-    } finally {
-      setLoadingBookings(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/auth/login?redirect=/dashboard');
-      return;
-    }
-    if (user) {
-      fetchBookings();
-    }
-  }, [user, authLoading, router, fetchBookings]);
+  const [cases] = useState<CaseTracker[]>([]);
 
   const upcomingBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
   const completedBookings = bookings.filter(b => b.status === 'completed');
-  const activeCases = cases.filter(c => c.status === 'active' || c.status === 'pending');
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('casewin_cases');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setCases(parsed.map((c: any) => ({
-          id: c.id,
-          title: c.title || 'Untitled Case',
-          status: c.status || 'active',
-          lawyer_name: c.client || 'Client',
-          last_update: c.createdAt || new Date().toISOString(),
-          progress: c.status === 'closed' ? 100 : c.status === 'settled' ? 90 : c.status === 'active' ? 50 : 20,
-        })));
-      }
-    } catch { /* no saved cases */ }
-  }, []);
+  const activeCases = cases.filter(c => c.status === 'active' || c.status === 'pending_review');
 
   const statusColors: Record<string, string> = {
     confirmed: 'bg-green-100 text-green-700',
     pending: 'bg-yellow-100 text-yellow-700',
     completed: 'bg-blue-100 text-blue-700',
     cancelled: 'bg-red-100 text-red-700',
+    active: 'bg-green-100 text-green-700',
+    pending_review: 'bg-yellow-100 text-yellow-700',
+    resolved: 'bg-blue-100 text-blue-700',
   };
 
   const Navigation = () => (
-    <nav className="flex gap-6">
-      <Link href="/" className="text-white hover:text-indigo-200 transition-colors font-semibold">
-        AI Tools
-      </Link>
-      <Link href="/marketplace" className="text-white hover:text-indigo-200 transition-colors font-semibold">
-        Hire Lawyers
-      </Link>
-      <Link href="/predictions" className="text-white hover:text-indigo-200 transition-colors font-semibold">
-        Predictions
-      </Link>
-      <Link href="/dashboard" className="text-white hover:text-indigo-200 transition-colors font-semibold underline">
-        Dashboard
-      </Link>
-    </nav>
+    <MobileNav currentPath="/dashboard" />
   );
-
-  if (authLoading || (!user && authLoading)) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -159,14 +65,14 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6 border-b border-indigo-400">
             <div>
-              <h1 className="text-2xl font-bold">{"\u2696\uFE0F"} CaseWin-NG</h1>
+              <h1 className="text-2xl font-bold">⚖️ CaseWin-NG</h1>
             </div>
             <Navigation />
           </div>
           <div className="py-8">
             <h2 className="text-3xl font-bold mb-2">My Dashboard</h2>
             <p className="text-indigo-200">
-              Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}. Track your consultations and upcoming meetings.
+              Track your consultations, cases, and upcoming video meetings
             </p>
           </div>
         </div>
@@ -178,11 +84,11 @@ export default function DashboardPage() {
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                <span className="text-2xl">{"\uD83D\uDCC5"}</span>
+                <span className="text-2xl">📅</span>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Upcoming Meetings</p>
-                <p className="text-2xl font-bold text-gray-900">{loadingBookings ? '—' : upcomingBookings.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{upcomingBookings.length}</p>
               </div>
             </div>
           </div>
@@ -190,11 +96,11 @@ export default function DashboardPage() {
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <span className="text-2xl">{"\uD83D\uDCC1"}</span>
+                <span className="text-2xl">📁</span>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Total Bookings</p>
-                <p className="text-2xl font-bold text-gray-900">{loadingBookings ? '—' : bookings.length}</p>
+                <p className="text-sm text-gray-500">Active Cases</p>
+                <p className="text-2xl font-bold text-gray-900">{activeCases.length}</p>
               </div>
             </div>
           </div>
@@ -202,11 +108,11 @@ export default function DashboardPage() {
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <span className="text-2xl">{"\u2705"}</span>
+                <span className="text-2xl">✅</span>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Completed</p>
-                <p className="text-2xl font-bold text-gray-900">{loadingBookings ? '—' : completedBookings.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{completedBookings.length}</p>
               </div>
             </div>
           </div>
@@ -214,11 +120,11 @@ export default function DashboardPage() {
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <span className="text-2xl">{"\uD83C\uDFA5"}</span>
+                <span className="text-2xl">🎥</span>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Video Calls</p>
-                <p className="text-2xl font-bold text-gray-900">{loadingBookings ? '—' : bookings.filter(b => b.meeting_room_id).length}</p>
+                <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
               </div>
             </div>
           </div>
@@ -228,10 +134,10 @@ export default function DashboardPage() {
         <div className="border-b border-gray-200 mb-8">
           <nav className="flex gap-8">
             {[
-              { id: 'overview' as const, label: 'Overview', icon: '\uD83D\uDCCA' },
-              { id: 'bookings' as const, label: 'My Bookings', icon: '\uD83D\uDCC5' },
-              { id: 'cases' as const, label: 'Case Tracker', icon: '\uD83D\uDCC1' },
-              { id: 'meetings' as const, label: 'Video Meetings', icon: '\uD83C\uDFA5' },
+              { id: 'overview' as const, label: 'Overview', icon: '📊' },
+              { id: 'bookings' as const, label: 'My Bookings', icon: '📅' },
+              { id: 'cases' as const, label: 'Case Tracker', icon: '📁' },
+              { id: 'meetings' as const, label: 'Video Meetings', icon: '🎥' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -286,12 +192,14 @@ export default function DashboardPage() {
             {/* Quick Actions */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                  { label: 'Hire Lawyer', href: '/marketplace', icon: '\uD83D\uDC68\u200D\u2696\uFE0F', color: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700' },
-                  { label: 'AI Tools', href: '/', icon: '\uD83E\uDD16', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
-                  { label: 'Predictions', href: '/predictions', icon: '\uD83D\uDCCA', color: 'bg-pink-50 hover:bg-pink-100 text-pink-700' },
-                  { label: 'Start Video Call', href: `/consultation/instant-${Date.now().toString(36)}`, icon: '\uD83C\uDFA5', color: 'bg-purple-50 hover:bg-purple-100 text-purple-700' },
+                  { label: 'Hire Lawyer', href: '/marketplace', icon: '👨‍⚖️', color: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700' },
+                  { label: 'Draft Document', href: '/tools/draft', icon: '📝', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
+                  { label: 'Analyze Contract', href: '/tools/analyze', icon: '🔍', color: 'bg-purple-50 hover:bg-purple-100 text-purple-700' },
+                  { label: 'Predict Case', href: '/tools/predict', icon: '🎯', color: 'bg-orange-50 hover:bg-orange-100 text-orange-700' },
+                  { label: 'Legal Research', href: '/tools/research', icon: '📚', color: 'bg-blue-50 hover:bg-blue-100 text-blue-700' },
+                  { label: 'Predictions', href: '/predictions', icon: '📊', color: 'bg-pink-50 hover:bg-pink-100 text-pink-700' },
                 ].map((action) => (
                   <Link
                     key={action.label}
@@ -421,7 +329,7 @@ export default function DashboardPage() {
                         {booking.duration_hours}hr{booking.duration_hours > 1 ? 's' : ''}
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        {"\u20A6"}{booking.total_amount.toLocaleString()}
+                        ₦{booking.total_amount.toLocaleString()}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[booking.status]}`}>

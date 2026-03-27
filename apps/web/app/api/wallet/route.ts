@@ -1,200 +1,176 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
-export const dynamic = 'force-dynamic';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-function getAdmin() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+async function getAuthUser(request: NextRequest) {
+  const response = NextResponse.next()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) { return request.cookies.get(name)?.value },
+        set(name: string, value: string, options: CookieOptions) { response.cookies.set({ name, value, ...options }) },
+        remove(name: string, options: CookieOptions) { response.cookies.set({ name, value: '', ...options }) },
+      },
+    }
+  )
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
 }
 
-// GET - Get user balance (real only — no fake demo balance)
-export async function GET() {
+// GET /api/wallet - Get authenticated user's wallet balance
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ 
-        balance: 0,
-        isDemo: true,
-        message: 'Login to start trading'
-      });
+    const authUser = await getAuthUser(request)
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const admin = getAdmin();
+    const email = authUser.email
 
-    // Get or create user balance using service role (bypasses RLS)
-    let { data: userBalance } = await admin
-      .from('user_balances')
+    if (!email) {
+      return NextResponse.json(
+        { error: 'Email is required' },
+        { status: 400 }
+      )
+    }
+
+    // If no Supabase configured, return mock wallet
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({
+        wallet: {
+          user_email: email,
+          naira_balance: 0,
+          total_deposits: 0,
+          total_withdrawals: 0
+        },
+        mock: true
+      })
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Get or create wallet
+    let { data: wallet, error } = await supabase
+      .from('user_wallets')
       .select('*')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_email', email)
+      .single()
 
-    if (!userBalance) {
-      // Auto-create balance row for this user
-      const { data: newBalance, error: createError } = await admin
-        .from('user_balances')
+    if (error && error.code === 'PGRST116') {
+      // Wallet doesn't exist, create it
+      const { data: newWallet, error: createError } = await supabase
+        .from('user_wallets')
         .insert({
-          user_id: user.id,
-          balance: 0,
-          total_deposited: 0,
-          total_withdrawn: 0,
-          streak_count: 0,
-          total_trades: 0,
-          total_wins: 0,
-          xp_points: 0,
-          rank_title: 'Rookie'
+          user_email: email,
+          naira_balance: 0
         })
         .select()
-        .single();
+        .single()
 
       if (createError) {
-        console.error('Failed to create balance:', createError);
-        return NextResponse.json({ balance: 0, isDemo: false, error: 'Balance creation failed' });
+        throw createError
       }
 
-      userBalance = newBalance;
+      wallet = newWallet
+    } else if (error) {
+      throw error
     }
 
-    return NextResponse.json({
-      balance: userBalance.balance || 0,
-      totalDeposited: userBalance.total_deposited || 0,
-      totalWithdrawn: userBalance.total_withdrawn || 0,
-      streakCount: userBalance.streak_count || 0,
-      bestStreak: userBalance.best_streak || 0,
-      totalTrades: userBalance.total_trades || 0,
-      totalWins: userBalance.total_wins || 0,
-      xpPoints: userBalance.xp_points || 0,
-      rankTitle: userBalance.rank_title || 'Rookie',
-      isDemo: false
-    });
-
+    return NextResponse.json({ wallet })
   } catch (error) {
-    console.error('Error getting balance:', error);
-    return NextResponse.json({ balance: 0, isDemo: false, error: 'Failed to load balance' });
+    console.error('Error fetching wallet:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch wallet' },
+      { status: 500 }
+    )
   }
 }
 
-// POST - Credit/debit balance (from crypto deposit sync, demo deposit, withdrawal)
-export async function POST(request: Request) {
+// POST /api/wallet - Update wallet balance (internal use)
+export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const body = await request.json();
-    const { amount, action } = body;
-
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+    const authUser = await getAuthUser(request)
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!user) {
-      return NextResponse.json({ error: 'Login required to trade' }, { status: 401 });
+    const body = await request.json()
+    const { amount, transaction_type, notes } = body
+    const email = authUser.email
+
+    if (!email || !amount || !transaction_type) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      )
     }
 
-    const admin = getAdmin();
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({
+        success: true,
+        message: 'Mock wallet update (Supabase not configured)',
+        mock: true
+      })
+    }
 
-    // Get current balance using service role
-    let { data: userBalance } = await admin
-      .from('user_balances')
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Get current wallet
+    const { data: wallet, error: walletError } = await supabase
+      .from('user_wallets')
       .select('*')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_email', email)
+      .single()
 
-    // Auto-create if missing
-    if (!userBalance) {
-      const { data: created } = await admin
-        .from('user_balances')
-        .insert({ user_id: user.id, balance: 0, total_deposited: 0, total_withdrawn: 0 })
-        .select()
-        .single();
-      userBalance = created;
+    if (walletError || !wallet) {
+      return NextResponse.json(
+        { error: 'Wallet not found' },
+        { status: 404 }
+      )
     }
 
-    const currentBalance = userBalance?.balance || 0;
+    // Calculate new balance (amount is in kobo)
+    const newBalance = wallet.naira_balance + amount
 
-    if (action === 'deposit') {
-      const { data, error } = await admin
-        .from('user_balances')
-        .update({
-          balance: currentBalance + amount,
-          total_deposited: (userBalance?.total_deposited || 0) + amount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Deposit error:', error);
-        return NextResponse.json({ error: 'Failed to deposit' }, { status: 500 });
-      }
-
-      // Record transaction
-      await admin
-        .from('wallet_transactions')
-        .insert({
-          user_id: user.id,
-          type: 'deposit',
-          amount: amount,
-          balance_after: data.balance,
-          description: `Wallet deposit (₦${amount.toLocaleString()})`
-        });
-
-      return NextResponse.json({ 
-        success: true, 
-        newBalance: data.balance,
-        isDemo: false
-      });
-
-    } else if (action === 'withdraw') {
-      if (amount > currentBalance) {
-        return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
-      }
-
-      const { data, error } = await admin
-        .from('user_balances')
-        .update({
-          balance: currentBalance - amount,
-          total_withdrawn: (userBalance?.total_withdrawn || 0) + amount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Withdraw error:', error);
-        return NextResponse.json({ error: 'Failed to withdraw' }, { status: 500 });
-      }
-
-      // Record transaction
-      await admin
-        .from('wallet_transactions')
-        .insert({
-          user_id: user.id,
-          type: 'withdrawal',
-          amount: -amount,
-          balance_after: data.balance,
-          description: `Wallet withdrawal (₦${amount.toLocaleString()})`
-        });
-
-      return NextResponse.json({ 
-        success: true, 
-        newBalance: data.balance,
-        isDemo: false
-      });
+    if (newBalance < 0) {
+      return NextResponse.json(
+        { error: 'Insufficient balance' },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    // Update wallet
+    await supabase
+      .from('user_wallets')
+      .update({
+        naira_balance: newBalance,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_email', email)
 
+    // Record transaction
+    await supabase.from('wallet_transactions').insert({
+      user_email: email,
+      amount,
+      transaction_type,
+      balance_after: newBalance,
+      notes
+    })
+
+    return NextResponse.json({
+      success: true,
+      new_balance: newBalance
+    })
   } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    console.error('Error updating wallet:', error)
+    return NextResponse.json(
+      { error: 'Failed to update wallet' },
+      { status: 500 }
+    )
   }
 }

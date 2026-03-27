@@ -72,23 +72,8 @@ export default function LawyerProfilePage() {
       
       if (data.success && data.lawyers.length > 0) {
         setLawyer(data.lawyers[0]);
-        // Mock reviews for demo
-        setReviews([
-          {
-            id: '1',
-            client_name: 'Adebayo O.',
-            rating: 5,
-            comment: 'Excellent lawyer! Very knowledgeable and responsive. Helped me with my property case.',
-            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-          },
-          {
-            id: '2',
-            client_name: 'Chioma N.',
-            rating: 5,
-            comment: 'Professional service. Won my case in court. Highly recommended!',
-            created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
-          }
-        ]);
+        // Reviews will be loaded from Supabase when available
+        setReviews([]);
       }
     } catch (error) {
       console.error('Error fetching lawyer:', error);
@@ -104,6 +89,7 @@ export default function LawyerProfilePage() {
     e.preventDefault();
     setBookingLoading(true);
 
+    // Generate a unique meeting room ID
     const meetingRoomId = `cw-${lawyerId?.substring(0, 6)}-${Date.now().toString(36)}`;
 
     try {
@@ -131,6 +117,7 @@ export default function LawyerProfilePage() {
           alert('Booking request sent successfully! The lawyer will contact you shortly.');
           setShowBookingModal(false);
         }
+        // Reset form
         setBookingDate('');
         setBookingTime('');
         setDuration(1);
@@ -353,7 +340,7 @@ export default function LawyerProfilePage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-500 mt-0.5">✓</span>
-                    <span>Secure Paystack payments</span>
+                    <span>Secure Korapay payments</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-500 mt-0.5">✓</span>
