@@ -126,15 +126,17 @@ export async function GET(request: NextRequest) {
         })
 
         // Store notification for the user to pick up client-side
-        await supabase.from('notifications').insert({
+        const { error: notifError } = await supabase.from('notifications').insert({
           user_email: userEmail,
           type: 'deposit',
           title: 'Deposit Successful!',
           message: `₦${(amountInKobo / 100).toLocaleString()} has been added to your wallet. Ref: ${reference}`,
           read: false,
-        }).catch(() => {
-          // notifications table may not exist yet — non-critical
         })
+        if (notifError) {
+          // notifications table may not exist yet — non-critical
+          console.warn('Notification insert failed:', notifError.message)
+        }
 
         // If payment is for booking, update booking status
         const paymentType = transactionData.metadata?.payment_type
