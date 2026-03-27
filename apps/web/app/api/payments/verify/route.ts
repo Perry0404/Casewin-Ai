@@ -10,7 +10,6 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const reference = searchParams.get('reference')
-    const isMock = searchParams.get('mock') === 'true'
 
     if (!reference) {
       return NextResponse.json(
@@ -19,25 +18,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Handle mock payments
-    if (isMock || !korapaySecretKey) {
-      return NextResponse.json({
-        status: 'success',
-        message: 'Mock payment verified successfully',
-        data: {
-          reference,
-          amount: 1000000, // ₦10,000 in kobo
-          status: 'success',
-          paid_at: new Date().toISOString(),
-          customer: {
-            email: 'student@example.com'
-          },
-          metadata: {
-            payment_type: 'booking'
-          }
-        },
-        mock: true
-      })
+    // Require Korapay API key
+    if (!korapaySecretKey) {
+      return NextResponse.json(
+        { error: 'Payment system not configured. Please contact support.' },
+        { status: 503 }
+      )
     }
 
     // Verify payment with Korapay

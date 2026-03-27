@@ -52,18 +52,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // If no Korapay key configured, return mock response
+    // Require Korapay API key
     if (!korapaySecretKey) {
-      const mockReference = `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      return NextResponse.json({
-        status: 'success',
-        message: 'Mock payment initialized (Korapay not configured)',
-        data: {
-          checkout_url: `http://localhost:3000/api/payments/verify?reference=${mockReference}&mock=true`,
-          reference: mockReference
-        },
-        mock: true
-      })
+      return NextResponse.json(
+        { error: 'Payment system not configured. Please contact support.' },
+        { status: 503 }
+      )
     }
 
     // Initialize Korapay payment

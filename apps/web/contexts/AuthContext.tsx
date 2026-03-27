@@ -4,8 +4,6 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import type { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 
-const SESSION_MARKER_KEY = 'casewin_session_active'
-
 type AuthContextValue = {
   user: User | null
   session: Session | null
@@ -30,25 +28,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data, error } = await supabase.auth.getSession()
       if (!mounted) return
 
-      // Force re-login if browser was closed (sessionStorage cleared)
-      const marker = typeof window !== 'undefined' ? sessionStorage.getItem(SESSION_MARKER_KEY) : null
-
       if (!error && data.session) {
-        if (!marker) {
-          // Browser was reopened — force sign out for security
-          await supabase.auth.signOut()
-          setSession(null)
-          setUser(null)
-          setLoading(false)
-          return
-        }
         setSession(data.session)
         setUser(data.session.user)
       }
       setLoading(false)
     }
 
-    init()
+    // Timeout to prevent hanging if Supabase is unreachable
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false)
+    }, 3000)
+
+    init().finally(() => clearTimeout(timeout))
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
@@ -63,9 +55,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (!error && typeof window !== 'undefined') {
-      sessionStorage.setItem(SESSION_MARKER_KEY, 'true')
-    }
     return { error: error?.message ?? null }
   }
 
@@ -83,16 +72,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const needsEmailConfirm = !data.session
-    if (!needsEmailConfirm && typeof window !== 'undefined') {
-      sessionStorage.setItem(SESSION_MARKER_KEY, 'true')
-    }
     return { error: null, needsEmailConfirm }
   }
 
   const signOut = async () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem(SESSION_MARKER_KEY)
-    }
     await supabase.auth.signOut()
     setUser(null)
     setSession(null)

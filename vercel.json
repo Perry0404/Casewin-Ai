@@ -1,8 +1,7 @@
 {
-  "buildCommand": "npm run build --prefix apps/web",
-  "outputDirectory": "apps/web/.next",
-  "devCommand": "npm run dev --prefix apps/web",
-  "installCommand": "npm install --prefix apps/web",
   "framework": "nextjs",
+  "buildCommand": "cd apps/web && npm run build",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": "npm install",
   "regions": ["sin1"]
 }

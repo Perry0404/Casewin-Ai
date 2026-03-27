@@ -6,18 +6,23 @@ import AuthGuard from '@/components/AuthGuard'
 import { NotificationProvider } from '@/components/Notifications'
 import Script from 'next/script'
 
-export const dynamic = 'force-dynamic'
-
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'CaseWin-NG | AI-Powered Legal Platform for Nigerian Lawyers',
+  title: 'CaseWin AI | AI-Powered Legal Platform for Nigerian Lawyers',
   description: 'Find and hire verified Nigerian lawyers across all 36 states. AI legal assistant with document drafting, case prediction, research, and more. Works offline!',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'CaseWin-NG',
+    title: 'CaseWin AI',
   },
   formatDetection: {
     telephone: true,
@@ -25,7 +30,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#4f46e5',
+  themeColor: '#1a2744',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

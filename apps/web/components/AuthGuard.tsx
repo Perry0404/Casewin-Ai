@@ -4,14 +4,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 
-const PUBLIC_PATHS = ['/auth/login', '/auth/signup', '/privacy', '/terms']
+const PUBLIC_PATHS = ['/', '/auth/login', '/auth/signup', '/auth/forgot-password', '/auth/reset-password', '/predictions', '/marketplace', '/tools', '/privacy', '/terms']
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
-  const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+  const isPublicPath = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
 
   useEffect(() => {
     if (!loading && !user && !isPublicPath) {
