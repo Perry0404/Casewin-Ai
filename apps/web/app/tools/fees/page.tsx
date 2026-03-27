@@ -122,7 +122,7 @@ export default function FeesPage() {
             {result && (
               <div className="space-y-4 sm:space-y-6">
                 {result.estimate && (
-                  <div className="bg-gradient-to-r from-rose-600 to-pink-600 rounded-xl p-4 sm:p-6 text-white">
+                  <div className="bg-gradient-to-r from-rose-600 to-emerald-600 rounded-xl p-4 sm:p-6 text-white">
                     <h3 className="font-semibold text-rose-100 mb-3 text-sm">Fee Estimate Range</h3>
                     <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                       <div><p className="text-xs text-rose-200">Low</p><p className="text-lg sm:text-2xl font-bold">{result.estimate.lowRange}</p></div>

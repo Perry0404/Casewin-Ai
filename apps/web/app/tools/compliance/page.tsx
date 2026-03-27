@@ -80,7 +80,7 @@ export default function CompliancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-pink-900 to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-emerald-900 to-gray-900">
       {/* Navigation */}
       <nav className="bg-black/30 backdrop-blur-md border-b border-pink-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -99,10 +99,10 @@ export default function CompliancePage() {
       </nav>
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-pink-800/50 to-rose-800/50 py-8">
+      <div className="bg-gradient-to-r from-emerald-800/50 to-rose-800/50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl flex items-center justify-center text-3xl">
+            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-rose-500 rounded-xl flex items-center justify-center text-3xl">
               ✅
             </div>
             <div>
@@ -128,7 +128,7 @@ export default function CompliancePage() {
                     onClick={() => toggleRegulation(reg.id)}
                     className={`p-3 rounded-lg border text-left transition ${
                       selectedRegulations.includes(reg.id)
-                        ? 'border-pink-500 bg-pink-500/20 text-white'
+                        ? 'border-pink-500 bg-green-500/20 text-white'
                         : 'border-gray-600 bg-gray-700/30 text-gray-300 hover:border-gray-500'
                     }`}
                   >
@@ -159,7 +159,7 @@ export default function CompliancePage() {
               <button
                 onClick={handleCheck}
                 disabled={isChecking || !documentText.trim()}
-                className="w-full mt-4 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 disabled:from-gray-600 disabled:to-gray-600 text-white py-3 rounded-lg font-semibold transition flex items-center justify-center space-x-2"
+                className="w-full mt-4 bg-gradient-to-r from-emerald-600 to-rose-600 hover:from-emerald-700 hover:to-rose-700 disabled:from-gray-600 disabled:to-gray-600 text-white py-3 rounded-lg font-semibold transition flex items-center justify-center space-x-2"
               >
                 {isChecking ? (
                   <>
@@ -217,7 +217,7 @@ export default function CompliancePage() {
                         </div>
                         <p className="text-gray-300 text-sm mb-2">{issue.issue}</p>
                         <p className="text-sm">
-                          <span className="text-pink-400">Fix:</span> {issue.recommendation}
+                          <span className="text-emerald-400">Fix:</span> {issue.recommendation}
                         </p>
                       </div>
                     ))}
@@ -238,7 +238,7 @@ export default function CompliancePage() {
 
                 {/* Action Items */}
                 <div className="bg-pink-900/20 border border-pink-500/30 rounded-xl p-4">
-                  <h3 className="font-semibold text-pink-400 mb-2">📋 Action Items</h3>
+                  <h3 className="font-semibold text-emerald-400 mb-2">📋 Action Items</h3>
                   <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
                     {results.actionItems.map((item, i) => (
                       <li key={i}>{item}</li>

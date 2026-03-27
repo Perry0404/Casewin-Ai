@@ -99,7 +99,7 @@ export default function AdminDashboard() {
           <p className="text-4xl mb-4">🔒</p>
           <h1 className="text-xl font-bold text-red-400 mb-2">Access Denied</h1>
           <p className="text-slate-400 text-sm mb-4">{error}</p>
-          <Link href="/predictions" className="text-purple-400 hover:text-purple-300 text-sm">Back to Markets</Link>
+          <Link href="/predictions" className="text-green-400 hover:text-green-300 text-sm">Back to Markets</Link>
         </div>
       </div>
     );
@@ -163,9 +163,9 @@ export default function AdminDashboard() {
             <p className="text-2xl font-bold text-blue-400">{formatMoney(data.revenue.tradeFees)}</p>
             <p className="text-xs text-slate-500 mt-1">2% per trade</p>
           </div>
-          <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-2xl p-5 border border-purple-500/30">
+          <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-2xl p-5 border border-green-500/30">
             <p className="text-xs text-slate-400 mb-1">Withdrawal Fees</p>
-            <p className="text-2xl font-bold text-purple-400">{formatMoney(data.revenue.withdrawalFees)}</p>
+            <p className="text-2xl font-bold text-green-400">{formatMoney(data.revenue.withdrawalFees)}</p>
             <p className="text-xs text-slate-500 mt-1">1.5% per payout</p>
           </div>
           <div className="bg-gradient-to-br from-orange-600/20 to-amber-600/20 rounded-2xl p-5 border border-orange-500/30">
@@ -265,7 +265,7 @@ export default function AdminDashboard() {
                     <div key={i} className="flex items-center justify-between py-2 border-b border-slate-700/30">
                       <div>
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium mr-2 ${
-                          e.type === 'trade_fee' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
+                          e.type === 'trade_fee' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'
                         }`}>
                           {e.type === 'trade_fee' ? 'Trade Fee' : 'Withdrawal Fee'}
                         </span>
@@ -384,7 +384,7 @@ export default function AdminDashboard() {
                 <div className="col-span-1 text-right text-slate-300">{t.trades}</div>
                 <div className="col-span-1 text-right text-emerald-400">{t.wins}</div>
                 <div className="col-span-1 text-right text-red-400">{formatMoney(t.withdrawn)}</div>
-                <div className="col-span-2 text-right text-purple-400">{(t.xp || 0).toLocaleString()}</div>
+                <div className="col-span-2 text-right text-green-400">{(t.xp || 0).toLocaleString()}</div>
               </div>
             ))}
             {(data.topTraders || []).length === 0 && (

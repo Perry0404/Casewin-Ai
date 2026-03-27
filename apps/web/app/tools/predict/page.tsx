@@ -87,13 +87,13 @@ export default function PredictPage() {
   const getProbabilityBg = (prob: number) => {
     if (prob >= 70) return 'from-green-500 to-emerald-500'
     if (prob >= 50) return 'from-yellow-500 to-orange-500'
-    return 'from-red-500 to-pink-500'
+    return 'from-red-500 to-emerald-500'
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-gray-900">
       {/* Navigation */}
-      <nav className="bg-black/30 backdrop-blur-md border-b border-purple-500/20">
+      <nav className="bg-black/30 backdrop-blur-md border-b border-green-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center space-x-2">
@@ -113,10 +113,10 @@ export default function PredictPage() {
       </nav>
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-800/50 to-pink-800/50 py-8">
+      <div className="bg-gradient-to-r from-green-800/50 to-emerald-800/50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-3xl">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center text-3xl">
               🔮
             </div>
             <div>
@@ -132,7 +132,7 @@ export default function PredictPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Input Section */}
           <div className="space-y-6">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-green-500/20">
               <h2 className="text-xl font-semibold text-white mb-4">Case Details</h2>
               
               {/* Case Type */}
@@ -145,7 +145,7 @@ export default function PredictPage() {
                       onClick={() => setCaseType(type.id)}
                       className={`p-3 rounded-lg border text-left transition ${
                         caseType === type.id
-                          ? 'border-purple-500 bg-purple-500/20 text-white'
+                          ? 'border-green-500 bg-green-500/20 text-white'
                           : 'border-gray-600 bg-gray-700/30 text-gray-300 hover:border-gray-500'
                       }`}
                     >
@@ -162,7 +162,7 @@ export default function PredictPage() {
                 <select
                   value={court}
                   onChange={(e) => setCourt(e.target.value)}
-                  className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="">Select Court</option>
                   {courts.map((c) => (
@@ -179,7 +179,7 @@ export default function PredictPage() {
                     onClick={() => setClientPosition('plaintiff')}
                     className={`flex-1 p-3 rounded-lg border transition ${
                       clientPosition === 'plaintiff'
-                        ? 'border-purple-500 bg-purple-500/20 text-white'
+                        ? 'border-green-500 bg-green-500/20 text-white'
                         : 'border-gray-600 bg-gray-700/30 text-gray-300'
                     }`}
                   >
@@ -189,7 +189,7 @@ export default function PredictPage() {
                     onClick={() => setClientPosition('defendant')}
                     className={`flex-1 p-3 rounded-lg border transition ${
                       clientPosition === 'defendant'
-                        ? 'border-purple-500 bg-purple-500/20 text-white'
+                        ? 'border-green-500 bg-green-500/20 text-white'
                         : 'border-gray-600 bg-gray-700/30 text-gray-300'
                     }`}
                   >
@@ -206,7 +206,7 @@ export default function PredictPage() {
                   onChange={(e) => setCaseFacts(e.target.value)}
                   rows={8}
                   placeholder="Describe the facts of the case in detail. Include:&#10;- What happened&#10;- When it happened&#10;- Evidence available&#10;- Key witnesses&#10;- Claims being made"
-                  className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
 
@@ -219,7 +219,7 @@ export default function PredictPage() {
               <button
                 onClick={handlePredict}
                 disabled={isAnalyzing}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-600 text-white py-3 rounded-lg font-semibold transition flex items-center justify-center space-x-2"
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white py-3 rounded-lg font-semibold transition flex items-center justify-center space-x-2"
               >
                 {isAnalyzing ? (
                   <>
@@ -244,7 +244,7 @@ export default function PredictPage() {
             {prediction ? (
               <>
                 {/* Win Probability */}
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-green-500/20">
                   <h2 className="text-xl font-semibold text-white mb-4">Prediction Result</h2>
                   <div className="text-center">
                     <div className={`text-6xl font-bold ${getProbabilityColor(prediction.winProbability)}`}>
@@ -262,12 +262,12 @@ export default function PredictPage() {
                 </div>
 
                 {/* Key Factors */}
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-green-500/20">
                   <h3 className="font-semibold text-white mb-3">📊 Key Factors</h3>
                   <ul className="space-y-2">
                     {prediction.keyFactors.map((factor, i) => (
                       <li key={i} className="flex items-start space-x-2 text-gray-300">
-                        <span className="text-purple-400 mt-1">•</span>
+                        <span className="text-green-400 mt-1">•</span>
                         <span>{factor}</span>
                       </li>
                     ))}
@@ -275,14 +275,14 @@ export default function PredictPage() {
                 </div>
 
                 {/* Similar Cases */}
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-green-500/20">
                   <h3 className="font-semibold text-white mb-3">📚 Similar Cases</h3>
                   <div className="space-y-3">
                     {prediction.similarCases.map((case_, i) => (
                       <div key={i} className="p-3 bg-gray-700/30 rounded-lg">
                         <div className="flex items-center justify-between">
                           <span className="text-white font-medium">{case_.name}</span>
-                          <span className="text-xs text-purple-400">{case_.relevance}% relevant</span>
+                          <span className="text-xs text-green-400">{case_.relevance}% relevant</span>
                         </div>
                         <p className="text-sm text-gray-400 mt-1">Outcome: {case_.outcome}</p>
                       </div>
@@ -311,7 +311,7 @@ export default function PredictPage() {
                 </div>
               </>
             ) : (
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20 h-[600px] flex items-center justify-center">
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-green-500/20 h-[600px] flex items-center justify-center">
                 <div className="text-center text-gray-500">
                   <span className="text-6xl mb-4 block">🔮</span>
                   <p>Enter case details to get a prediction</p>

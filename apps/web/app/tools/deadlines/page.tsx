@@ -69,7 +69,7 @@ export default function DeadlinesPage() {
       'Limitation': 'bg-red-100 text-red-800',
       'Service': 'bg-yellow-100 text-yellow-800',
       'Response': 'bg-green-100 text-green-800',
-      'Hearing': 'bg-purple-100 text-purple-800',
+      'Hearing': 'bg-green-100 text-green-800',
     }
     return colors[cat] || 'bg-gray-100 text-gray-800'
   }
@@ -93,7 +93,7 @@ export default function DeadlinesPage() {
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
               <span className="text-xl">📅</span>
             </div>
             <div>
@@ -113,7 +113,7 @@ export default function DeadlinesPage() {
                 <div className="grid grid-cols-2 gap-2">
                   {caseTypes.map(ct => (
                     <button key={ct.id} onClick={() => setCaseType(ct.id)}
-                      className={`p-2 text-xs rounded-lg border-2 text-left transition-all ${caseType === ct.id ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-gray-300'}`}>
+                      className={`p-2 text-xs rounded-lg border-2 text-left transition-all ${caseType === ct.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'}`}>
                       <span className="block text-base mb-0.5">{ct.icon}</span>
                       {ct.name}
                     </button>
@@ -124,7 +124,7 @@ export default function DeadlinesPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Jurisdiction</label>
                 <select value={jurisdiction} onChange={e => setJurisdiction(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500">
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                   {jurisdictions.map(j => <option key={j} value={j}>{j}</option>)}
                 </select>
               </div>
@@ -132,20 +132,20 @@ export default function DeadlinesPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Filing / Incident Date</label>
                 <input type="date" value={filingDate} onChange={e => setFilingDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500" />
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500" />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Case Description</label>
                 <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)}
                   placeholder="Brief description of the legal matter..."
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500" />
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-green-500" />
               </div>
 
               {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
 
               <button onClick={handleCalculate} disabled={isCalculating}
-                className="w-full py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 disabled:opacity-50 transition-colors">
+                className="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors">
                 {isCalculating ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>

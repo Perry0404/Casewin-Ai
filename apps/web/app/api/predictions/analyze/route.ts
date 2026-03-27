@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434'
+const GROK_API_KEY = process.env.GROK_API_KEY || ''
+const GROK_API_URL = 'https://api.x.ai/v1/chat/completions'
+const GROK_MODEL = process.env.GROK_MODEL || 'grok-3'
 
-function generateBuiltInAnalysis(market: {
+interface MarketData {
   title?: string
   description?: string
   category?: string
@@ -11,151 +13,80 @@ function generateBuiltInAnalysis(market: {
   yes_shares?: number
   no_shares?: number
   total_pool?: number
-}) {
+}
+
+interface Factor {
+  factor: string
+  impact: string
+  detail: string
+}
+
+interface Analysis {
+  summary: string
+  confidence: number
+  recommendation: 'YES' | 'NO' | 'HOLD'
+  factors: Factor[]
+  risk_level: string
+  disclaimer: string
+}
+
+function generateBuiltInAnalysis(market: MarketData): Analysis {
   const title = (market.title || '').toLowerCase()
   const category = market.category || 'General'
   const yesShares = market.yes_shares || 20000
   const noShares = market.no_shares || 20000
   const total = yesShares + noShares
   const yesProb = Math.round((noShares / total) * 100)
-  const noProb = 100 - yesProb
 
-  const factors: Array<{ factor: string; impact: string; detail: string }> = []
+  const factors: Factor[] = []
   let confidence = 65
   let recommendation: 'YES' | 'NO' | 'HOLD' = yesProb > 55 ? 'YES' : yesProb < 45 ? 'NO' : 'HOLD'
 
-  // Category-specific analysis
   if (category === 'Constitutional Law') {
-    factors.push({
-      factor: 'Constitutional Precedent',
-      impact: 'high',
-      detail: 'Nigerian Supreme Court has historically upheld constitutional provisions strictly. The 1999 Constitution (as amended) provides the framework for analysis. Key precedents from Marbury-equivalent Nigerian cases guide interpretation.'
-    })
-    factors.push({
-      factor: 'Political & Legislative Climate',
-      impact: 'medium',
-      detail: 'Current National Assembly composition and inter-party dynamics significantly influence constitutional amendment outcomes and judicial appointments.'
-    })
+    factors.push({ factor: 'Constitutional Precedent', impact: 'high', detail: 'Nigerian Supreme Court has historically upheld constitutional provisions strictly. The 1999 Constitution (as amended) provides the framework.' })
+    factors.push({ factor: 'Political Climate', impact: 'medium', detail: 'Current National Assembly composition and inter-party dynamics influence constitutional outcomes.' })
     confidence = 62
   } else if (category === 'Criminal Law') {
-    factors.push({
-      factor: 'Prosecution Success Rate',
-      impact: 'high',
-      detail: 'EFCC and other anti-corruption agencies maintain varying conviction rates. Lagos and Abuja Federal High Courts demonstrate different patterns in criminal proceedings.'
-    })
-    factors.push({
-      factor: 'Defense & Procedure',
-      impact: 'medium',
-      detail: 'Quality of legal representation, adherence to ACJA 2015 procedures, and availability of forensic evidence significantly impact outcomes.'
-    })
+    factors.push({ factor: 'Prosecution Success Rate', impact: 'high', detail: 'EFCC and anti-corruption agencies maintain varying conviction rates across jurisdictions.' })
+    factors.push({ factor: 'Defense & Procedure', impact: 'medium', detail: 'Adherence to ACJA 2015 procedures and forensic evidence availability impact outcomes.' })
     confidence = 55
   } else if (category === 'Financial Law') {
-    factors.push({
-      factor: 'CBN Regulatory Framework',
-      impact: 'high',
-      detail: 'Central Bank of Nigeria directives carry significant weight. Recent monetary policy shifts and foreign exchange regulations directly impact financial law disputes.'
-    })
-    factors.push({
-      factor: 'SEC & Capital Markets',
-      impact: 'medium',
-      detail: 'Securities and Exchange Commission guidelines and Investment & Securities Act provisions shape capital market dispute outcomes.'
-    })
+    factors.push({ factor: 'CBN Regulatory Framework', impact: 'high', detail: 'CBN directives and monetary policy shifts directly impact financial law disputes.' })
+    factors.push({ factor: 'SEC & Capital Markets', impact: 'medium', detail: 'SEC guidelines and Investment & Securities Act shape capital market dispute outcomes.' })
     confidence = 63
   } else if (category === 'Property Law') {
-    factors.push({
-      factor: 'Land Use Act 1978',
-      impact: 'high',
-      detail: 'All land vested in State Governors via Certificate of Occupancy. Disputes often hinge on proper documentation, consent requirements under S.22, and governor\'s revocation powers under S.28.'
-    })
-    factors.push({
-      factor: 'Customary Land Tenure',
-      impact: 'medium',
-      detail: 'Traditional land rights and family land disputes remain significant, particularly in southern Nigeria. Courts balance statutory and customary claims.'
-    })
+    factors.push({ factor: 'Land Use Act 1978', impact: 'high', detail: 'All land vested in State Governors via C of O. Disputes hinge on documentation and consent requirements.' })
+    factors.push({ factor: 'Customary Tenure', impact: 'medium', detail: 'Traditional land rights remain significant. Courts balance statutory and customary claims.' })
     confidence = 58
   } else if (category === 'Corporate Law') {
-    factors.push({
-      factor: 'CAMA 2020 Framework',
-      impact: 'high',
-      detail: 'Companies and Allied Matters Act 2020 introduced significant reforms including single-member companies, electronic filing, and enhanced minority shareholder protections.'
-    })
-    factors.push({
-      factor: 'Corporate Governance',
-      impact: 'medium',
-      detail: 'SEC Code of Corporate Governance and CBN guidelines for financial institutions create layered compliance requirements.'
-    })
+    factors.push({ factor: 'CAMA 2020', impact: 'high', detail: 'CAMA 2020 introduced reforms including single-member companies and enhanced minority protections.' })
+    factors.push({ factor: 'Corporate Governance', impact: 'medium', detail: 'SEC Corporate Governance Code and CBN guidelines create layered compliance.' })
     confidence = 60
   } else if (category === 'Labour Law') {
-    factors.push({
-      factor: 'NIC Jurisdiction',
-      impact: 'high',
-      detail: 'National Industrial Court has exclusive jurisdiction over labour matters. Recent expansions include fundamental rights at work and international labour standards.'
-    })
-    factors.push({
-      factor: 'Trade Union Dynamics',
-      impact: 'medium',
-      detail: 'NLC/TUC collective bargaining agreements and minimum wage legislation significantly influence labour dispute outcomes.'
-    })
+    factors.push({ factor: 'NIC Jurisdiction', impact: 'high', detail: 'National Industrial Court has exclusive jurisdiction over labour matters.' })
+    factors.push({ factor: 'Trade Union Dynamics', impact: 'medium', detail: 'NLC/TUC collective bargaining and minimum wage legislation influence outcomes.' })
     confidence = 57
   } else {
-    factors.push({
-      factor: 'Nigerian Legal Framework',
-      impact: 'high',
-      detail: 'Analysis based on established precedents from Nigerian superior courts and relevant statutory provisions.'
-    })
+    factors.push({ factor: 'Nigerian Legal Framework', impact: 'high', detail: 'Analysis based on established precedents from Nigerian superior courts.' })
     confidence = 55
   }
 
-  // Market sentiment factor
   factors.push({
-    factor: 'Market Sentiment Analysis',
-    impact: yesProb > 60 || noProb > 60 ? 'high' : 'low',
-    detail: `Current CPMM pricing: YES at ₦${(market.yes_price || 0.5).toFixed(2)}, NO at ₦${(market.no_price || 0.5).toFixed(2)}. ${
-      yesProb > 60 ? 'Strong bullish consensus among traders.' : noProb > 60 ? 'Strong bearish consensus among traders.' : 'Market is balanced — consider waiting for more signal.'
-    } Total pool: ₦${(market.total_pool || 0).toLocaleString()}.`
+    factor: 'Market Sentiment',
+    impact: yesProb > 60 || (100 - yesProb) > 60 ? 'high' : 'low',
+    detail: `YES at N${(market.yes_price || 0.5).toFixed(2)}, NO at N${(market.no_price || 0.5).toFixed(2)}. Pool: N${(market.total_pool || 0).toLocaleString()}.`
   })
-
-  factors.push({
-    factor: 'Historical Case Patterns',
-    impact: 'medium',
-    detail: 'Similar Nigerian court cases show approximately 35% appellate reversal rate. Supreme Court overturns Court of Appeal in roughly 28% of appeals heard.'
-  })
-
-  // Keyword-specific factors
-  if (title.includes('supreme court')) {
-    factors.push({
-      factor: 'Supreme Court Finality',
-      impact: 'high',
-      detail: 'Supreme Court decisions are final and binding under S.235 of the 1999 Constitution. The 7-justice panel configuration and Chief Justice assignment patterns can influence outcomes.'
-    })
-    confidence += 5
-  }
 
   if (title.includes('election') || title.includes('tribunal')) {
-    factors.push({
-      factor: 'Election Petition Dynamics',
-      impact: 'high',
-      detail: 'Election petitions operate under strict 180-day timelines (S.285(6)). INEC documentation, card reader data, and witness testimony are critical. Recent presidential election petitions show evolving standards of proof.'
-    })
+    factors.push({ factor: 'Election Petition', impact: 'high', detail: 'Election petitions operate under strict 180-day timelines (S.285(6)).' })
     confidence = 48
     recommendation = 'HOLD'
   }
 
-  if (title.includes('efcc') || title.includes('corruption')) {
-    factors.push({
-      factor: 'Anti-Corruption Prosecutions',
-      impact: 'high',
-      detail: 'EFCC conviction rate varies by jurisdiction and case complexity. High-profile cases often face procedural delays. Recent reforms in ACJA 2015 aim to expedite trials.'
-    })
-    confidence = 52
-  }
-
-  const summary = `**AI Legal Analysis for ${category}:**\n\nBased on analysis of Nigerian ${category.toLowerCase()} precedents and current market data, the market prices YES at ${yesProb}% probability. ${
-    recommendation === 'YES'
-      ? 'Legal factors and historical patterns favor a positive outcome. Traders should consider the strength of precedent and current judicial trends.'
-      : recommendation === 'NO'
-        ? 'Available evidence and precedent patterns suggest the proposition may not succeed. Key risk factors include procedural challenges and recent appellate trends.'
-        : 'This case is closely contested with significant uncertainty. The balanced market reflects genuine ambiguity in the legal analysis. Consider smaller positions or waiting for new developments.'
+  const summary = `AI Legal Analysis for ${category}: Market prices YES at ${yesProb}% probability. ${
+    recommendation === 'YES' ? 'Legal factors favor a positive outcome.'
+    : recommendation === 'NO' ? 'Evidence suggests the proposition may not succeed.'
+    : 'Closely contested with significant uncertainty.'
   }`
 
   return {
@@ -164,7 +95,7 @@ function generateBuiltInAnalysis(market: {
     recommendation,
     factors,
     risk_level: confidence >= 65 ? 'moderate' : confidence >= 55 ? 'high' : 'very_high',
-    disclaimer: 'This AI analysis is for informational and educational purposes only. It does not constitute legal advice. Past case outcomes do not guarantee future results. Always conduct your own research and consult qualified legal professionals before making trading decisions.'
+    disclaimer: 'This AI analysis is for informational purposes only. It does not constitute legal advice. Always consult qualified legal professionals.'
   }
 }
 
@@ -177,30 +108,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Market data required' }, { status: 400 })
     }
 
-    // Try Ollama AI first
-    try {
-      const ollamaRes = await fetch(`${OLLAMA_URL}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'llama3.1',
-          prompt: `You are a Nigerian legal AI expert specializing in case outcome prediction. Analyze this prediction market:\n\nTitle: ${market.title}\nDescription: ${market.description || 'N/A'}\nCategory: ${market.category}\nCurrent YES probability: ${market.yes_price ? Math.round(market.yes_price * 100) : 50}%\nTotal pool: ₦${market.total_pool || 0}\n\nRespond in this exact JSON format only:\n{\n  "summary": "2-3 sentence analysis of the legal case and likely outcome...",\n  "confidence": 65,\n  "recommendation": "YES or NO or HOLD",\n  "factors": [\n    {"factor": "Factor name", "impact": "high", "detail": "Detailed explanation"}\n  ],\n  "risk_level": "moderate",\n  "disclaimer": "This is AI analysis, not legal advice."\n}`,
-          stream: false
-        }),
-        signal: AbortSignal.timeout(10000)
-      })
+    // Try Grok API first
+    if (GROK_API_KEY) {
+      try {
+        const grokRes = await fetch(GROK_API_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${GROK_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: GROK_MODEL,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a Nigerian legal AI expert specializing in case outcome prediction and prediction market analysis. Respond ONLY with valid JSON.'
+              },
+              {
+                role: 'user',
+                content: `Analyze this Nigerian legal prediction market:\n\nTitle: ${market.title}\nDescription: ${market.description || 'N/A'}\nCategory: ${market.category}\nCurrent YES probability: ${market.yes_price ? Math.round(market.yes_price * 100) : 50}%\nTotal pool: N${market.total_pool || 0}\n\nRespond in this exact JSON format:\n{"summary": "2-3 sentence analysis", "confidence": 65, "recommendation": "YES or NO or HOLD", "factors": [{"factor": "Name", "impact": "high/medium/low", "detail": "Explanation"}], "risk_level": "moderate/high/very_high", "disclaimer": "This is AI analysis, not legal advice."}`
+              }
+            ],
+            temperature: 0.3,
+            max_tokens: 2000,
+          }),
+          signal: AbortSignal.timeout(15000)
+        })
 
-      if (ollamaRes.ok) {
-        const ollamaData = await ollamaRes.json()
-        const responseText = ollamaData.response || ''
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          const analysis = JSON.parse(jsonMatch[0])
-          return NextResponse.json({ analysis, source: 'ai' })
+        if (grokRes.ok) {
+          const grokData = await grokRes.json()
+          const responseText = grokData.choices?.[0]?.message?.content || ''
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            const analysis = JSON.parse(jsonMatch[0])
+            return NextResponse.json({ analysis, source: 'grok-ai' })
+          }
         }
+      } catch {
+        // Grok unavailable - fall through to built-in
       }
-    } catch {
-      // Ollama not available — use built-in engine
     }
 
     // Fallback: built-in analysis engine

@@ -6,6 +6,8 @@ import AuthGuard from '@/components/AuthGuard'
 import { NotificationProvider } from '@/components/Notifications'
 import Script from 'next/script'
 
+export const dynamic = 'force-dynamic'
+
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {

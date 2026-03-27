@@ -5,8 +5,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const BASE_RPC = process.env.BASE_RPC_URL || 'https://mainnet.base.org'
-const BASE_TREASURY = (process.env.BASE_TREASURY_ADDRESS || '').toLowerCase()
-const ETH_NGN_RATE = Number(process.env.ETH_NGN_RATE || '5500000') // ~₦5.5M per ETH
+const ETH_NGN_RATE = Number(process.env.ETH_NGN_RATE || '5500000') // ~N5.5M per ETH
 
 async function getAuthUser(request: NextRequest) {
   const response = NextResponse.next()
@@ -38,10 +37,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Transaction hash and chain=base required' }, { status: 400 })
     }
 
-    if (!BASE_TREASURY) {
-      return NextResponse.json({ error: 'Crypto deposits not configured. Contact support.' }, { status: 500 })
-    }
-
     if (!supabaseUrl || !supabaseServiceKey) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }
@@ -62,14 +57,14 @@ export async function POST(request: NextRequest) {
     const receipt = receiptData.result
 
     if (!receipt) {
-      return NextResponse.json({ error: 'Transaction not found. It may still be pending — try again in a minute.' }, { status: 400 })
+      return NextResponse.json({ error: 'Transaction not found. It may still be pending - try again in a minute.' }, { status: 400 })
     }
 
     if (receipt.status !== '0x1') {
       return NextResponse.json({ error: 'Transaction failed on-chain' }, { status: 400 })
     }
 
-    // Get full transaction details to check value and recipient
+    // Get full transaction details
     const txRes = await fetch(BASE_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -88,8 +83,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not retrieve transaction details' }, { status: 400 })
     }
 
-    if (tx.to?.toLowerCase() !== BASE_TREASURY) {
-      return NextResponse.json({ error: 'Transaction recipient does not match our deposit address' }, { status: 400 })
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const email = authUser.email
+
+    // Per-user wallet: verify the tx came FROM the user's registered wallet address
+    const { data: userWallet } = await supabase
+      .from('user_wallets')
+      .select('wallet_address')
+      .eq('user_email', email)
+      .single()
+
+    if (userWallet?.wallet_address && tx.from?.toLowerCase() !== userWallet.wallet_address.toLowerCase()) {
+      return NextResponse.json({ error: 'Transaction does not match your registered wallet address' }, { status: 400 })
     }
 
     // Calculate ETH amount and Naira equivalent
@@ -97,11 +102,8 @@ export async function POST(request: NextRequest) {
     const nairaAmount = Math.floor(ethAmount * ETH_NGN_RATE)
 
     if (nairaAmount < 100) {
-      return NextResponse.json({ error: `Deposit too small. ${ethAmount.toFixed(6)} ETH = ₦${nairaAmount}. Minimum is ₦100 equivalent.` }, { status: 400 })
+      return NextResponse.json({ error: `Deposit too small. ${ethAmount.toFixed(6)} ETH = N${nairaAmount}. Minimum is N100 equivalent.` }, { status: 400 })
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const email = authUser.email
 
     // Check for duplicate transaction
     const { data: existingTx } = await supabase
@@ -142,23 +144,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Record transaction
-    await supabase.from('wallet_transactions').insert({
+    const { error: txErr } = await supabase.from('wallet_transactions').insert({
       user_email: email,
       amount: nairaAmount,
       transaction_type: 'crypto_deposit',
       related_id: tx_hash,
       balance_after: newBalance,
-      notes: `Base ETH deposit: ${ethAmount.toFixed(6)} ETH @ ₦${ETH_NGN_RATE.toLocaleString()}/ETH = ₦${nairaAmount.toLocaleString()}`
+      notes: `Base ETH deposit: ${ethAmount.toFixed(6)} ETH @ N${ETH_NGN_RATE.toLocaleString()}/ETH = N${nairaAmount.toLocaleString()}`
     })
+    if (txErr) console.warn('Transaction record failed:', txErr.message)
 
     // Notification
-    await supabase.from('notifications').insert({
+    const { error: notifErr } = await supabase.from('notifications').insert({
       user_email: email,
       type: 'deposit',
       title: 'Crypto Deposit Confirmed!',
-      message: `${ethAmount.toFixed(6)} ETH deposited via Base network. ₦${nairaAmount.toLocaleString()} credited to your wallet.`,
+      message: `${ethAmount.toFixed(6)} ETH deposited via Base network. N${nairaAmount.toLocaleString()} credited to your wallet.`,
       read: false
-    }).then(() => {}).catch(() => {})
+    })
+    if (notifErr) console.warn('Notification insert failed:', notifErr.message)
 
     return NextResponse.json({
       success: true,

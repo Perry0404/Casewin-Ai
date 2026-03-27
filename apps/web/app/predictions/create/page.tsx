@@ -102,7 +102,7 @@ export default function CreateMarketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/20 to-slate-900">
       {/* Header */}
       <header className="border-b border-slate-700/50 backdrop-blur-xl bg-slate-900/80 sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -110,7 +110,7 @@ export default function CreateMarketPage() {
             <Link href="/predictions" className="flex items-center gap-3">
               <Image src="/favicon.png" alt="CaseWin AI" width={40} height={40} className="rounded-xl" />
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
                   Create Market
                 </h1>
                 <p className="text-xs text-slate-400">Step {step} of 6</p>
@@ -134,7 +134,7 @@ export default function CreateMarketPage() {
             <div 
               key={s} 
               className={`h-2 flex-1 rounded-full transition-all ${
-                s <= step ? 'bg-purple-600' : 'bg-slate-700'
+                s <= step ? 'bg-green-600' : 'bg-slate-700'
               }`}
             />
           ))}
@@ -157,7 +157,7 @@ export default function CreateMarketPage() {
                   onClick={() => setMarketType(type.id)}
                   className={`p-6 rounded-2xl border text-left transition-all ${
                     marketType === type.id
-                      ? 'bg-purple-600/20 border-purple-500'
+                      ? 'bg-green-600/20 border-green-500'
                       : 'bg-slate-800/60 border-slate-700/50 hover:border-slate-600'
                   }`}
                 >
@@ -185,7 +185,7 @@ export default function CreateMarketPage() {
                   onClick={() => setCategory(cat.id)}
                   className={`p-4 rounded-xl border text-center transition-all ${
                     category === cat.id
-                      ? 'bg-purple-600/20 border-purple-500'
+                      ? 'bg-green-600/20 border-green-500'
                       : 'bg-slate-800/60 border-slate-700/50 hover:border-slate-600'
                   }`}
                 >
@@ -215,7 +215,7 @@ export default function CreateMarketPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Will [specific event] happen by [specific date]?"
-                  className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20"
+                  className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20"
                 />
                 <p className="mt-2 text-xs text-slate-400">
                   {title.length}/200 characters (minimum 20)
@@ -231,7 +231,7 @@ export default function CreateMarketPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                   placeholder="Provide context about the market, relevant background information, and clarify any edge cases..."
-                  className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 resize-none"
+                  className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 resize-none"
                 />
                 <p className="mt-2 text-xs text-slate-400">
                   {description.length}/1000 characters (minimum 50)
@@ -291,7 +291,7 @@ export default function CreateMarketPage() {
                       value={choice}
                       onChange={(e) => updateChoice(index, e.target.value)}
                       placeholder={`Choice ${index + 1}`}
-                      className="flex-1 px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/50"
+                      className="flex-1 px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-green-500/50"
                     />
                     {choices.length > 2 && (
                       <button
@@ -324,7 +324,7 @@ export default function CreateMarketPage() {
                       type="number"
                       value={scalarMin}
                       onChange={(e) => setScalarMin(Number(e.target.value))}
-                      className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                      className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-green-500/50"
                     />
                   </div>
                   <div>
@@ -333,7 +333,7 @@ export default function CreateMarketPage() {
                       type="number"
                       value={scalarMax}
                       onChange={(e) => setScalarMax(Number(e.target.value))}
-                      className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                      className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-green-500/50"
                     />
                   </div>
                 </div>
@@ -344,7 +344,7 @@ export default function CreateMarketPage() {
                     value={scalarUnit}
                     onChange={(e) => setScalarUnit(e.target.value)}
                     placeholder="%, ₦, years, etc."
-                    className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/50"
+                    className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-green-500/50"
                   />
                 </div>
               </div>
@@ -370,7 +370,7 @@ export default function CreateMarketPage() {
                   value={resolutionDate}
                   onChange={(e) => setResolutionDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                  className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-green-500/50"
                 />
               </div>
               
@@ -383,7 +383,7 @@ export default function CreateMarketPage() {
                   onChange={(e) => setResolutionSource(e.target.value)}
                   rows={3}
                   placeholder="Describe the official source that will be used to determine the outcome (e.g., 'Official Supreme Court ruling published on supremecourt.gov.ng')"
-                  className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/50 resize-none"
+                  className="w-full px-4 py-3 bg-slate-800/60 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-green-500/50 resize-none"
                 />
               </div>
               
@@ -424,7 +424,7 @@ export default function CreateMarketPage() {
                 
                 <div className="flex justify-between text-sm text-slate-400">
                   <span>₦1,000</span>
-                  <span className="text-2xl font-bold text-purple-400">₦{initialLiquidity.toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-green-400">₦{initialLiquidity.toLocaleString()}</span>
                   <span>₦100,000</span>
                 </div>
                 
@@ -435,7 +435,7 @@ export default function CreateMarketPage() {
                       onClick={() => setInitialLiquidity(amount)}
                       className={`py-2 rounded-lg text-sm font-medium transition-all ${
                         initialLiquidity === amount
-                          ? 'bg-purple-600 text-white'
+                          ? 'bg-green-600 text-white'
                           : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                       }`}
                     >
@@ -472,8 +472,8 @@ export default function CreateMarketPage() {
               </div>
             </div>
             
-            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
-              <h4 className="text-sm font-medium text-purple-400 mb-2">💰 Earn Fees</h4>
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-green-400 mb-2">💰 Earn Fees</h4>
               <p className="text-sm text-slate-400">
                 As the market creator, you&apos;ll earn 2% of all trading fees. Higher liquidity 
                 attracts more traders and generates more fees!
@@ -502,7 +502,7 @@ export default function CreateMarketPage() {
               disabled={!canProceed()}
               className={`px-8 py-3 rounded-xl font-medium transition-all ${
                 canProceed()
-                  ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                  ? 'bg-green-600 hover:bg-green-500 text-white'
                   : 'bg-slate-800/40 text-slate-600 cursor-not-allowed'
               }`}
             >
@@ -514,7 +514,7 @@ export default function CreateMarketPage() {
               disabled={!canProceed() || isSubmitting}
               className={`px-8 py-3 rounded-xl font-semibold transition-all ${
                 canProceed() && !isSubmitting
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white'
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white'
                   : 'bg-slate-800/40 text-slate-600 cursor-not-allowed'
               }`}
             >

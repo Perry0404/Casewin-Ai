@@ -48,7 +48,7 @@ export default function BookingSuccessPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="inline-block w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4"></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Verifying Payment...</h2>
           <p className="text-gray-600">Please wait while we confirm your booking</p>
         </div>
@@ -65,7 +65,7 @@ export default function BookingSuccessPage() {
           <p className="text-gray-600 mb-6">{error}</p>
           <Link
             href="/marketplace"
-            className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+            className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
           >
             Back to Marketplace
           </Link>
@@ -75,7 +75,7 @@ export default function BookingSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-50 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Success Header */}
         <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-8 text-center">
@@ -114,40 +114,40 @@ export default function BookingSuccessPage() {
             </div>
           </div>
 
-          <div className="bg-indigo-50 rounded-xl p-6 mb-6">
+          <div className="bg-green-50 rounded-xl p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">What's Next?</h3>
             <ul className="space-y-2 text-gray-600">
               <li className="flex items-start gap-2">
-                <span className="text-indigo-600 mt-1">✓</span>
+                <span className="text-green-600 mt-1">✓</span>
                 <span>You'll receive a confirmation email at <strong>{paymentData?.customer?.email}</strong></span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-indigo-600 mt-1">✓</span>
+                <span className="text-green-600 mt-1">✓</span>
                 <span>The lawyer will contact you within 24 hours to confirm the appointment</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-indigo-600 mt-1">✓</span>
+                <span className="text-green-600 mt-1">✓</span>
                 <span>Prepare any relevant documents for your consultation</span>
               </li>
             </ul>
           </div>
 
           {/* Video Meeting Section */}
-          <div className="bg-purple-50 border border-purple-200 rounded-xl p-6 mb-6">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
                 </svg>
               </div>
               <div>
-                <h4 className="font-semibold text-purple-900">Video Consultation Ready</h4>
-                <p className="text-sm text-purple-600">Your video meeting room is ready to use</p>
+                <h4 className="font-semibold text-green-900">Video Consultation Ready</h4>
+                <p className="text-sm text-green-600">Your video meeting room is ready to use</p>
               </div>
             </div>
             <Link
               href={`/consultation/booking-${reference}`}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
@@ -159,13 +159,13 @@ export default function BookingSuccessPage() {
           <div className="flex gap-4">
             <Link
               href="/dashboard"
-              className="flex-1 py-3 border-2 border-indigo-600 text-indigo-600 rounded-lg font-semibold text-center hover:bg-indigo-50 transition-colors"
+              className="flex-1 py-3 border-2 border-green-600 text-green-600 rounded-lg font-semibold text-center hover:bg-green-50 transition-colors"
             >
               My Dashboard
             </Link>
             <Link
               href="/"
-              className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-semibold text-center hover:bg-indigo-700 transition-colors"
+              className="flex-1 py-3 bg-green-600 text-white rounded-lg font-semibold text-center hover:bg-green-700 transition-colors"
             >
               Back to Home
             </Link>

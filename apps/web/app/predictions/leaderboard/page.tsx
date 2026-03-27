@@ -56,9 +56,9 @@ export default function LeaderboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/20 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4" />
+          <div className="animate-spin h-12 w-12 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4" />
           <p className="text-slate-400">Loading leaderboard...</p>
         </div>
       </div>
@@ -66,7 +66,7 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/20 to-slate-900">
       <header className="border-b border-slate-700/50 backdrop-blur-xl bg-slate-900/80 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -90,10 +90,10 @@ export default function LeaderboardPage() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {myRank && (
-          <div className="mb-6 bg-gradient-to-r from-purple-600/20 via-blue-600/20 to-purple-600/20 rounded-2xl p-6 border border-purple-500/30">
+          <div className="mb-6 bg-gradient-to-r from-green-600/20 via-blue-600/20 to-green-600/20 rounded-2xl p-6 border border-green-500/30">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4">
-                <div className="text-4xl font-bold text-purple-300">#{myRank.rank}</div>
+                <div className="text-4xl font-bold text-green-300">#{myRank.rank}</div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{myRank.rankBadge}</span>
@@ -107,7 +107,7 @@ export default function LeaderboardPage() {
                         <span>Next: {myRank.nextRankTitle} ({myRank.nextRankXP?.toLocaleString()} XP)</span>
                       </div>
                       <div className="w-48 h-1.5 bg-slate-700 rounded-full mt-1">
-                        <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all" style={{ width: `${Math.min(100, myRank.rankProgress)}%` }} />
+                        <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(100, myRank.rankProgress)}%` }} />
                       </div>
                     </div>
                   )}
@@ -133,7 +133,7 @@ export default function LeaderboardPage() {
           </div>
         )}
 
-        <button onClick={() => setShowRanks(!showRanks)} className="mb-4 text-sm text-purple-400 hover:text-purple-300 flex items-center gap-2">
+        <button onClick={() => setShowRanks(!showRanks)} className="mb-4 text-sm text-green-400 hover:text-green-300 flex items-center gap-2">
           {showRanks ? 'Hide' : 'Show'} Rank Tiers
         </button>
 
@@ -164,13 +164,13 @@ export default function LeaderboardPage() {
               <p className="text-4xl mb-3">Trophy</p>
               <p className="font-bold text-white mb-1">No traders yet</p>
               <p className="text-sm">Be the first to trade and claim #1!</p>
-              <Link href="/predictions" className="mt-4 inline-block px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-500 transition-all">
+              <Link href="/predictions" className="mt-4 inline-block px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-500 transition-all">
                 Start Trading
               </Link>
             </div>
           ) : (
             leaderboard.map((entry, idx) => (
-              <div key={entry.userId} className={`grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-slate-700/30 hover:bg-slate-700/20 transition-all ${myRank?.userId === entry.userId ? 'bg-purple-500/10 border-purple-500/30' : ''} ${idx < 3 ? 'bg-gradient-to-r ' + (idx === 0 ? 'from-yellow-500/10' : idx === 1 ? 'from-gray-400/10' : 'from-orange-400/10') + ' to-transparent' : ''}`}>
+              <div key={entry.userId} className={`grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-slate-700/30 hover:bg-slate-700/20 transition-all ${myRank?.userId === entry.userId ? 'bg-green-500/10 border-green-500/30' : ''} ${idx < 3 ? 'bg-gradient-to-r ' + (idx === 0 ? 'from-yellow-500/10' : idx === 1 ? 'from-gray-400/10' : 'from-orange-400/10') + ' to-transparent' : ''}`}>
                 <div className="col-span-1">
                   {idx === 0 ? 'Gold' : idx === 1 ? 'Silver' : idx === 2 ? 'Bronze' : (
                     <span className="text-slate-400 font-mono text-sm">{entry.rank}</span>
@@ -184,7 +184,7 @@ export default function LeaderboardPage() {
                   </div>
                 </div>
                 <div className="col-span-2 text-right">
-                  <p className="text-sm font-bold text-purple-300">{entry.xpPoints.toLocaleString()}</p>
+                  <p className="text-sm font-bold text-green-300">{entry.xpPoints.toLocaleString()}</p>
                 </div>
                 <div className="col-span-2 text-right">
                   <p className={`text-sm font-bold ${entry.winRate >= 60 ? 'text-green-400' : entry.winRate >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>{entry.winRate}%</p>

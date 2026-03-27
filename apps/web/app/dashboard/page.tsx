@@ -61,9 +61,9 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6 border-b border-indigo-400">
+          <div className="flex items-center justify-between py-6 border-b border-green-400">
             <div>
               <h1 className="text-2xl font-bold">⚖️ CaseWin-NG</h1>
             </div>
@@ -71,7 +71,7 @@ export default function DashboardPage() {
           </div>
           <div className="py-8">
             <h2 className="text-3xl font-bold mb-2">My Dashboard</h2>
-            <p className="text-indigo-200">
+            <p className="text-green-200">
               Track your consultations, cases, and upcoming video meetings
             </p>
           </div>
@@ -83,7 +83,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                 <span className="text-2xl">📅</span>
               </div>
               <div>
@@ -119,7 +119,7 @@ export default function DashboardPage() {
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                 <span className="text-2xl">🎥</span>
               </div>
               <div>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`pb-4 px-1 font-medium transition-colors flex items-center gap-2 ${
                   activeTab === tab.id
-                    ? 'border-b-2 border-indigo-600 text-indigo-600'
+                    ? 'border-b-2 border-green-600 text-green-600'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -160,12 +160,12 @@ export default function DashboardPage() {
           <div className="space-y-8">
             {/* Next Meeting */}
             {upcomingBookings.length > 0 && (
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white">
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
-                    <p className="text-indigo-200 text-sm font-medium mb-1">NEXT CONSULTATION</p>
+                    <p className="text-green-200 text-sm font-medium mb-1">NEXT CONSULTATION</p>
                     <h3 className="text-2xl font-bold mb-1">{upcomingBookings[0].lawyer_name}</h3>
-                    <p className="text-indigo-200">
+                    <p className="text-green-200">
                       {upcomingBookings[0].lawyer_specialization} &bull;{' '}
                       {new Date(upcomingBookings[0].booking_date).toLocaleDateString('en-NG', {
                         weekday: 'long',
@@ -178,7 +178,7 @@ export default function DashboardPage() {
                   </div>
                   <Link
                     href={`/consultation/${upcomingBookings[0].meeting_room_id}`}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 font-semibold rounded-xl hover:bg-indigo-50 transition-colors"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-green-600 font-semibold rounded-xl hover:bg-green-50 transition-colors"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
@@ -194,12 +194,12 @@ export default function DashboardPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                  { label: 'Hire Lawyer', href: '/marketplace', icon: '👨‍⚖️', color: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700' },
+                  { label: 'Hire Lawyer', href: '/marketplace', icon: '👨\u200D\u2696\uFE0F', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Draft Document', href: '/tools/draft', icon: '📝', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
-                  { label: 'Analyze Contract', href: '/tools/analyze', icon: '🔍', color: 'bg-purple-50 hover:bg-purple-100 text-purple-700' },
-                  { label: 'Predict Case', href: '/tools/predict', icon: '🎯', color: 'bg-orange-50 hover:bg-orange-100 text-orange-700' },
-                  { label: 'Legal Research', href: '/tools/research', icon: '📚', color: 'bg-blue-50 hover:bg-blue-100 text-blue-700' },
-                  { label: 'Predictions', href: '/predictions', icon: '📊', color: 'bg-pink-50 hover:bg-pink-100 text-pink-700' },
+                  { label: 'Analyze Contract', href: '/tools/analyze', icon: '🔍', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
+                  { label: 'Predict Case', href: '/tools/predict', icon: '🎯', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
+                  { label: 'Legal Research', href: '/tools/research', icon: '📚', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
+                  { label: 'Predictions', href: '/predictions', icon: '📊', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                 ].map((action) => (
                   <Link
                     key={action.label}
@@ -222,7 +222,7 @@ export default function DashboardPage() {
                   {upcomingBookings.length === 0 ? (
                     <div className="p-6 text-center text-gray-500">
                       <p>No upcoming bookings</p>
-                      <Link href="/marketplace" className="text-indigo-600 text-sm hover:underline mt-1 inline-block">
+                      <Link href="/marketplace" className="text-green-600 text-sm hover:underline mt-1 inline-block">
                         Browse lawyers
                       </Link>
                     </div>
@@ -241,7 +241,7 @@ export default function DashboardPage() {
                           </span>
                           <Link
                             href={`/consultation/${booking.meeting_room_id}`}
-                            className="p-2 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200 transition-colors"
+                            className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
                             title="Join Video Call"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -277,7 +277,7 @@ export default function DashboardPage() {
                         </p>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
-                            className="bg-indigo-600 rounded-full h-2 transition-all"
+                            className="bg-green-600 rounded-full h-2 transition-all"
                             style={{ width: `${caseItem.progress}%` }}
                           ></div>
                         </div>
@@ -298,7 +298,7 @@ export default function DashboardPage() {
               <h3 className="text-lg font-semibold text-gray-900">All Bookings</h3>
               <Link
                 href="/marketplace"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
               >
                 + New Booking
               </Link>
@@ -340,7 +340,7 @@ export default function DashboardPage() {
                         {(booking.status === 'confirmed' || booking.status === 'pending') && (
                           <Link
                             href={`/consultation/${booking.meeting_room_id}`}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg font-medium hover:bg-green-700 transition-colors"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                               <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
@@ -388,7 +388,7 @@ export default function DashboardPage() {
                     <div className="w-full bg-gray-200 rounded-full h-3">
                       <div
                         className={`rounded-full h-3 transition-all ${
-                          caseItem.progress === 100 ? 'bg-green-500' : 'bg-indigo-600'
+                          caseItem.progress === 100 ? 'bg-green-500' : 'bg-green-600'
                         }`}
                         style={{ width: `${caseItem.progress}%` }}
                       ></div>
@@ -431,7 +431,7 @@ export default function DashboardPage() {
                   const roomId = 'instant-' + Math.random().toString(36).substring(2, 10);
                   router.push(`/consultation/${roomId}`);
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
@@ -441,10 +441,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Feature highlight */}
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-indigo-200 rounded-2xl p-6 mb-8">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 mb-8">
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+                <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
                   </svg>
                 </div>
@@ -468,10 +468,10 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      booking.status === 'completed' ? 'bg-gray-100' : 'bg-indigo-100'
+                      booking.status === 'completed' ? 'bg-gray-100' : 'bg-green-100'
                     }`}>
                       <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${
-                        booking.status === 'completed' ? 'text-gray-400' : 'text-indigo-600'
+                        booking.status === 'completed' ? 'text-gray-400' : 'text-green-600'
                       }`} viewBox="0 0 20 20" fill="currentColor">
                         <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
                       </svg>
@@ -496,7 +496,7 @@ export default function DashboardPage() {
                     {(booking.status === 'confirmed' || booking.status === 'pending') ? (
                       <Link
                         href={`/consultation/${booking.meeting_room_id}`}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700 transition-colors"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                           <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />

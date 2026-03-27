@@ -68,7 +68,7 @@ export default function CitationsPage() {
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center"><span className="text-xl">📚</span></div>
+            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><span className="text-xl">📚</span></div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Legal Citation Generator</h1>
               <p className="text-gray-600 text-sm">Format Nigerian legal citations in NWLR, LPELR, SC, and more</p>
@@ -79,11 +79,11 @@ export default function CitationsPage() {
         {/* Mode Toggle */}
         <div className="flex gap-1 mb-6 bg-white rounded-xl border p-1 w-fit">
           <button onClick={() => { setMode('format'); setResult(null) }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === 'format' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === 'format' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
             ✏️ Format Citation
           </button>
           <button onClick={() => { setMode('extract'); setResult(null) }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === 'extract' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === 'extract' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
             🔍 Extract Citations
           </button>
         </div>
@@ -130,7 +130,7 @@ export default function CitationsPage() {
                     <div className="flex flex-wrap gap-2">
                       {reporters.map(r => (
                         <button key={r.id} onClick={() => setReporter(r.id)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${reporter === r.id ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${reporter === r.id ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
                           {r.name}
                         </button>
                       ))}
@@ -148,7 +148,7 @@ export default function CitationsPage() {
               )}
               {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
               <button onClick={handleSubmit} disabled={isLoading}
-                className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50">
+                className="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 disabled:opacity-50">
                 {isLoading ? 'Processing...' : mode === 'format' ? '📚 Format Citation' : '🔍 Extract & Format'}
               </button>
             </div>
@@ -169,23 +169,23 @@ export default function CitationsPage() {
                   <div key={i} className="bg-white rounded-xl border p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        {c.format && <span className="text-xs text-indigo-600 font-semibold uppercase">{c.format}</span>}
+                        {c.format && <span className="text-xs text-green-600 font-semibold uppercase">{c.format}</span>}
                         {c.caseName && <p className="text-sm font-medium text-gray-900 mt-0.5">{c.caseName}</p>}
                         <p className="text-sm font-mono bg-gray-50 p-2 rounded mt-1 text-gray-800">{c.citation || c.formatted}</p>
                         {c.original && <p className="text-xs text-gray-400 mt-1">Original: {c.original}</p>}
                         {c.court && <p className="text-xs text-gray-500 mt-0.5">{c.court} {c.year && `• ${c.year}`}</p>}
                       </div>
                       <button onClick={() => navigator.clipboard.writeText(c.citation || c.formatted)}
-                        className="text-xs text-indigo-600 hover:text-indigo-700 flex-shrink-0">Copy</button>
+                        className="text-xs text-green-600 hover:text-green-700 flex-shrink-0">Copy</button>
                     </div>
                   </div>
                 ))}
 
                 {result.caseInfo && (
-                  <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-4">
-                    <h3 className="font-semibold text-indigo-900 mb-1">{result.caseInfo.caseName}</h3>
-                    <p className="text-sm text-indigo-700">{result.caseInfo.court} • {result.caseInfo.year}</p>
-                    {result.caseInfo.summary && <p className="text-sm text-indigo-600 mt-1">{result.caseInfo.summary}</p>}
+                  <div className="bg-green-50 rounded-xl border border-green-200 p-4">
+                    <h3 className="font-semibold text-green-900 mb-1">{result.caseInfo.caseName}</h3>
+                    <p className="text-sm text-green-700">{result.caseInfo.court} • {result.caseInfo.year}</p>
+                    {result.caseInfo.summary && <p className="text-sm text-green-600 mt-1">{result.caseInfo.summary}</p>}
                   </div>
                 )}
 

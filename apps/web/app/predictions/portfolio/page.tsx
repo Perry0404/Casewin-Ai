@@ -151,9 +151,9 @@ export default function PortfolioPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/20 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <svg className="animate-spin h-12 w-12 text-purple-500 mx-auto mb-4" viewBox="0 0 24 24">
+          <svg className="animate-spin h-12 w-12 text-green-500 mx-auto mb-4" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
@@ -164,7 +164,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/20 to-slate-900">
       {/* Header */}
       <header className="border-b border-slate-700/50 backdrop-blur-xl bg-slate-900/80 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -172,7 +172,7 @@ export default function PortfolioPage() {
             <Link href="/predictions" className="flex items-center gap-3">
               <Image src="/favicon.png" alt="CaseWin AI" width={40} height={40} className="rounded-xl" />
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
                   My Portfolio
                 </h1>
                 <p className="text-xs text-slate-400">Track your predictions</p>
@@ -195,7 +195,7 @@ export default function PortfolioPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           {/* Total Portfolio Value */}
-          <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-2xl p-6 border border-purple-500/30">
+          <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-2xl p-6 border border-green-500/30">
             <p className="text-sm text-slate-400 mb-1">Portfolio Value</p>
             <p className="text-3xl font-bold text-white">₦{portfolioValue.toLocaleString()}</p>
           </div>
@@ -206,7 +206,7 @@ export default function PortfolioPage() {
             <p className="text-3xl font-bold text-emerald-400">₦{userBalance.toLocaleString()}</p>
             <button 
               onClick={handleDeposit}
-              className="mt-3 px-4 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm font-medium text-white"
+              className="mt-3 px-4 py-1.5 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-medium text-white"
             >
               + Deposit
             </button>
@@ -237,7 +237,7 @@ export default function PortfolioPage() {
             onClick={() => setActiveTab('positions')}
             className={`px-6 py-2.5 rounded-xl font-medium transition-all ${
               activeTab === 'positions'
-                ? 'bg-purple-600 text-white'
+                ? 'bg-green-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
@@ -247,7 +247,7 @@ export default function PortfolioPage() {
             onClick={() => setActiveTab('history')}
             className={`px-6 py-2.5 rounded-xl font-medium transition-all ${
               activeTab === 'history'
-                ? 'bg-purple-600 text-white'
+                ? 'bg-green-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
@@ -265,7 +265,7 @@ export default function PortfolioPage() {
                 <p className="text-slate-400 mb-6">Start trading to build your portfolio!</p>
                 <Link 
                   href="/predictions"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-medium text-white transition-all"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-medium text-white transition-all"
                 >
                   Browse Markets
                 </Link>
@@ -289,7 +289,7 @@ export default function PortfolioPage() {
                       {positions.map(position => (
                         <tr key={position.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
                           <td className="px-6 py-4">
-                            <Link href={`/predictions/${position.marketId}`} className="text-white hover:text-purple-400 transition-colors line-clamp-2 max-w-xs">
+                            <Link href={`/predictions/${position.marketId}`} className="text-white hover:text-green-400 transition-colors line-clamp-2 max-w-xs">
                               {position.marketTitle}
                             </Link>
                           </td>
@@ -343,7 +343,7 @@ export default function PortfolioPage() {
                 <p className="text-slate-400 mb-6">Your trades will appear here</p>
                 <Link 
                   href="/predictions"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-medium text-white transition-all"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-medium text-white transition-all"
                 >
                   Start Trading
                 </Link>

@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       : (updatedOptions.yes_shares || 20000) / totalSharesAfter
     const potentialPayout = Math.floor(amount / winPrice)
 
-    await supabase.from('prediction_bets').insert([{
+    const { error: betErr } = await supabase.from('prediction_bets').insert([{
       user_id: authUser.id,
       user_email: email,
       market_id,
@@ -152,21 +152,19 @@ export async function POST(request: NextRequest) {
       amount,
       potential_payout: potentialPayout,
       status: 'active'
-    }]).then(() => {}).catch((err) => {
-      console.warn('Failed to record bet (non-critical):', err)
-    })
+    }])
+    if (betErr) console.warn('Failed to record bet (non-critical):', betErr.message)
 
     // 6. Record wallet transaction
-    await supabase.from('wallet_transactions').insert({
+    const { error: txErr } = await supabase.from('wallet_transactions').insert({
       user_email: email,
       amount: -amount,
       transaction_type: 'bet',
       related_id: market_id,
       balance_after: newBalance,
       notes: `Bet ₦${amount.toLocaleString()} on ${vote.toUpperCase()} — ${(market.title || '').substring(0, 60)}`
-    }).then(() => {}).catch((err) => {
-      console.warn('Failed to record wallet transaction (non-critical):', err)
     })
+    if (txErr) console.warn('Failed to record wallet transaction (non-critical):', txErr.message)
 
     return NextResponse.json({
       message: `₦${amount.toLocaleString()} placed on ${vote.toUpperCase()}! Potential payout: ₦${potentialPayout.toLocaleString()}`,

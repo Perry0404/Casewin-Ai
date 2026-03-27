@@ -148,7 +148,7 @@ export default function WalletPage() {
             <p className="text-xs text-slate-400">Base Chain · Deposit &amp; Trade</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/predictions" className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-500">
+            <Link href="/predictions" className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-500">
               🎯 Bet Now
             </Link>
             <Link href="/" className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-sm hover:bg-slate-700">
@@ -270,8 +270,8 @@ export default function WalletPage() {
                   <p className="text-slate-400 text-xs mt-1">Tap "Sync Deposits" to convert on-chain balance to Naira trading balance</p>
                 </div>
                 <div className="text-center">
-                  <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-purple-400 font-bold">3</span>
+                  <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <span className="text-green-400 font-bold">3</span>
                   </div>
                   <p className="text-white text-sm font-medium">Place Bets</p>
                   <p className="text-slate-400 text-xs mt-1">Use your NGN balance to bet on Nigerian legal case outcomes</p>
@@ -293,9 +293,9 @@ export default function WalletPage() {
 
             {/* Quick Actions */}
             <div className="grid md:grid-cols-3 gap-4">
-              <Link href="/predictions" className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 hover:border-purple-500/50 transition group">
+              <Link href="/predictions" className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 hover:border-green-500/50 transition group">
                 <p className="text-2xl mb-2">🎯</p>
-                <h3 className="font-semibold text-white group-hover:text-purple-400 transition">Prediction Markets</h3>
+                <h3 className="font-semibold text-white group-hover:text-green-400 transition">Prediction Markets</h3>
                 <p className="text-slate-400 text-xs mt-1">Bet on case outcomes with your balance</p>
               </Link>
               <Link href="/predictions/portfolio" className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 hover:border-green-500/50 transition group">

@@ -40,13 +40,13 @@ export default function LawyerProfilePage() {
   // Navigation component
   const Navigation = () => (
     <nav className="flex gap-6">
-      <Link href="/" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+      <Link href="/" className="text-white hover:text-green-200 transition-colors font-semibold">
         AI Tools
       </Link>
-      <Link href="/marketplace" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+      <Link href="/marketplace" className="text-white hover:text-green-200 transition-colors font-semibold">
         Hire Lawyers
       </Link>
-      <Link href="/dashboard" className="text-white hover:text-indigo-200 transition-colors font-semibold">
+      <Link href="/dashboard" className="text-white hover:text-green-200 transition-colors font-semibold">
         Dashboard
       </Link>
     </nav>
@@ -137,7 +137,7 @@ export default function LawyerProfilePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading profile...</p>
         </div>
       </div>
@@ -149,7 +149,7 @@ export default function LawyerProfilePage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-gray-600">Lawyer not found</p>
-          <Link href="/marketplace" className="mt-4 inline-block text-indigo-600 hover:text-indigo-700">
+          <Link href="/marketplace" className="mt-4 inline-block text-green-600 hover:text-green-700">
             ← Back to marketplace
           </Link>
         </div>
@@ -162,16 +162,16 @@ export default function LawyerProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header with Navigation */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6 border-b border-indigo-400">
+          <div className="flex items-center justify-between py-6 border-b border-green-400">
             <div>
               <h1 className="text-2xl font-bold">⚖️ CaseWin-NG</h1>
             </div>
             <Navigation />
           </div>
           <div className="py-6">
-            <Link href="/marketplace" className="text-indigo-100 hover:text-white inline-flex items-center gap-2">
+            <Link href="/marketplace" className="text-green-100 hover:text-white inline-flex items-center gap-2">
               ← Back to marketplace
             </Link>
           </div>
@@ -186,14 +186,14 @@ export default function LawyerProfilePage() {
             <div className="bg-white rounded-lg shadow-sm p-8">
               <div className="flex items-start gap-6">
                 <div className="flex-shrink-0">
-                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
+                  <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
                     {lawyer.full_name.charAt(0)}
                   </div>
                 </div>
 
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{lawyer.full_name}</h1>
-                  <p className="text-xl text-indigo-600 font-medium mb-3">{lawyer.specialization}</p>
+                  <p className="text-xl text-green-600 font-medium mb-3">{lawyer.specialization}</p>
                   
                   <div className="flex items-center gap-6 text-gray-600 mb-4">
                     <span className="flex items-center gap-1">
@@ -239,7 +239,7 @@ export default function LawyerProfilePage() {
                   <h3 className="font-semibold text-gray-900 mb-1">Languages</h3>
                   <div className="flex flex-wrap gap-2">
                     {lawyer.languages.map(lang => (
-                      <span key={lang} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm">
+                      <span key={lang} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
                         {lang}
                       </span>
                     ))}
@@ -285,10 +285,10 @@ export default function LawyerProfilePage() {
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Book Consultation</h3>
               
-              <div className="mb-4 p-4 bg-indigo-50 rounded-lg">
+              <div className="mb-4 p-4 bg-green-50 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-700">Hourly Rate:</span>
-                  <span className="font-bold text-xl text-indigo-600">
+                  <span className="font-bold text-xl text-green-600">
                     ₦{lawyer.hourly_rate.toLocaleString()}
                   </span>
                 </div>
@@ -309,7 +309,7 @@ export default function LawyerProfilePage() {
 
               <button
                 onClick={() => setShowBookingModal(true)}
-                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-shadow mb-3"
+                className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:shadow-lg transition-shadow mb-3"
               >
                 📅 Schedule Consultation
               </button>
@@ -391,7 +391,7 @@ export default function LawyerProfilePage() {
                   </p>
                   <Link
                     href={`/consultation/${bookingSuccess.roomId}`}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
@@ -403,7 +403,7 @@ export default function LawyerProfilePage() {
                       navigator.clipboard.writeText(`${window.location.origin}/consultation/${bookingSuccess.roomId}`);
                       alert('Meeting link copied!');
                     }}
-                    className="block w-full text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                    className="block w-full text-sm text-green-600 hover:text-green-700 font-medium"
                   >
                     Copy meeting link to share with lawyer
                   </button>
@@ -427,7 +427,7 @@ export default function LawyerProfilePage() {
                         onClick={() => setConsultationType('video')}
                         className={`p-3 rounded-lg border-2 text-center transition-all ${
                           consultationType === 'video'
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                            ? 'border-green-600 bg-green-50 text-green-700'
                             : 'border-gray-200 text-gray-600 hover:border-gray-300'
                         }`}
                       >
@@ -439,7 +439,7 @@ export default function LawyerProfilePage() {
                         onClick={() => setConsultationType('in-person')}
                         className={`p-3 rounded-lg border-2 text-center transition-all ${
                           consultationType === 'in-person'
-                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                            ? 'border-green-600 bg-green-50 text-green-700'
                             : 'border-gray-200 text-gray-600 hover:border-gray-300'
                         }`}
                       >
@@ -459,7 +459,7 @@ export default function LawyerProfilePage() {
                       value={bookingDate}
                       onChange={(e) => setBookingDate(e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                     />
                   </div>
 
@@ -472,7 +472,7 @@ export default function LawyerProfilePage() {
                       required
                       value={bookingTime}
                       onChange={(e) => setBookingTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                     />
                   </div>
 
@@ -483,7 +483,7 @@ export default function LawyerProfilePage() {
                     <select
                       value={duration}
                       onChange={(e) => setDuration(Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                     >
                       {[1, 2, 3, 4, 5].map(h => (
                         <option key={h} value={h}>{h} hour{h > 1 ? 's' : ''}</option>
@@ -501,7 +501,7 @@ export default function LawyerProfilePage() {
                       onChange={(e) => setCaseDescription(e.target.value)}
                       rows={4}
                       placeholder="Briefly describe your legal matter..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                     />
                   </div>
 
@@ -520,7 +520,7 @@ export default function LawyerProfilePage() {
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t border-gray-300">
                       <span className="text-lg font-bold text-gray-900">Total:</span>
-                      <span className="text-xl font-bold text-indigo-600">
+                      <span className="text-xl font-bold text-green-600">
                         ₦{totalCost.toLocaleString()}
                       </span>
                     </div>
@@ -529,7 +529,7 @@ export default function LawyerProfilePage() {
                   <button
                     type="submit"
                     disabled={bookingLoading}
-                    className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-shadow disabled:opacity-50"
+                    className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:shadow-lg transition-shadow disabled:opacity-50"
                   >
                     {bookingLoading ? 'Processing...' : consultationType === 'video' ? '🎥 Book Video Consultation' : '📅 Confirm Booking'}
                   </button>

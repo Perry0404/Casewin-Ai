@@ -238,7 +238,7 @@ export default function MarketplacePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading lawyers...</p>
         </div>
       </div>
@@ -255,9 +255,9 @@ export default function MarketplacePage() {
       )}
 
       {/* Header with Navigation */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6 border-b border-indigo-400">
+          <div className="flex items-center justify-between py-6 border-b border-green-400">
             <div>
               <h1 className="text-2xl font-bold">⚖️ CaseWin-NG</h1>
             </div>
@@ -270,11 +270,11 @@ export default function MarketplacePage() {
                 🎥 Video Calls
               </span>
             </div>
-            <p className="text-xl text-indigo-100">
+            <p className="text-xl text-green-100">
               Browse verified lawyers across all 36 states. Book video consultations in-app!
             </p>
             {isOffline && lastUpdated && (
-              <p className="text-sm text-indigo-200 mt-2">
+              <p className="text-sm text-green-200 mt-2">
                 📱 Offline Mode - Last updated: {lastUpdated}
               </p>
             )}
@@ -317,7 +317,7 @@ export default function MarketplacePage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Name, specialty, or keyword..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
 
@@ -329,7 +329,7 @@ export default function MarketplacePage() {
                 <select
                   value={selectedSpecialization}
                   onChange={(e) => setSelectedSpecialization(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="all">All Specializations</option>
                   {specializations.map(spec => (
@@ -346,7 +346,7 @@ export default function MarketplacePage() {
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="all">All States (36 + FCT)</option>
                   {locations.map(loc => (
@@ -382,7 +382,7 @@ export default function MarketplacePage() {
                   setMaxRate(100000);
                   setSearchQuery('');
                 }}
-                className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                className="w-full py-2 text-sm text-green-600 hover:text-green-700 font-medium"
               >
                 Reset Filters
               </button>
@@ -426,7 +426,7 @@ export default function MarketplacePage() {
                     setMaxRate(100000);
                     setSearchQuery('');
                   }}
-                  className="mt-4 text-indigo-600 hover:text-indigo-700 font-medium"
+                  className="mt-4 text-green-600 hover:text-green-700 font-medium"
                 >
                   Clear all filters
                 </button>
@@ -437,12 +437,12 @@ export default function MarketplacePage() {
                   <Link
                     key={lawyer.id}
                     href={`/marketplace/lawyer/${lawyer.id}`}
-                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200 hover:border-indigo-300"
+                    className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200 hover:border-green-300"
                   >
                     <div className="flex items-start gap-4">
                       {/* Profile Image */}
                       <div className="flex-shrink-0">
-                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                           {lawyer.full_name.charAt(0)}
                         </div>
                       </div>
@@ -452,7 +452,7 @@ export default function MarketplacePage() {
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">
                           {lawyer.full_name}
                         </h3>
-                        <p className="text-indigo-600 text-sm font-medium mb-2">
+                        <p className="text-green-600 text-sm font-medium mb-2">
                           {lawyer.specialization}
                         </p>
                         
@@ -489,6 +489,57 @@ export default function MarketplacePage() {
               </div>
             )}
           </main>
+        </div>
+
+        {/* AI Automation Tools Section */}
+        <div className="mt-12 mb-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">🤖 AI Legal Automation</h2>
+            <p className="text-gray-600">Automate your legal workflow with AI-powered tools</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Link href="/tools/draft" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📝</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Auto Document Drafting</h3>
+              <p className="text-sm text-gray-600 mb-3">Generate contracts, letters of demand, pleadings, and NDAs using AI trained on Nigerian legal standards.</p>
+              <span className="text-green-600 text-sm font-medium">Generate Now →</span>
+            </Link>
+
+            <Link href="/tools/analyze" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🔍</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Smart Contract Analysis</h3>
+              <p className="text-sm text-gray-600 mb-3">Upload any contract and AI identifies risks, unfair clauses, missing terms, and compliance issues automatically.</p>
+              <span className="text-green-600 text-sm font-medium">Analyze Now →</span>
+            </Link>
+
+            <Link href="/tools/research" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📚</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Legal Research</h3>
+              <p className="text-sm text-gray-600 mb-3">Search 10,000+ Nigerian judgments instantly. AI finds relevant cases, statutes, and precedents for your matter.</p>
+              <span className="text-green-600 text-sm font-medium">Research Now →</span>
+            </Link>
+
+            <Link href="/tools/predict" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🎯</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Case Outcome Prediction</h3>
+              <p className="text-sm text-gray-600 mb-3">AI analyzes your case details against historical outcomes to predict likely results with confidence scores.</p>
+              <span className="text-green-600 text-sm font-medium">Predict Now →</span>
+            </Link>
+
+            <Link href="/tools/compliance" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">✅</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Compliance Checker</h3>
+              <p className="text-sm text-gray-600 mb-3">Check any document or business process against Nigerian regulations, CAMA, FIRS, and industry standards.</p>
+              <span className="text-green-600 text-sm font-medium">Check Now →</span>
+            </Link>
+
+            <Link href="/predictions" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📊</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Prediction Markets</h3>
+              <p className="text-sm text-gray-600 mb-3">Bet on sports, crypto, politics, entertainment & legal outcomes. Deposit via Korapay or Base (ETH/USDC).</p>
+              <span className="text-green-600 text-sm font-medium">Trade Now →</span>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

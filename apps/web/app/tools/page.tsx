@@ -17,7 +17,7 @@ const tools = [
     title: 'Case Prediction',
     icon: '🔮',
     description: 'Predict case outcomes based on Nigerian case law analysis',
-    color: 'from-purple-500 to-pink-500',
+    color: 'from-green-500 to-emerald-500',
     href: '/tools/predict',
     features: ['Win Probability', 'Similar Cases', 'Risk Analysis']
   },
@@ -44,7 +44,7 @@ const tools = [
     title: 'Judgment Summarization',
     icon: '📋',
     description: 'Extract key points from lengthy court judgments',
-    color: 'from-indigo-500 to-blue-500',
+    color: 'from-green-500 to-blue-500',
     href: '/tools/summarize',
     features: ['Facts', 'Issues', 'Ratio Decidendi']
   },
@@ -71,7 +71,7 @@ const tools = [
     title: 'Compliance Check',
     icon: '✅',
     description: 'Check documents against Nigerian regulations',
-    color: 'from-pink-500 to-rose-500',
+    color: 'from-emerald-500 to-rose-500',
     href: '/tools/compliance',
     features: ['CAMA', 'NDPR', 'CBN', 'Tax Laws']
   },
@@ -80,7 +80,7 @@ const tools = [
     title: 'Deadline Calculator',
     icon: '📅',
     description: 'AI calculates statutory deadlines and limitation periods for Nigerian courts',
-    color: 'from-violet-500 to-purple-500',
+    color: 'from-green-500 to-green-500',
     href: '/tools/deadlines',
     features: ['Limitation Periods', 'Filing Dates', 'Court Rules']
   },
@@ -116,7 +116,7 @@ const tools = [
     title: 'Citation Generator',
     icon: '📚',
     description: 'Format Nigerian legal citations in NWLR, LPELR, SC, and more',
-    color: 'from-indigo-500 to-violet-500',
+    color: 'from-green-500 to-green-500',
     href: '/tools/citations',
     features: ['NWLR', 'LPELR', 'Batch Format']
   },
@@ -125,7 +125,7 @@ const tools = [
     title: 'AI Legal Chatbot',
     icon: '🤖',
     description: 'Chat with AI about any Nigerian legal question — statutes, case law, and procedures',
-    color: 'from-blue-500 to-indigo-500',
+    color: 'from-blue-500 to-green-500',
     href: '/tools/chatbot',
     features: ['Conversational', 'Nigerian Law', 'Real-time']
   },
@@ -134,7 +134,7 @@ const tools = [
     title: 'Legal Fee Estimator',
     icon: '💸',
     description: 'AI estimates legal fees by matter type, court, and complexity using NBA scales',
-    color: 'from-rose-500 to-pink-500',
+    color: 'from-rose-500 to-emerald-500',
     href: '/tools/fees',
     features: ['Fee Breakdown', 'Court Fees', 'VAT']
   },
@@ -143,7 +143,7 @@ const tools = [
     title: 'Hearing Prep Assistant',
     icon: '🎯',
     description: 'AI generates examination questions, cross-exam strategies, and court prep',
-    color: 'from-violet-500 to-fuchsia-500',
+    color: 'from-green-500 to-emerald-500',
     href: '/tools/hearing-prep',
     features: ['Exam-in-Chief', 'Cross-Exam', 'Objections']
   },

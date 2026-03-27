@@ -103,11 +103,8 @@ export async function POST(request: NextRequest) {
     const { amount, transaction_type, notes } = body
     const email = authUser.email
 
-    if (!email || !amount || !transaction_type) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
     }
 
     if (!supabaseUrl || !supabaseKey) {
@@ -119,6 +116,25 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // If connecting a crypto wallet, save the address
+    if (transaction_type === 'wallet_connect' && notes) {
+      const walletAddress = notes
+      const { error: addrErr } = await supabase
+        .from('user_wallets')
+        .update({ wallet_address: walletAddress, updated_at: new Date().toISOString() })
+        .eq('user_email', email)
+      if (!addrErr) {
+        return NextResponse.json({ success: true, wallet_address: walletAddress })
+      }
+    }
+
+    if (!amount || !transaction_type) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
 
     // Get current wallet
     const { data: wallet, error: walletError } = await supabase

@@ -6,7 +6,7 @@ import MobileNav from '@/components/MobileNav'
 import { useAuth } from '@/contexts/AuthContext'
 import { useNotification } from '@/components/Notifications'
 
-/* ─── Types ─── */
+/* --- Types --- */
 interface PredictionMarket {
   id: string
   title: string
@@ -32,6 +32,19 @@ interface WalletData {
   total_withdrawals: number
 }
 
+interface BaseWallet {
+  walletAddress: string
+  cdpWalletId: string
+  onChainBalance: { eth: number; usdc: number; ethNGN: number; usdcNGN: number; totalNGN: number }
+  tradingBalance: number
+  totalDeposited: number
+  totalWithdrawn: number
+  chain: string
+  explorer: string
+  isNew?: boolean
+  message?: string
+}
+
 interface AIAnalysis {
   summary: string
   confidence: number
@@ -41,23 +54,20 @@ interface AIAnalysis {
   disclaimer: string
 }
 
-/* ─── Constants ─── */
-const BASE_CHAIN_ID = '0x2105' // Base Mainnet
-const BASE_TREASURY = process.env.NEXT_PUBLIC_BASE_TREASURY_ADDRESS || ''
-const CATEGORIES = ['Constitutional Law', 'Financial Law', 'Property Law', 'Criminal Law', 'Corporate Law', 'Labour Law']
+/* --- Constants --- */
+const CATEGORIES = [
+  'All',
+  'Sports',
+  'Entertainment',
+  'World Politics',
+  'Crypto',
+  'Technology',
+  'Nigerian Law',
+  'Financial Law',
+  'Criminal Law',
+]
 
-/* ─── Ethereum type ─── */
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
-      on?: (event: string, cb: (...args: unknown[]) => void) => void
-      isMetaMask?: boolean
-    }
-  }
-}
-
-/* ─── Page ─── */
+/* --- Page --- */
 export default function PredictionMarketPage() {
   const { user } = useAuth()
   const { notify } = useNotification()
@@ -68,6 +78,11 @@ export default function PredictionMarketPage() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [wallet, setWallet] = useState<WalletData | null>(null)
   const [walletLoading, setWalletLoading] = useState(true)
+
+  // Base wallet (auto-generated per user)
+  const [baseWallet, setBaseWallet] = useState<BaseWallet | null>(null)
+  const [baseWalletLoading, setBaseWalletLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
 
   // Trade modal
   const [tradeMarket, setTradeMarket] = useState<PredictionMarket | null>(null)
@@ -91,14 +106,9 @@ export default function PredictionMarketPage() {
   const [bankAccount, setBankAccount] = useState('')
   const [accountName, setAccountName] = useState('')
   const [cryptoWithdrawAddr, setCryptoWithdrawAddr] = useState('')
+  const [withdrawToken, setWithdrawToken] = useState<'eth' | 'usdc'>('usdc')
 
-  // Base crypto
-  const [baseAddress, setBaseAddress] = useState('')
-  const [baseConnected, setBaseConnected] = useState(false)
-  const [cryptoAmount, setCryptoAmount] = useState('')
-  const [cryptoSending, setCryptoSending] = useState(false)
-
-  /* ─── Data Fetching ─── */
+  /* --- Data Fetching --- */
   const fetchMarkets = useCallback(async () => {
     try {
       setLoading(true)
@@ -128,10 +138,57 @@ export default function PredictionMarketPage() {
     }
   }, [])
 
-  useEffect(() => { fetchMarkets() }, [fetchMarkets])
-  useEffect(() => { if (user) fetchWallet() }, [user, fetchWallet])
+  const fetchBaseWallet = useCallback(async () => {
+    try {
+      setBaseWalletLoading(true)
+      const res = await fetch('/api/wallet/base-wallet')
+      const data = await res.json()
+      if (data.walletAddress) {
+        setBaseWallet(data as BaseWallet)
+      }
+    } catch {
+      // Base wallet not available
+    } finally {
+      setBaseWalletLoading(false)
+    }
+  }, [])
 
-  /* ─── AI Analysis ─── */
+  const syncCryptoBalance = async () => {
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/wallet/base-wallet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync' })
+      })
+      const data = await res.json()
+      if (data.success) {
+        if (data.credited > 0) {
+          notify({ type: 'success', title: 'Deposit Synced!', message: data.message })
+          fetchWallet()
+        } else {
+          notify({ type: 'info', title: 'No New Deposits', message: 'Send ETH or USDC to your wallet address first.' })
+        }
+        fetchBaseWallet()
+      } else {
+        notify({ type: 'error', title: 'Sync Failed', message: data.error || 'Try again' })
+      }
+    } catch {
+      notify({ type: 'error', title: 'Error', message: 'Failed to sync balance' })
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  useEffect(() => { fetchMarkets() }, [fetchMarkets])
+  useEffect(() => {
+    if (user) {
+      fetchWallet()
+      fetchBaseWallet()
+    }
+  }, [user, fetchWallet, fetchBaseWallet])
+
+  /* --- AI Analysis --- */
   const fetchAI = async (market: PredictionMarket) => {
     setAiLoading(true)
     setAiAnalysis(null)
@@ -150,12 +207,12 @@ export default function PredictionMarketPage() {
     }
   }
 
-  /* ─── Trade ─── */
+  /* --- Trade --- */
   const openTrade = (market: PredictionMarket) => {
     setTradeMarket(market)
     setVoteAmount(500)
     setAiAnalysis(null)
-    fetchAI(market) // Auto-load AI analysis
+    fetchAI(market)
   }
 
   const handleVote = async (vote: 'yes' | 'no') => {
@@ -189,10 +246,10 @@ export default function PredictionMarketPage() {
     }
   }
 
-  /* ─── Naira Deposit ─── */
+  /* --- Naira Deposit --- */
   const handleNairaDeposit = async () => {
     if (depositAmount < 100) {
-      notify({ type: 'error', title: 'Error', message: 'Minimum deposit is ₦100' })
+      notify({ type: 'error', title: 'Error', message: 'Minimum deposit is N100' })
       return
     }
     try {
@@ -216,96 +273,16 @@ export default function PredictionMarketPage() {
     }
   }
 
-  /* ─── Base Crypto ─── */
-  const connectBaseWallet = async () => {
-    if (!window.ethereum) {
-      notify({ type: 'error', title: 'No Wallet', message: 'Install MetaMask or Coinbase Wallet to deposit crypto' })
-      return
-    }
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[]
-      setBaseAddress(accounts[0])
-      setBaseConnected(true)
-
-      // Switch to Base network
-      try {
-        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_CHAIN_ID }] })
-      } catch (switchErr: unknown) {
-        const err = switchErr as { code?: number }
-        if (err.code === 4902) {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: BASE_CHAIN_ID,
-              chainName: 'Base',
-              nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-              rpcUrls: ['https://mainnet.base.org'],
-              blockExplorerUrls: ['https://basescan.org']
-            }]
-          })
-        }
-      }
-      notify({ type: 'success', title: 'Connected', message: `Wallet connected: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}` })
-    } catch {
-      notify({ type: 'error', title: 'Error', message: 'Failed to connect wallet' })
-    }
-  }
-
-  const handleCryptoDeposit = async () => {
-    if (!baseConnected || !baseAddress || !cryptoAmount || !BASE_TREASURY) {
-      notify({ type: 'error', title: 'Error', message: !BASE_TREASURY ? 'Crypto deposits coming soon' : 'Connect wallet and enter an amount' })
-      return
-    }
-    setCryptoSending(true)
-    try {
-      const weiHex = '0x' + BigInt(Math.floor(parseFloat(cryptoAmount) * 1e18)).toString(16)
-      const txHash = await window.ethereum!.request({
-        method: 'eth_sendTransaction',
-        params: [{ from: baseAddress, to: BASE_TREASURY, value: weiHex, chainId: BASE_CHAIN_ID }]
-      }) as string
-
-      notify({ type: 'success', title: 'Sent!', message: 'Verifying your deposit on Base...' })
-
-      // Wait a few seconds for confirmation then verify
-      await new Promise(r => setTimeout(r, 5000))
-
-      const verifyRes = await fetch('/api/wallet/crypto-deposit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tx_hash: txHash, chain: 'base' })
-      })
-      const verifyData = await verifyRes.json()
-
-      if (verifyRes.ok) {
-        notify({ type: 'success', title: 'Deposit Confirmed!', message: `₦${verifyData.naira_credited?.toLocaleString()} credited to your wallet` })
-        fetchWallet()
-        setShowDeposit(false)
-        setCryptoAmount('')
-      } else {
-        notify({ type: 'error', title: 'Verification Pending', message: verifyData.error || 'Try again in a minute — the transaction may still be confirming.' })
-      }
-    } catch (err: unknown) {
-      const error = err as { code?: number }
-      if (error.code === 4001) {
-        notify({ type: 'error', title: 'Cancelled', message: 'Transaction was cancelled' })
-      } else {
-        notify({ type: 'error', title: 'Error', message: 'Failed to send transaction' })
-      }
-    } finally {
-      setCryptoSending(false)
-    }
-  }
-
-  /* ─── Withdrawal ─── */
+  /* --- Withdrawal --- */
   const handleWithdraw = async () => {
     if (withdrawAmount < 100) {
-      notify({ type: 'error', title: 'Error', message: 'Minimum withdrawal is ₦100' })
+      notify({ type: 'error', title: 'Error', message: 'Minimum withdrawal is N100' })
       return
     }
     try {
       const body = withdrawTab === 'naira'
         ? { amount: withdrawAmount, method: 'bank', bank_details: { bank: bankName, account: bankAccount, name: accountName } }
-        : { amount: withdrawAmount, method: 'crypto', wallet_address: cryptoWithdrawAddr }
+        : { amount: withdrawAmount, method: 'crypto', wallet_address: cryptoWithdrawAddr, token: withdrawToken }
 
       const res = await fetch('/api/wallet/withdraw', {
         method: 'POST',
@@ -325,7 +302,7 @@ export default function PredictionMarketPage() {
     }
   }
 
-  /* ─── Helpers ─── */
+  /* --- Helpers --- */
   const getTimeRemaining = (deadline: string) => {
     const diff = new Date(deadline).getTime() - Date.now()
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
@@ -336,15 +313,29 @@ export default function PredictionMarketPage() {
     return 'Ended'
   }
 
+  const getCategoryIcon = (cat: string) => {
+    const icons: Record<string, string> = {
+      'Sports': '⚽',
+      'Entertainment': '🎬',
+      'World Politics': '🌍',
+      'Crypto': '💰',
+      'Technology': '🚀',
+      'Nigerian Law': '⚖️',
+      'Financial Law': '📊',
+      'Criminal Law': '👮',
+    }
+    return icons[cat] || '📊'
+  }
+
   const balance = wallet?.naira_balance || 0
 
-  /* ─── Render ─── */
+  /* --- Render --- */
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900">
       {/* BG decoration */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-20 left-20 w-72 h-72 bg-green-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
       </div>
 
       {/* Header */}
@@ -355,7 +346,7 @@ export default function PredictionMarketPage() {
               <div className="text-3xl">⚖️</div>
               <div>
                 <h1 className="text-2xl font-bold text-white">CaseWin-NG</h1>
-                <p className="text-xs text-purple-300">Legal Prediction Markets</p>
+                <p className="text-xs text-green-300">Prediction Markets</p>
               </div>
             </Link>
             <MobileNav currentPath="/predictions" />
@@ -363,7 +354,7 @@ export default function PredictionMarketPage() {
         </div>
       </header>
 
-      {/* ═══ Wallet Bar ═══ */}
+      {/* Wallet Bar */}
       <div className="relative bg-black/20 backdrop-blur-lg border-b border-white/10">
         <div className="container mx-auto px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -371,18 +362,23 @@ export default function PredictionMarketPage() {
               <div className="flex items-center gap-2">
                 <span className="text-yellow-400 text-lg">💰</span>
                 <div>
-                  <div className="text-xs text-gray-400">Naira Balance</div>
+                  <div className="text-xs text-gray-400">Trading Balance</div>
                   <div className="text-lg font-bold text-white">
-                    {walletLoading ? '...' : `₦${balance.toLocaleString()}`}
+                    {walletLoading ? '...' : `N${balance.toLocaleString()}`}
                   </div>
                 </div>
               </div>
-              {baseConnected && (
+              {baseWallet && (
                 <div className="flex items-center gap-2 pl-4 border-l border-white/10">
                   <span className="text-blue-400 text-lg">🔗</span>
                   <div>
                     <div className="text-xs text-gray-400">Base Wallet</div>
-                    <div className="text-sm font-medium text-blue-300">{baseAddress.slice(0, 6)}...{baseAddress.slice(-4)}</div>
+                    <div className="text-sm font-medium text-blue-300">
+                      {baseWallet.walletAddress.slice(0, 6)}...{baseWallet.walletAddress.slice(-4)}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 ml-2">
+                    {baseWallet.onChainBalance.eth.toFixed(4)} ETH | {baseWallet.onChainBalance.usdc.toFixed(2)} USDC
                   </div>
                 </div>
               )}
@@ -408,60 +404,55 @@ export default function PredictionMarketPage() {
       </div>
 
       <div className="relative container mx-auto px-4 py-8">
-        {/* ═══ Hero ═══ */}
+        {/* Hero */}
         <div className="text-center mb-12">
           <div className="inline-block mb-4">
             <span className="bg-gradient-to-r from-green-400 via-white to-green-400 text-green-900 px-6 py-2 rounded-full text-sm font-bold border-2 border-green-500">
-              🇳🇬 NIGERIAN LEGAL MARKETS • REAL MONEY
+              🇳🇬 PREDICTION MARKETS • REAL MONEY
             </span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-4 bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-white to-green-400">
-            Predict Nigerian Legal Outcomes
+            Predict & Win
           </h2>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-6">
-            Deposit Naira or ETH on Base. Use AI-powered analysis to trade on Supreme Court rulings, Court of Appeal decisions, and landmark Nigerian cases.
+            Sports, crypto, entertainment, politics, technology & legal markets. Deposit Naira or crypto. Use AI-powered analysis to trade with real money.
           </p>
           <div className="flex justify-center gap-6 text-center">
             <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10 min-w-[120px]">
-              <div className="text-2xl font-bold text-purple-400">
-                {loading ? '...' : `₦${markets.reduce((s, m) => s + m.total_pool, 0).toLocaleString()}`}
+              <div className="text-2xl font-bold text-green-400">
+                {loading ? '...' : `N${markets.reduce((s, m) => s + m.total_pool, 0).toLocaleString()}`}
               </div>
               <div className="text-xs text-gray-400 mt-1">Total Volume</div>
             </div>
             <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 border border-white/10 min-w-[120px]">
-              <div className="text-2xl font-bold text-pink-400">{loading ? '...' : markets.length}</div>
+              <div className="text-2xl font-bold text-green-400">{loading ? '...' : markets.length}</div>
               <div className="text-xs text-gray-400 mt-1">Active Markets</div>
             </div>
           </div>
         </div>
 
-        {/* ═══ Category Filter ═══ */}
+        {/* Category Filter */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-3 scrollbar-hide">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all whitespace-nowrap ${
-              selectedCategory === 'all'
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
-                : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
-            }`}
-          >All Markets</button>
           {CATEGORIES.map(cat => (
             <button
               key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all whitespace-nowrap ${
-                selectedCategory === cat
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
+              onClick={() => setSelectedCategory(cat === 'All' ? 'all' : cat)}
+              className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                (cat === 'All' ? 'all' : cat) === selectedCategory
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30'
                   : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
               }`}
-            >{cat}</button>
+            >
+              <span>{cat === 'All' ? '🌐' : getCategoryIcon(cat)}</span>
+              {cat}
+            </button>
           ))}
         </div>
 
-        {/* ═══ Markets Grid ═══ */}
+        {/* Markets Grid */}
         {loading ? (
           <div className="text-center py-20">
-            <div className="inline-block w-14 h-14 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            <div className="inline-block w-14 h-14 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
             <p className="text-gray-400 mt-4">Loading markets...</p>
           </div>
         ) : markets.length === 0 ? (
@@ -477,17 +468,20 @@ export default function PredictionMarketPage() {
               const noP = 100 - yesP
 
               return (
-                <div key={market.id} className="group bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 hover:border-purple-500/50 transition-all duration-300 overflow-hidden hover:shadow-2xl hover:shadow-purple-500/10">
+                <div key={market.id} className="group bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 hover:border-green-500/50 transition-all duration-300 overflow-hidden hover:shadow-2xl hover:shadow-green-500/10">
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs font-semibold border border-purple-500/30">{market.category}</span>
+                      <span className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-xs font-semibold border border-green-500/30 flex items-center gap-1">
+                        <span>{getCategoryIcon(market.category)}</span>
+                        {market.category}
+                      </span>
                       <span className="text-gray-500 text-xs flex items-center gap-1">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         {getTimeRemaining(market.deadline)}
                       </span>
                     </div>
 
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-purple-300 transition-colors leading-tight">{market.title}</h3>
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-green-300 transition-colors leading-tight">{market.title}</h3>
                     <p className="text-gray-400 text-sm mb-4 line-clamp-2">{market.description}</p>
 
                     {/* Price & Probability */}
@@ -495,12 +489,12 @@ export default function PredictionMarketPage() {
                       <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
                         <div className="text-xs text-green-400 mb-1">YES</div>
                         <div className="text-xl font-bold text-green-400">{yesP}%</div>
-                        <div className="text-xs text-gray-500">₦{(market.yes_price || 0.5).toFixed(2)}/share</div>
+                        <div className="text-xs text-gray-500">N{(market.yes_price || 0.5).toFixed(2)}/share</div>
                       </div>
                       <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
                         <div className="text-xs text-red-400 mb-1">NO</div>
                         <div className="text-xl font-bold text-red-400">{noP}%</div>
-                        <div className="text-xs text-gray-500">₦{(market.no_price || 0.5).toFixed(2)}/share</div>
+                        <div className="text-xs text-gray-500">N{(market.no_price || 0.5).toFixed(2)}/share</div>
                       </div>
                     </div>
 
@@ -513,16 +507,14 @@ export default function PredictionMarketPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-gray-500 text-xs">Pool</div>
-                        <div className="text-white font-bold">₦{market.total_pool.toLocaleString()}</div>
+                        <div className="text-white font-bold">N{market.total_pool.toLocaleString()}</div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openTrade(market)}
-                          className="px-5 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg hover:shadow-purple-500/30 transition-all"
-                        >
-                          🤖 Trade
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => openTrade(market)}
+                        className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-semibold text-sm hover:shadow-lg hover:shadow-green-500/30 transition-all"
+                      >
+                        🤖 Trade
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -531,17 +523,15 @@ export default function PredictionMarketPage() {
           </div>
         )}
 
-        {/* ═══════════════════════════════════════ */}
-        {/* ═══ TRADE MODAL ═══ */}
-        {/* ═══════════════════════════════════════ */}
+        {/* ========= TRADE MODAL ========= */}
         {tradeMarket && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-slate-900 border border-purple-500/30 rounded-2xl max-w-lg w-full my-8">
+            <div className="bg-slate-900 border border-green-500/30 rounded-2xl max-w-lg w-full my-8">
               {/* Header */}
               <div className="p-6 border-b border-white/10">
                 <div className="flex justify-between items-start">
                   <div className="flex-1 mr-4">
-                    <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs font-semibold">{tradeMarket.category}</span>
+                    <span className="px-2 py-0.5 bg-green-500/20 text-green-300 rounded text-xs font-semibold">{tradeMarket.category}</span>
                     <h3 className="text-xl font-bold text-white mt-2 leading-tight">{tradeMarket.title}</h3>
                   </div>
                   <button onClick={() => setTradeMarket(null)} className="text-gray-400 hover:text-white p-1">
@@ -552,18 +542,17 @@ export default function PredictionMarketPage() {
 
               {/* AI Analysis */}
               <div className="p-6 border-b border-white/10">
-                <h4 className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2">
-                  🤖 AI Legal Analysis
+                <h4 className="text-sm font-semibold text-green-400 mb-3 flex items-center gap-2">
+                  🤖 AI Analysis
                   {aiLoading && <span className="text-xs text-gray-500">analyzing...</span>}
                 </h4>
                 {aiLoading ? (
                   <div className="flex items-center gap-3 py-4">
-                    <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-gray-400 text-sm">Running AI analysis on Nigerian legal precedents...</span>
+                    <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-gray-400 text-sm">Running AI analysis...</span>
                   </div>
                 ) : aiAnalysis ? (
                   <div className="space-y-3">
-                    {/* Recommendation badge */}
                     <div className="flex items-center gap-3">
                       <span className={`px-3 py-1 rounded-full text-sm font-bold ${
                         aiAnalysis.recommendation === 'YES' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
@@ -583,9 +572,7 @@ export default function PredictionMarketPage() {
                         }`}>{aiAnalysis.risk_level} risk</span>
                       )}
                     </div>
-                    {/* Summary */}
                     <p className="text-sm text-gray-300 leading-relaxed">{aiAnalysis.summary}</p>
-                    {/* Factors */}
                     <div className="space-y-2">
                       {aiAnalysis.factors.slice(0, 4).map((f, i) => (
                         <div key={i} className="bg-white/5 rounded-lg p-3">
@@ -607,11 +594,10 @@ export default function PredictionMarketPage() {
 
               {/* Trading section */}
               <div className="p-6">
-                {/* Wallet balance */}
                 <div className="flex items-center justify-between mb-4 bg-white/5 rounded-lg p-3">
                   <span className="text-sm text-gray-400">Your Balance</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-white">₦{balance.toLocaleString()}</span>
+                    <span className="text-lg font-bold text-white">N{balance.toLocaleString()}</span>
                     {balance < voteAmount && (
                       <button onClick={() => { setTradeMarket(null); setShowDeposit(true) }} className="text-xs text-green-400 hover:text-green-300 underline">
                         Deposit
@@ -620,7 +606,6 @@ export default function PredictionMarketPage() {
                   </div>
                 </div>
 
-                {/* Amount */}
                 <div className="mb-4">
                   <label className="text-sm text-gray-400 mb-2 block">Bet Amount</label>
                   <div className="flex gap-2 mb-2">
@@ -630,10 +615,10 @@ export default function PredictionMarketPage() {
                         onClick={() => setVoteAmount(amt)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                           voteAmount === amt
-                            ? 'bg-purple-500 text-white'
+                            ? 'bg-green-500 text-white'
                             : 'bg-white/5 text-gray-400 hover:bg-white/10'
                         }`}
-                      >₦{amt >= 1000 ? `${amt/1000}K` : amt}</button>
+                      >N{amt >= 1000 ? `${amt/1000}K` : amt}</button>
                     ))}
                   </div>
                   <input
@@ -643,12 +628,11 @@ export default function PredictionMarketPage() {
                     step="100"
                     value={voteAmount}
                     onChange={(e) => setVoteAmount(Number(e.target.value))}
-                    className="w-full accent-purple-500"
+                    className="w-full accent-green-500"
                   />
-                  <div className="text-center text-xl font-bold text-purple-400 mt-1">₦{voteAmount.toLocaleString()}</div>
+                  <div className="text-center text-xl font-bold text-green-400 mt-1">N{voteAmount.toLocaleString()}</div>
                 </div>
 
-                {/* YES / NO buttons */}
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => handleVote('yes')}
@@ -660,7 +644,7 @@ export default function PredictionMarketPage() {
                   <button
                     onClick={() => handleVote('no')}
                     disabled={submitting || !user || balance < voteAmount}
-                    className="py-3.5 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-red-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="py-3.5 bg-gradient-to-r from-red-500 to-rose-500 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-red-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {submitting ? '...' : `NO (${Math.round((tradeMarket.no_price || 0.5) * 100)}%)`}
                   </button>
@@ -673,12 +657,10 @@ export default function PredictionMarketPage() {
           </div>
         )}
 
-        {/* ═══════════════════════════════════════ */}
-        {/* ═══ DEPOSIT MODAL ═══ */}
-        {/* ═══════════════════════════════════════ */}
+        {/* ========= DEPOSIT MODAL ========= */}
         {showDeposit && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-900 border border-green-500/30 rounded-2xl max-w-md w-full">
+            <div className="bg-slate-900 border border-green-500/30 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-white/10 flex justify-between items-center">
                 <h3 className="text-xl font-bold text-white">Deposit Funds</h3>
                 <button onClick={() => setShowDeposit(false)} className="text-gray-400 hover:text-white">
@@ -686,7 +668,6 @@ export default function PredictionMarketPage() {
                 </button>
               </div>
 
-              {/* Tabs */}
               <div className="flex border-b border-white/10">
                 <button
                   onClick={() => setDepositTab('naira')}
@@ -694,8 +675,8 @@ export default function PredictionMarketPage() {
                 >🏦 Naira (Korapay)</button>
                 <button
                   onClick={() => setDepositTab('crypto')}
-                  className={`flex-1 py-3 text-sm font-semibold transition-all ${depositTab === 'crypto' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300'}`}
-                >🔗 Base (ETH)</button>
+                  className={`flex-1 py-3 text-sm font-semibold transition-all ${depositTab === 'crypto' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-500 hover:text-gray-300'}`}
+                >🔗 Base (ETH/USDC)</button>
               </div>
 
               <div className="p-6">
@@ -703,7 +684,7 @@ export default function PredictionMarketPage() {
                   <div className="space-y-4">
                     <p className="text-sm text-gray-400">Deposit Naira via card, bank transfer, or USSD using Korapay secure checkout.</p>
                     <div>
-                      <label className="text-sm text-gray-300 mb-2 block">Amount (₦)</label>
+                      <label className="text-sm text-gray-300 mb-2 block">Amount (N)</label>
                       <div className="flex gap-2 mb-3">
                         {[1000, 5000, 10000, 50000].map(amt => (
                           <button
@@ -712,7 +693,7 @@ export default function PredictionMarketPage() {
                             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                               depositAmount === amt ? 'bg-green-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
                             }`}
-                          >₦{amt >= 1000 ? `${amt/1000}K` : amt}</button>
+                          >N{amt >= 1000 ? `${amt/1000}K` : amt}</button>
                         ))}
                       </div>
                       <input
@@ -728,7 +709,7 @@ export default function PredictionMarketPage() {
                       disabled={depositAmount < 100}
                       className="w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-green-500/30 transition-all disabled:opacity-40"
                     >
-                      Pay ₦{depositAmount.toLocaleString()} with Korapay
+                      Pay N{depositAmount.toLocaleString()} with Korapay
                     </button>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -737,50 +718,70 @@ export default function PredictionMarketPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-400">Deposit ETH on Base network. Converted to Naira at current rates.</p>
+                    <p className="text-sm text-gray-400">Your personal Base wallet accepts ETH and USDC. Deposit to your address below and sync to credit your balance.</p>
 
-                    {!baseConnected ? (
-                      <button
-                        onClick={connectBaseWallet}
-                        className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
-                        Connect Base Wallet
-                      </button>
-                    ) : (
+                    {baseWalletLoading ? (
+                      <div className="flex items-center gap-3 py-6 justify-center">
+                        <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-gray-400 text-sm">Loading your wallet...</span>
+                      </div>
+                    ) : baseWallet ? (
                       <>
-                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                          <div className="text-xs text-blue-400 mb-1">Connected Wallet</div>
-                          <div className="text-sm text-white font-mono">{baseAddress}</div>
+                        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                          <div className="text-xs text-green-400 mb-1 font-semibold">Your Base Deposit Address</div>
+                          <div className="text-sm text-white font-mono break-all bg-black/30 rounded p-2 mt-1 select-all">{baseWallet.walletAddress}</div>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(baseWallet.walletAddress)
+                              notify({ type: 'success', title: 'Copied!', message: 'Wallet address copied to clipboard' })
+                            }}
+                            className="mt-2 text-xs text-green-400 hover:text-green-300 underline"
+                          >
+                            Copy Address
+                          </button>
                         </div>
-                        <div>
-                          <label className="text-sm text-gray-300 mb-2 block">ETH Amount</label>
-                          <input
-                            type="number"
-                            step="0.001"
-                            min="0.0001"
-                            placeholder="0.01"
-                            value={cryptoAmount}
-                            onChange={e => setCryptoAmount(e.target.value)}
-                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white text-lg font-bold focus:outline-none focus:border-blue-500"
-                          />
-                          {cryptoAmount && (
-                            <p className="text-xs text-gray-400 mt-1">
-                              ≈ ₦{Math.floor(parseFloat(cryptoAmount || '0') * 5500000).toLocaleString()} at current rate
-                            </p>
-                          )}
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white/5 rounded-lg p-3 text-center">
+                            <div className="text-xs text-gray-400">ETH Balance</div>
+                            <div className="text-lg font-bold text-white">{baseWallet.onChainBalance.eth.toFixed(4)}</div>
+                            <div className="text-xs text-gray-500">≈ N{baseWallet.onChainBalance.ethNGN.toLocaleString()}</div>
+                          </div>
+                          <div className="bg-white/5 rounded-lg p-3 text-center">
+                            <div className="text-xs text-gray-400">USDC Balance</div>
+                            <div className="text-lg font-bold text-white">{baseWallet.onChainBalance.usdc.toFixed(2)}</div>
+                            <div className="text-xs text-gray-500">≈ N{baseWallet.onChainBalance.usdcNGN.toLocaleString()}</div>
+                          </div>
                         </div>
+
                         <button
-                          onClick={handleCryptoDeposit}
-                          disabled={cryptoSending || !cryptoAmount}
-                          className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-40"
+                          onClick={syncCryptoBalance}
+                          disabled={syncing}
+                          className="w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-green-500/30 transition-all disabled:opacity-40"
                         >
-                          {cryptoSending ? 'Sending & Verifying...' : `Send ${cryptoAmount || '0'} ETH on Base`}
+                          {syncing ? 'Syncing...' : '🔄 Sync & Credit Balance'}
                         </button>
+
+                        <div className="bg-white/5 rounded-lg p-3">
+                          <h4 className="text-xs font-semibold text-green-400 mb-2">How it works:</h4>
+                          <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                            <li>Send ETH or USDC (Base network) to your address above</li>
+                            <li>Click "Sync & Credit Balance" after transaction confirms</li>
+                            <li>Your Naira trading balance updates automatically at live rates</li>
+                          </ol>
+                        </div>
                       </>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-gray-400 text-sm mb-3">Sign in to get your personal Base wallet</p>
+                        <Link href="/auth/login" className="text-green-400 hover:text-green-300 underline text-sm">
+                          Sign In
+                        </Link>
+                      </div>
                     )}
+
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span className="text-blue-400">●</span> Base Network (L2) • Low fees • Fast confirmation
+                      <span className="text-green-400">●</span> Base Network (L2) • ETH + USDC • Low fees • Fast confirmation
                     </div>
                   </div>
                 )}
@@ -789,12 +790,10 @@ export default function PredictionMarketPage() {
           </div>
         )}
 
-        {/* ═══════════════════════════════════════ */}
-        {/* ═══ WITHDRAW MODAL ═══ */}
-        {/* ═══════════════════════════════════════ */}
+        {/* ========= WITHDRAW MODAL ========= */}
         {showWithdraw && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-900 border border-orange-500/30 rounded-2xl max-w-md w-full">
+            <div className="bg-slate-900 border border-green-500/30 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-white/10 flex justify-between items-center">
                 <h3 className="text-xl font-bold text-white">Withdraw Funds</h3>
                 <button onClick={() => setShowWithdraw(false)} className="text-gray-400 hover:text-white">
@@ -802,28 +801,27 @@ export default function PredictionMarketPage() {
                 </button>
               </div>
 
-              {/* Tabs */}
               <div className="flex border-b border-white/10">
                 <button
                   onClick={() => setWithdrawTab('naira')}
-                  className={`flex-1 py-3 text-sm font-semibold transition-all ${withdrawTab === 'naira' ? 'text-orange-400 border-b-2 border-orange-400' : 'text-gray-500'}`}
+                  className={`flex-1 py-3 text-sm font-semibold transition-all ${withdrawTab === 'naira' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-500'}`}
                 >🏦 Bank Transfer</button>
                 <button
                   onClick={() => setWithdrawTab('crypto')}
-                  className={`flex-1 py-3 text-sm font-semibold transition-all ${withdrawTab === 'crypto' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500'}`}
-                >🔗 Base (ETH)</button>
+                  className={`flex-1 py-3 text-sm font-semibold transition-all ${withdrawTab === 'crypto' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-500'}`}
+                >🔗 Base (ETH/USDC)</button>
               </div>
 
               <div className="p-6">
                 <div className="bg-white/5 rounded-lg p-3 mb-4 flex justify-between">
                   <span className="text-sm text-gray-400">Available Balance</span>
-                  <span className="text-lg font-bold text-white">₦{balance.toLocaleString()}</span>
+                  <span className="text-lg font-bold text-white">N{balance.toLocaleString()}</span>
                 </div>
 
                 {withdrawTab === 'naira' ? (
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm text-gray-300 mb-1 block">Amount (₦)</label>
+                      <label className="text-sm text-gray-300 mb-1 block">Amount (N)</label>
                       <input
                         type="number"
                         min={100}
@@ -831,7 +829,7 @@ export default function PredictionMarketPage() {
                         value={withdrawAmount || ''}
                         onChange={e => setWithdrawAmount(Number(e.target.value))}
                         placeholder="Enter amount"
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-orange-500"
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500"
                       />
                     </div>
                     <div>
@@ -840,7 +838,7 @@ export default function PredictionMarketPage() {
                         value={bankName}
                         onChange={e => setBankName(e.target.value)}
                         placeholder="e.g. GTBank, Access Bank"
-                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-orange-500 text-sm"
+                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
                       />
                     </div>
                     <div>
@@ -850,7 +848,7 @@ export default function PredictionMarketPage() {
                         onChange={e => setBankAccount(e.target.value)}
                         placeholder="0123456789"
                         maxLength={10}
-                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-orange-500 text-sm"
+                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
                       />
                     </div>
                     <div>
@@ -859,50 +857,60 @@ export default function PredictionMarketPage() {
                         value={accountName}
                         onChange={e => setAccountName(e.target.value)}
                         placeholder="Full name on account"
-                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-orange-500 text-sm"
+                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
                       />
                     </div>
                     <button
                       onClick={handleWithdraw}
                       disabled={withdrawAmount < 100 || !bankName || !bankAccount || !accountName}
-                      className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-40 mt-2"
+                      className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-40 mt-2"
                     >
-                      Withdraw ₦{(withdrawAmount || 0).toLocaleString()} to Bank
+                      Withdraw N{(withdrawAmount || 0).toLocaleString()} to Bank
                     </button>
                     <p className="text-xs text-gray-500 text-center">Processing time: within 24 hours</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm text-gray-300 mb-1 block">Amount (₦)</label>
+                      <label className="text-sm text-gray-300 mb-1 block">Amount (N)</label>
                       <input
                         type="number"
                         min={100}
                         max={balance}
                         value={withdrawAmount || ''}
                         onChange={e => setWithdrawAmount(Number(e.target.value))}
-                        placeholder="Amount in Naira to convert to ETH"
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                        placeholder="Amount in Naira to convert"
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500"
                       />
-                      {withdrawAmount > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">≈ {(withdrawAmount / 5500000).toFixed(6)} ETH at current rate</p>
-                      )}
                     </div>
                     <div>
-                      <label className="text-sm text-gray-300 mb-1 block">Base Wallet Address</label>
+                      <label className="text-sm text-gray-300 mb-1 block">Token</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setWithdrawToken('usdc')}
+                          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${withdrawToken === 'usdc' ? 'bg-green-500 text-white' : 'bg-white/5 text-gray-400'}`}
+                        >USDC</button>
+                        <button
+                          onClick={() => setWithdrawToken('eth')}
+                          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${withdrawToken === 'eth' ? 'bg-green-500 text-white' : 'bg-white/5 text-gray-400'}`}
+                        >ETH</button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-300 mb-1 block">Destination Wallet Address</label>
                       <input
                         value={cryptoWithdrawAddr}
                         onChange={e => setCryptoWithdrawAddr(e.target.value)}
                         placeholder="0x..."
-                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-blue-500"
+                        className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-green-500"
                       />
                     </div>
                     <button
                       onClick={handleWithdraw}
                       disabled={withdrawAmount < 100 || !cryptoWithdrawAddr}
-                      className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-40 mt-2"
+                      className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-40 mt-2"
                     >
-                      Withdraw to Base Wallet
+                      Withdraw as {withdrawToken.toUpperCase()} to Base Wallet
                     </button>
                     <p className="text-xs text-gray-500 text-center">Processing time: within 1 hour</p>
                   </div>
@@ -912,30 +920,30 @@ export default function PredictionMarketPage() {
           </div>
         )}
 
-        {/* ═══ How It Works ═══ */}
+        {/* How It Works */}
         <div className="mt-16 bg-white/5 backdrop-blur-xl rounded-3xl border border-green-500/20 p-8 md:p-12">
           <h2 className="text-2xl font-bold text-white text-center mb-2">How It Works</h2>
-          <p className="text-center text-green-400 mb-8 text-xs">🇳🇬 Nigerian Legal Prediction Markets • Real Money</p>
+          <p className="text-center text-green-400 mb-8 text-xs">🇳🇬 Prediction Markets • Real Money</p>
           <div className="grid md:grid-cols-4 gap-6">
             <div className="text-center">
               <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">💰</div>
               <h3 className="text-lg font-bold text-white mb-2">1. Deposit</h3>
-              <p className="text-gray-400 text-sm">Fund your wallet with Naira via Korapay or ETH on Base network</p>
+              <p className="text-gray-400 text-sm">Fund with Naira via Korapay, or send ETH/USDC to your auto-generated Base wallet</p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🤖</div>
+              <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🤖</div>
               <h3 className="text-lg font-bold text-white mb-2">2. AI Analysis</h3>
-              <p className="text-gray-400 text-sm">Get AI-powered analysis on Nigerian case law, precedents, and legal factors</p>
+              <p className="text-gray-400 text-sm">Get AI-powered analysis on any market before you trade</p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">📊</div>
+              <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">📊</div>
               <h3 className="text-lg font-bold text-white mb-2">3. Trade</h3>
-              <p className="text-gray-400 text-sm">Buy YES or NO shares on Nigerian court outcomes using your wallet balance</p>
+              <p className="text-gray-400 text-sm">Buy YES or NO on sports, crypto, politics, entertainment & more</p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🏆</div>
+              <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🏆</div>
               <h3 className="text-lg font-bold text-white mb-2">4. Win & Withdraw</h3>
-              <p className="text-gray-400 text-sm">Winning shares pay out. Withdraw to your bank or Base wallet anytime</p>
+              <p className="text-gray-400 text-sm">Winning shares pay out. Withdraw to bank or Base wallet anytime</p>
             </div>
           </div>
         </div>
@@ -947,10 +955,10 @@ export default function PredictionMarketPage() {
             <div className="text-sm">
               <h4 className="text-yellow-400 font-semibold mb-1">Trading Guidelines</h4>
               <ul className="text-gray-400 space-y-0.5 text-xs">
-                <li>• Markets resolve based on publicly available Nigerian court judgments</li>
-                <li>• No trading on confidential client information or by involved parties</li>
+                <li>• Markets resolve based on official sources and verified outcomes</li>
                 <li>• 18+ only — Age verification required</li>
-                <li>• Compliant with Rules of Professional Conduct for Legal Practitioners</li>
+                <li>• Trade responsibly — only bet what you can afford to lose</li>
+                <li>• All deposits and withdrawals are secured and auditable</li>
               </ul>
             </div>
           </div>

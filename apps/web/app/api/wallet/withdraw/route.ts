@@ -97,13 +97,14 @@ export async function POST(request: NextRequest) {
     })
 
     // Create notification for user
-    await supabase.from('notifications').insert({
+    const { error: notifErr } = await supabase.from('notifications').insert({
       user_email: email,
       type: 'withdrawal',
       title: 'Withdrawal Requested',
       message: `₦${amount.toLocaleString()} withdrawal via ${method === 'bank' ? 'bank transfer' : 'Base crypto'} has been submitted. ${method === 'bank' ? 'Funds will arrive within 24 hours.' : 'Crypto will be sent within 1 hour.'}`,
       read: false
-    }).then(() => {}).catch(() => {})
+    })
+    if (notifErr) console.warn('Notification insert failed:', notifErr.message)
 
     return NextResponse.json({
       success: true,

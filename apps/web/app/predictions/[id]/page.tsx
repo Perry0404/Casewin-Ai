@@ -219,9 +219,9 @@ export default function MarketDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/20 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <svg className="animate-spin h-12 w-12 text-purple-500 mx-auto mb-4" viewBox="0 0 24 24">
+          <svg className="animate-spin h-12 w-12 text-green-500 mx-auto mb-4" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
@@ -233,12 +233,12 @@ export default function MarketDetailPage() {
 
   if (error || !market) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/20 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4">❌</div>
           <h1 className="text-2xl font-bold text-white mb-2">Market Not Found</h1>
           <p className="text-slate-400 mb-6">{error || 'This market does not exist or has been removed.'}</p>
-          <Link href="/predictions" className="px-6 py-3 bg-purple-600 hover:bg-purple-500 rounded-xl text-white font-medium">
+          <Link href="/predictions" className="px-6 py-3 bg-green-600 hover:bg-green-500 rounded-xl text-white font-medium">
             ← Back to Markets
           </Link>
         </div>
@@ -254,7 +254,7 @@ export default function MarketDetailPage() {
   const categoryInfo = CATEGORIES[market.category] || CATEGORIES.other;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/20 to-slate-900">
       {/* Header */}
       <header className="border-b border-slate-700/50 backdrop-blur-xl bg-slate-900/80 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -262,7 +262,7 @@ export default function MarketDetailPage() {
             <Link href="/predictions" className="flex items-center gap-3">
               <Image src="/favicon.png" alt="CaseWin AI" width={40} height={40} className="rounded-xl" />
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">CaseWin Predictions</h1>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">CaseWin Predictions</h1>
                 <p className="text-xs text-slate-400">Market Details</p>
               </div>
             </Link>
@@ -286,7 +286,7 @@ export default function MarketDetailPage() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-400 mb-6">
-          <Link href="/predictions" className="hover:text-purple-400">Markets</Link>
+          <Link href="/predictions" className="hover:text-green-400">Markets</Link>
           <span>→</span>
           <span className="text-white">{market.title.slice(0, 50)}...</span>
         </div>
@@ -298,7 +298,7 @@ export default function MarketDetailPage() {
             <div className="bg-slate-800/60 rounded-2xl p-6 border border-slate-700/50">
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-2xl">{categoryInfo.icon}</span>
-                <span className="text-sm font-medium text-purple-400 uppercase tracking-wide">
+                <span className="text-sm font-medium text-green-400 uppercase tracking-wide">
                   {categoryInfo.name}
                 </span>
                 <span className={`ml-auto px-3 py-1 rounded-full text-xs font-medium ${
@@ -375,7 +375,7 @@ export default function MarketDetailPage() {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`px-4 py-2 rounded-xl whitespace-nowrap font-medium transition-all ${
                     activeTab === tab.id
-                      ? 'bg-purple-600 text-white'
+                      ? 'bg-green-600 text-white'
                       : 'bg-slate-800/60 text-slate-400 hover:text-white'
                   }`}
                 >
@@ -418,11 +418,11 @@ export default function MarketDetailPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-xl p-4 border border-purple-500/30">
+                    <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-xl p-4 border border-green-500/30">
                       <div className="text-3xl font-bold text-white mb-1">
                         {Math.round(aiAnalysis.prediction * 100)}%
                       </div>
-                      <div className="text-sm text-purple-300">AI Prediction (YES)</div>
+                      <div className="text-sm text-green-300">AI Prediction (YES)</div>
                     </div>
                     <div className="bg-slate-700/30 rounded-xl p-4">
                       <div className="text-3xl font-bold text-white mb-1">
@@ -458,13 +458,13 @@ export default function MarketDetailPage() {
                   {comments.map((comment) => (
                     <div key={comment.id} className="bg-slate-700/30 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-purple-400">{comment.user}</span>
+                        <span className="font-medium text-green-400">{comment.user}</span>
                         <span className="text-xs text-slate-500">{formatDate(comment.timestamp)}</span>
                       </div>
                       <p className="text-slate-300 text-sm mb-2">{comment.content}</p>
                       <div className="flex items-center gap-2 text-sm text-slate-400">
                         <button className="hover:text-red-400">❤️ {comment.likes}</button>
-                        <button className="hover:text-purple-400">💬 Reply</button>
+                        <button className="hover:text-green-400">💬 Reply</button>
                       </div>
                     </div>
                   ))}
@@ -552,7 +552,7 @@ export default function MarketDetailPage() {
                     onClick={() => setShares(amount)}
                     className={`py-2 rounded-lg text-sm font-medium transition-all ${
                       shares === amount
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-green-600 text-white'
                         : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                     }`}
                   >

@@ -57,7 +57,7 @@ export default function HearingPrepPage() {
 
       <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
         <div className="mb-6 sm:mb-8 flex items-center gap-3">
-          <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center"><span className="text-xl">🎯</span></div>
+          <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><span className="text-xl">🎯</span></div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Hearing Prep Assistant</h1>
             <p className="text-gray-600 text-xs sm:text-sm">AI generates examination questions, objections, and court appearance prep</p>
@@ -96,7 +96,7 @@ export default function HearingPrepPage() {
               </div>
               {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
               <button onClick={handleGenerate} disabled={isLoading}
-                className="w-full py-3 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 disabled:opacity-50 text-sm sm:text-base">
+                className="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 disabled:opacity-50 text-sm sm:text-base">
                 {isLoading ? 'Preparing...' : '🎯 Prepare for Hearing'}
               </button>
             </div>
@@ -115,7 +115,7 @@ export default function HearingPrepPage() {
                 <div className="flex gap-1 overflow-x-auto bg-white rounded-xl border p-1">
                   {sections.map(s => (
                     <button key={s.id} onClick={() => setActiveSection(s.id)}
-                      className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${activeSection === s.id ? 'bg-violet-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                      className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${activeSection === s.id ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
                       {s.label}
                     </button>
                   ))}

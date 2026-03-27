@@ -1,72 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const OLLAMA_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:3b'
-const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333'
+const GROK_API_KEY = process.env.GROK_API_KEY || ''
+const GROK_API_URL = 'https://api.x.ai/v1/chat/completions'
+const GROK_MODEL = process.env.GROK_MODEL || 'grok-3'
 
 export async function POST(req: NextRequest) {
   try {
     const { query, jurisdiction, limit = 10 } = await req.json()
 
-    // Generate embedding for the research query via Ollama REST API
-    const embeddingRes = await fetch(`${OLLAMA_URL}/api/embeddings`, {
+    if (!query) {
+      return NextResponse.json({ success: false, error: 'Research query is required' }, { status: 400 })
+    }
+
+    if (!GROK_API_KEY) {
+      return NextResponse.json({ success: false, error: 'AI service not configured. Set GROK_API_KEY.' }, { status: 500 })
+    }
+
+    const grokRes = await fetch(GROK_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: OLLAMA_MODEL, prompt: query }),
+      headers: {
+        'Authorization': `Bearer ${GROK_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: GROK_MODEL,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a Nigerian legal research assistant with comprehensive knowledge of Nigerian case law, statutes, and legal principles. When searching for cases, provide real Nigerian case citations, court names, years, summaries, and key holdings. Return up to ${limit} relevant cases. Format each case as a structured entry.`
+          },
+          {
+            role: 'user',
+            content: `Research the following legal topic in ${jurisdiction || 'Nigerian'} law:\n\n"${query}"\n\nFind relevant cases, statutes, and legal principles. For each case provide:\n- Case name\n- Citation (e.g., (2020) LPELR-51234(SC))\n- Court (Supreme Court, Court of Appeal, Federal High Court, etc.)\n- Year\n- Summary of facts and decision\n- Key holdings\n\nAlso identify relevant statutes and constitutional provisions.`
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 5000,
+      }),
     })
 
-    if (!embeddingRes.ok) {
-      throw new Error(`Ollama embeddings returned ${embeddingRes.status}: ${await embeddingRes.text()}`)
+    if (!grokRes.ok) {
+      const errText = await grokRes.text()
+      throw new Error(`Grok API returned ${grokRes.status}: ${errText}`)
     }
 
-    const embeddingData = await embeddingRes.json()
-
-    // Search Qdrant for relevant cases via REST API
-    const qdrantBody: any = {
-      vector: embeddingData.embedding,
-      limit,
-    }
-    if (jurisdiction) {
-      qdrantBody.filter = {
-        must: [{ key: 'jurisdiction', match: { value: jurisdiction } }],
-      }
-    }
-
-    const qdrantRes = await fetch(`${QDRANT_URL}/collections/nigerian_cases/points/search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(qdrantBody),
-    })
-
-    if (!qdrantRes.ok) {
-      throw new Error(`Qdrant search returned ${qdrantRes.status}: ${await qdrantRes.text()}`)
-    }
-
-    const qdrantData = await qdrantRes.json()
-    const searchResults = qdrantData.result || []
-
-    const cases = searchResults.map((result: any) => ({
-      case_name: result.payload?.case_name,
-      citation: result.payload?.citation,
-      court: result.payload?.court,
-      year: result.payload?.year,
-      summary: result.payload?.summary,
-      key_holdings: result.payload?.key_holdings,
-      relevance_score: result.score,
-    }))
+    const grokData = await grokRes.json()
+    const researchText = grokData.choices?.[0]?.message?.content || ''
 
     return NextResponse.json({
       success: true,
       query,
-      totalResults: cases.length,
-      cases,
+      research: researchText,
+      totalResults: limit,
       searchedAt: new Date().toISOString(),
     })
-  } catch (error: any) {
-    console.error('Legal research error:', error)
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Legal research error:', message)
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
