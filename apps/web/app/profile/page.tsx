@@ -1,12 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
+interface Profile {
+  full_name?: string
+  phone?: string
+  bio?: string
+  location?: string
+  user_type?: string
+  created_at?: string
+}
+
+interface Wallet {
+  balance?: number
+}
+
 export default function ProfilePage() {
-  const { user, profile, wallet, loading, refreshProfile } = useAuth()
+  const { user, loading } = useAuth()
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [wallet, setWallet] = useState<Wallet | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
@@ -15,6 +30,29 @@ export default function ProfilePage() {
     bio: '',
     location: '',
   })
+
+  const refreshProfile = useCallback(async () => {
+    if (!user) return
+    const supabase = createClient()
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    if (profileData) setProfile(profileData)
+
+    const { data: walletData } = await supabase
+      .from('user_wallets')
+      .select('naira_balance')
+      .eq('user_email', user.email)
+      .single()
+    if (walletData) setWallet({ balance: walletData.naira_balance })
+  }, [user])
+
+  useEffect(() => {
+    refreshProfile()
+  }, [refreshProfile])
 
   useEffect(() => {
     if (profile) {
