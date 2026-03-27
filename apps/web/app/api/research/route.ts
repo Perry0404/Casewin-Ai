@@ -1,37 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const OLLAMA_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:3b'
+const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333'
+
 export async function POST(req: NextRequest) {
-  const { QdrantClient } = await import('@qdrant/js-client-rest')
-  const { Ollama } = await import('ollama')
-  
-  const qdrant = new QdrantClient({ url: process.env.QDRANT_URL || 'http://localhost:6333' })
-  const ollama = new Ollama({ host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434' })
-  
   try {
     const { query, jurisdiction, limit = 10 } = await req.json()
 
-    // Generate embedding for the research query
-    const embeddingResponse = await ollama.embeddings({
-      model: 'llama3.2:3b',
-      prompt: query,
+    // Generate embedding for the research query via Ollama REST API
+    const embeddingRes = await fetch(`${OLLAMA_URL}/api/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: OLLAMA_MODEL, prompt: query }),
     })
 
-    // Search Qdrant for relevant cases
-    const searchResults = await qdrant.search('nigerian_cases', {
-      vector: embeddingResponse.embedding,
+    if (!embeddingRes.ok) {
+      throw new Error(`Ollama embeddings returned ${embeddingRes.status}: ${await embeddingRes.text()}`)
+    }
+
+    const embeddingData = await embeddingRes.json()
+
+    // Search Qdrant for relevant cases via REST API
+    const qdrantBody: any = {
+      vector: embeddingData.embedding,
       limit,
-      filter: jurisdiction ? {
-        must: [{ key: 'jurisdiction', match: { value: jurisdiction } }]
-      } : undefined,
+    }
+    if (jurisdiction) {
+      qdrantBody.filter = {
+        must: [{ key: 'jurisdiction', match: { value: jurisdiction } }],
+      }
+    }
+
+    const qdrantRes = await fetch(`${QDRANT_URL}/collections/nigerian_cases/points/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(qdrantBody),
     })
+
+    if (!qdrantRes.ok) {
+      throw new Error(`Qdrant search returned ${qdrantRes.status}: ${await qdrantRes.text()}`)
+    }
+
+    const qdrantData = await qdrantRes.json()
+    const searchResults = qdrantData.result || []
 
     const cases = searchResults.map((result: any) => ({
-      case_name: result.payload.case_name,
-      citation: result.payload.citation,
-      court: result.payload.court,
-      year: result.payload.year,
-      summary: result.payload.summary,
-      key_holdings: result.payload.key_holdings,
+      case_name: result.payload?.case_name,
+      citation: result.payload?.citation,
+      court: result.payload?.court,
+      year: result.payload?.year,
+      summary: result.payload?.summary,
+      key_holdings: result.payload?.key_holdings,
       relevance_score: result.score,
     }))
 

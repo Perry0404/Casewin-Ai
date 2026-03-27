@@ -1,20 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import axios from 'axios'
 
 const OLLAMA_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:3b'
 
 export async function POST(req: NextRequest) {
-  const { Ollama } = await import('ollama')
-  const { QdrantClient } = await import('@qdrant/js-client-rest')
-  
-  const ollama = new Ollama({ host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434' })
-  const qdrant = new QdrantClient({ url: process.env.QDRANT_URL || 'http://localhost:6333' })
-  
   try {
     const { caseFacts, legalIssues, jurisdiction } = await req.json()
 
-    // Mock similar cases (Qdrant not available)
+    // Similar cases (will come from Qdrant vector search when available)
     const similarCases = [
       {
         case_name: "Adeyemi v. The State",
@@ -30,7 +23,7 @@ export async function POST(req: NextRequest) {
       }
     ]
 
-    // Generate prediction using Llama 3.2
+    // Generate prediction using Ollama REST API
     const prompt = `You are a legal expert specializing in Nigerian case law.
 
 Case Facts: ${caseFacts}
@@ -47,15 +40,21 @@ Based on the similar cases and Nigerian legal precedents, predict:
 
 Provide a detailed analysis.`
 
-    const response = await ollama.generate({
-      model: 'llama3.2:3b',
-      prompt,
-      stream: false,
+    const ollamaRes = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false }),
     })
+
+    if (!ollamaRes.ok) {
+      throw new Error(`Ollama returned ${ollamaRes.status}: ${await ollamaRes.text()}`)
+    }
+
+    const data = await ollamaRes.json()
 
     return NextResponse.json({
       success: true,
-      prediction: response.response,
+      prediction: data.response,
       similarCases,
       metadata: {
         jurisdiction,

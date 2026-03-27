@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const OLLAMA_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:3b'
+
 export async function POST(req: NextRequest) {
-  const { Ollama } = await import('ollama')
-  const ollama = new Ollama({ host: process.env.OLLAMA_BASE_URL || 'http://localhost:11434' })
-  
   try {
     const { contractText } = await req.json()
 
@@ -21,19 +21,26 @@ ${contractText}
 
 Provide a detailed analysis with a risk score (0-100).`
 
-    const response = await ollama.generate({
-      model: 'llama3.2:3b',
-      prompt,
-      stream: false,
+    const ollamaRes = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false }),
     })
 
+    if (!ollamaRes.ok) {
+      throw new Error(`Ollama returned ${ollamaRes.status}: ${await ollamaRes.text()}`)
+    }
+
+    const data = await ollamaRes.json()
+    const responseText = data.response || ''
+
     // Extract risk score (simple regex parsing)
-    const riskScoreMatch = response.response.match(/risk score[:\s]+(\d+)/i)
+    const riskScoreMatch = responseText.match(/risk score[:\s]+(\d+)/i)
     const riskScore = riskScoreMatch ? parseInt(riskScoreMatch[1]) : 50
 
     return NextResponse.json({
       success: true,
-      analysis: response.response,
+      analysis: responseText,
       riskScore,
       riskLevel: riskScore < 30 ? 'Low' : riskScore < 70 ? 'Medium' : 'High',
       analyzedAt: new Date().toISOString(),
