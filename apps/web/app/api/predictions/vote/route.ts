@@ -1,17 +1,84 @@
-import { NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/lib/supabase'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
-export async function POST(request: Request) {
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+
+async function getAuthUser(request: NextRequest) {
+  const response = NextResponse.next()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) { return request.cookies.get(name)?.value },
+        set(name: string, value: string, options: CookieOptions) { response.cookies.set({ name, value, ...options }) },
+        remove(name: string, options: CookieOptions) { response.cookies.set({ name, value: '', ...options }) },
+      },
+    }
+  )
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { market_id, user_id, vote, amount } = body
+    const authUser = await getAuthUser(request)
+    if (!authUser?.email) {
+      return NextResponse.json({ error: 'You must be signed in to place a bet' }, { status: 401 })
+    }
+
+    const { market_id, vote, amount } = await request.json()
 
     if (!market_id || !vote || !amount) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get current market
-    const { data: market, error: marketError } = await getSupabaseClient()
+    if (!['yes', 'no'].includes(vote)) {
+      return NextResponse.json({ error: 'Vote must be "yes" or "no"' }, { status: 400 })
+    }
+
+    if (amount < 100) {
+      return NextResponse.json({ error: 'Minimum bet is ₦100' }, { status: 400 })
+    }
+
+    if (amount > 500000) {
+      return NextResponse.json({ error: 'Maximum bet is ₦500,000 per trade' }, { status: 400 })
+    }
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const email = authUser.email
+
+    // 1. Check wallet balance (stored in Naira)
+    const { data: wallet, error: walletError } = await supabase
+      .from('user_wallets')
+      .select('*')
+      .eq('user_email', email)
+      .single()
+
+    if (walletError || !wallet) {
+      return NextResponse.json({
+        error: 'No wallet found. Please deposit funds first.',
+        need_deposit: true
+      }, { status: 400 })
+    }
+
+    const currentBalance = wallet.naira_balance || 0
+    if (currentBalance < amount) {
+      return NextResponse.json({
+        error: `Insufficient balance. You have ₦${currentBalance.toLocaleString()} but need ₦${amount.toLocaleString()}. Please deposit more funds.`,
+        balance: currentBalance,
+        need_deposit: true
+      }, { status: 400 })
+    }
+
+    // 2. Get & validate market
+    const { data: market, error: marketError } = await supabase
       .from('prediction_markets')
       .select('*')
       .eq('id', market_id)
@@ -22,19 +89,38 @@ export async function POST(request: Request) {
     }
 
     if (market.status !== 'open') {
-      return NextResponse.json({ error: 'Market is closed' }, { status: 400 })
+      return NextResponse.json({ error: 'This market is closed for trading' }, { status: 400 })
     }
 
-    // Update outcome_options with new vote
-    const currentOptions = market.outcome_options || { yes_votes: 0, no_votes: 0 }
+    // Check deadline
+    if (market.closes_at && new Date(market.closes_at) < new Date()) {
+      return NextResponse.json({ error: 'This market has expired' }, { status: 400 })
+    }
+
+    // 3. Deduct from wallet
+    const newBalance = currentBalance - amount
+    const { error: deductError } = await supabase
+      .from('user_wallets')
+      .update({
+        naira_balance: newBalance,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_email', email)
+
+    if (deductError) {
+      console.error('Wallet deduct error:', deductError)
+      return NextResponse.json({ error: 'Failed to process payment from wallet' }, { status: 500 })
+    }
+
+    // 4. Update market pool & shares (CPMM model)
+    const opts = market.outcome_options || { yes_shares: 20000, no_shares: 20000 }
     const updatedOptions = {
-      ...currentOptions,
-      yes_votes: vote === 'yes' ? (currentOptions.yes_votes || 0) + 1 : currentOptions.yes_votes || 0,
-      no_votes: vote === 'no' ? (currentOptions.no_votes || 0) + 1 : currentOptions.no_votes || 0,
+      ...opts,
+      yes_shares: vote === 'yes' ? (opts.yes_shares || 20000) + amount : (opts.yes_shares || 20000),
+      no_shares: vote === 'no' ? (opts.no_shares || 20000) + amount : (opts.no_shares || 20000),
     }
 
-    // Update market
-    const { error: updateError } = await getSupabaseClient()
+    const { error: updateError } = await supabase
       .from('prediction_markets')
       .update({
         outcome_options: updatedOptions,
@@ -43,33 +129,53 @@ export async function POST(request: Request) {
       .eq('id', market_id)
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 400 })
+      // CRITICAL: Refund the user on market update failure
+      console.error('Market update error, refunding:', updateError)
+      await supabase.from('user_wallets')
+        .update({ naira_balance: currentBalance, updated_at: new Date().toISOString() })
+        .eq('user_email', email)
+      return NextResponse.json({ error: 'Failed to place bet. Your funds have been refunded.' }, { status: 500 })
     }
 
-    // Create bet record if user_id provided
-    if (user_id) {
-      const potentialPayout = amount * 2 // Simple 2x payout for now
+    // 5. Record bet in prediction_bets table
+    const totalSharesAfter = (updatedOptions.yes_shares || 20000) + (updatedOptions.no_shares || 20000)
+    const winPrice = vote === 'yes'
+      ? (updatedOptions.no_shares || 20000) / totalSharesAfter
+      : (updatedOptions.yes_shares || 20000) / totalSharesAfter
+    const potentialPayout = Math.floor(amount / winPrice)
 
-      await getSupabaseClient()
-        .from('prediction_bets')
-        .insert([{
-          user_id,
-          market_id,
-          selected_outcome: vote,
-          amount,
-          potential_payout: potentialPayout,
-          status: 'active'
-        }])
-    }
+    await supabase.from('prediction_bets').insert([{
+      user_id: authUser.id,
+      user_email: email,
+      market_id,
+      selected_outcome: vote,
+      amount,
+      potential_payout: potentialPayout,
+      status: 'active'
+    }]).then(() => {}).catch((err) => {
+      console.warn('Failed to record bet (non-critical):', err)
+    })
 
-    return NextResponse.json({ 
-      message: 'Vote placed successfully!',
-      success: true 
+    // 6. Record wallet transaction
+    await supabase.from('wallet_transactions').insert({
+      user_email: email,
+      amount: -amount,
+      transaction_type: 'bet',
+      related_id: market_id,
+      balance_after: newBalance,
+      notes: `Bet ₦${amount.toLocaleString()} on ${vote.toUpperCase()} — ${(market.title || '').substring(0, 60)}`
+    }).then(() => {}).catch((err) => {
+      console.warn('Failed to record wallet transaction (non-critical):', err)
+    })
+
+    return NextResponse.json({
+      message: `₦${amount.toLocaleString()} placed on ${vote.toUpperCase()}! Potential payout: ₦${potentialPayout.toLocaleString()}`,
+      success: true,
+      new_balance: newBalance,
+      potential_payout: potentialPayout
     })
   } catch (error) {
-    console.error('Error:', error)
-    return NextResponse.json({ error: 'Failed to place vote' }, { status: 500 })
+    console.error('Vote error:', error)
+    return NextResponse.json({ error: 'Failed to place bet. Please try again.' }, { status: 500 })
   }
 }
-
-
