@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     const { data: lawyerProfiles, error: lawyerError } = await getSupabaseClient()
       .from('lawyer_profiles')
       .select('*')
+      .eq('is_verified', true)
       .order('rating', { ascending: false })
 
     if (lawyerError) {

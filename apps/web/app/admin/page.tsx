@@ -47,6 +47,19 @@ interface Transaction {
   created_at: string
 }
 
+interface Lawyer {
+  id: string
+  full_name: string
+  email: string
+  location: string
+  bar_number: string
+  specializations: string[]
+  is_verified: boolean
+  years_of_experience: number
+  hourly_rate: number
+  created_at: string
+}
+
 /* --- Page --- */
 export default function AdminDashboard() {
   const { user } = useAuth()
@@ -54,9 +67,11 @@ export default function AdminDashboard() {
   const [markets, setMarkets] = useState<Market[]>([])
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([])
   const [recentTx, setRecentTx] = useState<Transaction[]>([])
+  const [lawyers, setLawyers] = useState<Lawyer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'overview' | 'markets' | 'users' | 'transactions'>('overview')
+  const [tab, setTab] = useState<'overview' | 'markets' | 'users' | 'transactions' | 'lawyers'>('overview')
+  const [verifyingId, setVerifyingId] = useState('')
 
   // Resolve market state
   const [resolveId, setResolveId] = useState('')
@@ -89,6 +104,11 @@ export default function AdminDashboard() {
       setMarkets(data.markets || [])
       setRecentUsers(data.recentUsers || [])
       setRecentTx(data.recentTransactions || [])
+      // Fetch lawyers
+      try {
+        const lRes = await fetch('/api/admin/lawyers')
+        if (lRes.ok) { const lData = await lRes.json(); setLawyers(lData.lawyers || []) }
+      } catch { /* ignore */ }
     } catch {
       setError('Failed to load admin data')
     } finally {
@@ -205,7 +225,7 @@ export default function AdminDashboard() {
           <>
             {/* Tab Nav */}
             <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-              {(['overview', 'markets', 'users', 'transactions'] as const).map(t => (
+              {(['overview', 'markets', 'users', 'transactions', 'lawyers'] as const).map(t => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
@@ -453,6 +473,83 @@ export default function AdminDashboard() {
                           <td className="p-3 text-right text-gray-500 text-xs">{tx.created_at ? new Date(tx.created_at).toLocaleString() : '—'}</td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            {/* ======= LAWYERS TAB ======= */}
+            {tab === 'lawyers' && (
+              <div className="space-y-6">
+                <h2 className="text-lg font-bold text-white">👨‍⚖️ Registered Lawyers ({lawyers.length})</h2>
+                <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-gray-400">
+                        <th className="text-left p-3">Name</th>
+                        <th className="text-left p-3">Email</th>
+                        <th className="text-left p-3">Location</th>
+                        <th className="text-left p-3">Bar #</th>
+                        <th className="text-left p-3">Specializations</th>
+                        <th className="text-right p-3">Rate</th>
+                        <th className="text-right p-3">Exp</th>
+                        <th className="text-center p-3">Status</th>
+                        <th className="text-center p-3">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lawyers.map(l => (
+                        <tr key={l.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="p-3 text-white font-medium">{l.full_name}</td>
+                          <td className="p-3 text-gray-400 text-xs">{l.email || '—'}</td>
+                          <td className="p-3 text-gray-400 text-xs">{l.location || '—'}</td>
+                          <td className="p-3 text-gray-400 text-xs">{l.bar_number}</td>
+                          <td className="p-3 text-xs">
+                            <div className="flex flex-wrap gap-1">
+                              {(l.specializations || []).slice(0, 3).map((s, i) => (
+                                <span key={i} className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded text-[10px]">{s}</span>
+                              ))}
+                              {(l.specializations || []).length > 3 && <span className="text-gray-500">+{l.specializations.length - 3}</span>}
+                            </div>
+                          </td>
+                          <td className="p-3 text-right text-green-400">₦{(l.hourly_rate || 0).toLocaleString()}/hr</td>
+                          <td className="p-3 text-right text-gray-400">{l.years_of_experience}yr</td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                              l.is_verified ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                            }`}>{l.is_verified ? 'Verified' : 'Pending'}</span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <button
+                              disabled={verifyingId === l.id}
+                              onClick={async () => {
+                                setVerifyingId(l.id)
+                                try {
+                                  const res = await fetch('/api/admin/lawyers/verify', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ lawyer_id: l.id, verified: !l.is_verified })
+                                  })
+                                  if (res.ok) {
+                                    setLawyers(prev => prev.map(x => x.id === l.id ? { ...x, is_verified: !x.is_verified } : x))
+                                  }
+                                } catch { /* ignore */ }
+                                setVerifyingId('')
+                              }}
+                              className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
+                                l.is_verified
+                                  ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                  : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                              }`}
+                            >
+                              {verifyingId === l.id ? '...' : l.is_verified ? 'Revoke' : 'Verify'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {lawyers.length === 0 && (
+                        <tr><td colSpan={9} className="p-8 text-center text-gray-500">No lawyer registrations yet</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
