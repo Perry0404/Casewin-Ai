@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import MobileNav from '@/components/MobileNav';
+import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 interface Lawyer {
   id: string;
@@ -23,6 +25,8 @@ const CACHE_EXPIRY_KEY = 'casewin_lawyers_cache_expiry';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 export default function MarketplacePage() {
+  const { user } = useAuth();
+  const [userType, setUserType] = useState<string | null>(null);
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [filteredLawyers, setFilteredLawyers] = useState<Lawyer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +112,14 @@ export default function MarketplacePage() {
   ];
 
   // Check online status
+  useEffect(() => {
+    if (user) {
+      const supabase = createClient();
+      supabase.from('profiles').select('user_type').eq('id', user.id).single()
+        .then(({ data }) => { if (data) setUserType(data.user_type) });
+    }
+  }, [user]);
+
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -491,55 +503,105 @@ export default function MarketplacePage() {
           </main>
         </div>
 
-        {/* AI Automation Tools Section */}
+        {/* Lawyer-Exclusive Tools Section */}
         <div className="mt-12 mb-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">🤖 AI Legal Automation</h2>
-            <p className="text-gray-600">Automate your legal workflow with AI-powered tools</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">⚖️ Law Firm Automation Tools</h2>
+            <p className="text-gray-600">Professional tools exclusively for registered lawyers and law firms</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link href="/tools/draft" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📝</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Auto Document Drafting</h3>
-              <p className="text-sm text-gray-600 mb-3">Generate contracts, letters of demand, pleadings, and NDAs using AI trained on Nigerian legal standards.</p>
-              <span className="text-green-600 text-sm font-medium">Generate Now →</span>
-            </Link>
 
-            <Link href="/tools/analyze" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🔍</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Smart Contract Analysis</h3>
-              <p className="text-sm text-gray-600 mb-3">Upload any contract and AI identifies risks, unfair clauses, missing terms, and compliance issues automatically.</p>
-              <span className="text-green-600 text-sm font-medium">Analyze Now →</span>
-            </Link>
+          {userType === 'lawyer' || userType === 'law_firm' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Link href="/marketplace/case-intake" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📋</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Case Intake</h3>
+                <p className="text-sm text-gray-600 mb-3">Describe your case, get instant AI analysis with complexity assessment, risk scoring, and auto-generated documents.</p>
+                <span className="text-green-600 text-sm font-medium">Start Intake →</span>
+              </Link>
 
-            <Link href="/tools/research" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📚</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Legal Research</h3>
-              <p className="text-sm text-gray-600 mb-3">Search 10,000+ Nigerian judgments instantly. AI finds relevant cases, statutes, and precedents for your matter.</p>
-              <span className="text-green-600 text-sm font-medium">Research Now →</span>
-            </Link>
+              <Link href="/tools/billing" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">💰</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Time & Billing</h3>
+                <p className="text-sm text-gray-600 mb-3">Track billable hours, manage client rates, generate professional invoices, and monitor firm revenue in real-time.</p>
+                <span className="text-green-600 text-sm font-medium">Track Hours →</span>
+              </Link>
 
-            <Link href="/tools/predict" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🎯</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Case Outcome Prediction</h3>
-              <p className="text-sm text-gray-600 mb-3">AI analyzes your case details against historical outcomes to predict likely results with confidence scores.</p>
-              <span className="text-green-600 text-sm font-medium">Predict Now →</span>
-            </Link>
+              <Link href="/tools/cases" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📁</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Case Manager</h3>
+                <p className="text-sm text-gray-600 mb-3">Track active cases with suit numbers, court dates, parties, and deadlines. Never miss a filing date again.</p>
+                <span className="text-green-600 text-sm font-medium">Manage Cases →</span>
+              </Link>
 
-            <Link href="/tools/compliance" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">✅</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Compliance Checker</h3>
-              <p className="text-sm text-gray-600 mb-3">Check any document or business process against Nigerian regulations, CAMA, FIRS, and industry standards.</p>
-              <span className="text-green-600 text-sm font-medium">Check Now →</span>
-            </Link>
+              <Link href="/tools/deadlines" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📅</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Deadline Calculator</h3>
+                <p className="text-sm text-gray-600 mb-3">AI calculates statutory deadlines, limitation periods, and court filing dates under Nigerian law automatically.</p>
+                <span className="text-green-600 text-sm font-medium">Calculate →</span>
+              </Link>
 
-            <Link href="/predictions" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📊</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Prediction Markets</h3>
-              <p className="text-sm text-gray-600 mb-3">Bet on sports, crypto, politics, entertainment & legal outcomes. Deposit via bank transfer or Base (ETH/USDC).</p>
-              <span className="text-green-600 text-sm font-medium">Trade Now →</span>
-            </Link>
-          </div>
+              <Link href="/tools/filing" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📝</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Court Filing Prep</h3>
+                <p className="text-sm text-gray-600 mb-3">Get filing checklists, formatting rules, fee schedules, and procedural requirements for all Nigerian courts.</p>
+                <span className="text-green-600 text-sm font-medium">Prepare Filing →</span>
+              </Link>
+
+              <Link href="/tools/hearing-prep" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🎯</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Hearing Prep Assistant</h3>
+                <p className="text-sm text-gray-600 mb-3">AI generates exam-in-chief questions, cross-examination strategies, objection scripts, and closing arguments.</p>
+                <span className="text-green-600 text-sm font-medium">Prepare Now →</span>
+              </Link>
+
+              <Link href="/tools/citations" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📚</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Citation Generator</h3>
+                <p className="text-sm text-gray-600 mb-3">Format Nigerian legal citations in NWLR, LPELR, SC standards. Batch format multiple citations instantly.</p>
+                <span className="text-green-600 text-sm font-medium">Format Citations →</span>
+              </Link>
+
+              <Link href="/tools/clauses" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📑</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Clause Library</h3>
+                <p className="text-sm text-gray-600 mb-3">Save, search, and reuse Nigerian legal clauses. AI generates custom clauses for contracts and agreements.</p>
+                <span className="text-green-600 text-sm font-medium">Browse Clauses →</span>
+              </Link>
+
+              <Link href="/tools/fees" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">💸</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Legal Fee Estimator</h3>
+                <p className="text-sm text-gray-600 mb-3">AI estimates legal fees by matter type, court level, complexity, and jurisdiction. Includes court fees and VAT.</p>
+                <span className="text-green-600 text-sm font-medium">Estimate Fees →</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center max-w-lg mx-auto">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🔒</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Lawyer & Law Firm Tools</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                9 professional tools including Case Manager, Time & Billing, Hearing Prep, Court Filing, and more are exclusively available to registered legal practitioners.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {!user ? (
+                  <>
+                    <Link href="/auth/login" className="px-6 py-3 bg-green-700 text-white font-semibold rounded-xl hover:bg-green-800 transition-colors text-center">
+                      Sign In
+                    </Link>
+                    <Link href="/marketplace/register" className="px-6 py-3 border-2 border-green-700 text-green-700 font-semibold rounded-xl hover:bg-green-50 transition-colors text-center">
+                      Register as Lawyer
+                    </Link>
+                  </>
+                ) : (
+                  <Link href="/marketplace/register" className="px-6 py-3 bg-green-700 text-white font-semibold rounded-xl hover:bg-green-800 transition-colors text-center">
+                    Register as Lawyer / Law Firm
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
