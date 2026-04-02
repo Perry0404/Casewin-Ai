@@ -108,6 +108,14 @@ export default function PredictionMarketPage() {
   const [cryptoWithdrawAddr, setCryptoWithdrawAddr] = useState('')
   const [withdrawToken, setWithdrawToken] = useState<'eth' | 'usdc'>('usdc')
 
+  // Create market modal
+  const [showCreateMarket, setShowCreateMarket] = useState(false)
+  const [cmTitle, setCmTitle] = useState('')
+  const [cmDesc, setCmDesc] = useState('')
+  const [cmCategory, setCmCategory] = useState('Sports')
+  const [cmDeadline, setCmDeadline] = useState('')
+  const [cmSubmitting, setCmSubmitting] = useState(false)
+
   /* --- Data Fetching --- */
   const fetchMarkets = useCallback(async () => {
     try {
@@ -302,6 +310,39 @@ export default function PredictionMarketPage() {
     }
   }
 
+  /* --- Create Market --- */
+  const handleCreateMarket = async () => {
+    if (!cmTitle || cmTitle.length < 10) {
+      notify({ type: 'error', title: 'Error', message: 'Title must be at least 10 characters' })
+      return
+    }
+    if (!cmDeadline) {
+      notify({ type: 'error', title: 'Error', message: 'Pick a deadline' })
+      return
+    }
+    setCmSubmitting(true)
+    try {
+      const res = await fetch('/api/predictions/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: cmTitle, description: cmDesc, category: cmCategory, deadline: cmDeadline })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        notify({ type: 'success', title: 'Market Created!', message: 'Your market is now live' })
+        setShowCreateMarket(false)
+        setCmTitle(''); setCmDesc(''); setCmDeadline('')
+        fetchMarkets()
+      } else {
+        notify({ type: 'error', title: 'Error', message: data.error })
+      }
+    } catch {
+      notify({ type: 'error', title: 'Error', message: 'Failed to create market' })
+    } finally {
+      setCmSubmitting(false)
+    }
+  }
+
   /* --- Helpers --- */
   const getTimeRemaining = (deadline: string) => {
     const diff = new Date(deadline).getTime() - Date.now()
@@ -397,6 +438,13 @@ export default function PredictionMarketPage() {
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20V4m0 16l-4-4m4 4l4-4" /></svg>
                 Withdraw
+              </button>
+              <button
+                onClick={() => setShowCreateMarket(true)}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Create Market
               </button>
             </div>
           </div>
@@ -916,6 +964,79 @@ export default function PredictionMarketPage() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Market Modal */}
+        {showCreateMarket && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="bg-gray-900 border border-purple-500/30 rounded-2xl w-full max-w-lg p-6 space-y-5 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span className="text-purple-400">➕</span> Create a Market
+                </h3>
+                <button onClick={() => setShowCreateMarket(false)} className="text-gray-400 hover:text-white text-xl">✕</button>
+              </div>
+              <p className="text-xs text-gray-400">Create a prediction market and let others bet on it. Markets start with equal YES/NO pricing.</p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Question / Title *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Will Bitcoin hit $100k before July 2025?"
+                  value={cmTitle}
+                  onChange={e => setCmTitle(e.target.value)}
+                  maxLength={200}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                />
+                <div className="text-xs text-gray-500 mt-1 text-right">{cmTitle.length}/200</div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Description (optional)</label>
+                <textarea
+                  placeholder="Additional context or resolution criteria..."
+                  value={cmDesc}
+                  onChange={e => setCmDesc(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Category *</label>
+                  <select
+                    value={cmCategory}
+                    onChange={e => setCmCategory(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-purple-500 focus:outline-none appearance-none"
+                  >
+                    {CATEGORIES.map(c => <option key={c} value={c} className="bg-gray-900">{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Deadline *</label>
+                  <input
+                    type="datetime-local"
+                    value={cmDeadline}
+                    onChange={e => setCmDeadline(e.target.value)}
+                    min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-purple-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleCreateMarket}
+                disabled={cmSubmitting || cmTitle.length < 10 || !cmDeadline}
+                className="w-full py-3 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                {cmSubmitting ? 'Creating...' : '🚀 Launch Market'}
+              </button>
+
+              <div className="text-xs text-gray-500 text-center">Markets are reviewed and may be removed if they violate community guidelines. Max 5 per day.</div>
             </div>
           </div>
         )}
