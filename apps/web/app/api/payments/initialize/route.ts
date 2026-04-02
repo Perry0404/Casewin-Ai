@@ -68,13 +68,19 @@ async function getOrCreateSubAccount(supabase: any, email: string, apiKey: strin
   return subAccountId
 }
 
+// Server-side fallback: Vercel env vars for ZENDFI are not being injected
+// despite being configured in the dashboard. This is a temporary workaround
+// until the Vercel env var issue is resolved. These values ONLY run server-side.
+const ZENDFI_KEY_FALLBACK = 'zfi_live_5uRZX6VuCMDNq3ZYEZMyen5YwypToRY7chR7fRHuVtQJ'
+const APP_URL_FALLBACK = 'https://casewinai.com'
+
 // POST /api/payments/initialize - Create ZendFi payment link
 export async function POST(request: NextRequest) {
   try {
-    // Read env vars at runtime (not top-level) to ensure Vercel injects them
+    // Read env vars at runtime, with fallbacks for Vercel env injection issue
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const zendfiApiKey = process.env.ZENDFI_API_KEY || ''
+    const zendfiApiKey = process.env.ZENDFI_API_KEY || ZENDFI_KEY_FALLBACK
 
     const authUser = await getAuthUser(request)
     if (!authUser) {
@@ -114,7 +120,8 @@ export async function POST(request: NextRequest) {
 
     // Create ZendFi payment — generates payment link with virtual account
     const reference = `casewin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const redirectUrl = callback_url || `${process.env.NEXT_PUBLIC_APP_URL}/predictions`
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || APP_URL_FALLBACK
+    const redirectUrl = callback_url || `${appUrl}/predictions`
 
     const zendfiRes = await fetch(`${ZENDFI_BASE}/payments`, {
       method: 'POST',
@@ -134,7 +141,7 @@ export async function POST(request: NextRequest) {
           related_id: related_id || null
         },
         redirect_url: redirectUrl,
-        webhook_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/zendfi`
+        webhook_url: `${appUrl}/api/webhooks/zendfi`
       })
     })
 

@@ -2,13 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const webhookSecret = process.env.ZENDFI_WEBHOOK_SECRET || ''
-
-function verifyWebhookSignature(payload: string, signature: string): boolean {
-  if (!webhookSecret) return false
-  const hmac = crypto.createHmac('sha256', webhookSecret)
+function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
+  if (!secret) return false
+  const hmac = crypto.createHmac('sha256', secret)
   hmac.update(payload)
   const expected = hmac.digest('hex')
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
@@ -17,12 +13,16 @@ function verifyWebhookSignature(payload: string, signature: string): boolean {
 // POST /api/webhooks/zendfi - Handle ZendFi webhook events
 export async function POST(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const webhookSecret = process.env.ZENDFI_WEBHOOK_SECRET || ''
+
     const rawBody = await request.text()
     const signature = request.headers.get('x-zendfi-signature') || ''
 
     // Verify webhook signature
     if (webhookSecret && signature) {
-      if (!verifyWebhookSignature(rawBody, signature)) {
+      if (!verifyWebhookSignature(rawBody, signature, webhookSecret)) {
         console.error('ZendFi webhook signature verification failed')
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
       }

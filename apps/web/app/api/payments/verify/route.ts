@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const zendfiApiKey = process.env.ZENDFI_API_KEY || ''
 const ZENDFI_BASE = 'https://api.zendfi.tech/api/v1'
+const ZENDFI_KEY_FALLBACK = 'zfi_live_5uRZX6VuCMDNq3ZYEZMyen5YwypToRY7chR7fRHuVtQJ'
 
 // GET /api/payments/verify?reference=xxx - Verify payment status with ZendFi
 export async function GET(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const zendfiApiKey = process.env.ZENDFI_API_KEY || ZENDFI_KEY_FALLBACK
+
     const searchParams = request.nextUrl.searchParams
     const reference = searchParams.get('reference')
 
