@@ -77,6 +77,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Calculate 1% market fee (like Bayse Markets)
+    const marketFee = Math.round(amount * 0.01)
+    const totalDeduction = amount + marketFee
+
     // 2. Get & validate market
     const { data: market, error: marketError } = await supabase
       .from('prediction_markets')
@@ -97,8 +101,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'This market has expired' }, { status: 400 })
     }
 
-    // 3. Deduct from wallet
-    const newBalance = currentBalance - amount
+    // 3. Deduct from wallet (bet amount + 1% fee)
+    if (currentBalance < totalDeduction) {
+      return NextResponse.json({
+        error: `Insufficient balance for bet + 1% fee. You need ₦${totalDeduction.toLocaleString()} (₦${amount.toLocaleString()} bet + ₦${marketFee.toLocaleString()} fee).`,
+        balance: currentBalance,
+        need_deposit: true
+      }, { status: 400 })
+    }
+
+    const newBalance = currentBalance - totalDeduction
     const { error: deductError } = await supabase
       .from('user_wallets')
       .update({
@@ -166,8 +178,29 @@ export async function POST(request: NextRequest) {
     })
     if (txErr) console.warn('Failed to record wallet transaction (non-critical):', txErr.message)
 
+    // 7. Record 1% market fee
+    if (marketFee > 0) {
+      await supabase.from('platform_fees').insert({
+        user_email: email,
+        amount: marketFee,
+        fee_type: 'market',
+        related_id: market_id,
+        notes: `1% market fee on ₦${amount.toLocaleString()} bet — ${(market.title || '').substring(0, 40)}`
+      })
+
+      // Also record fee as wallet transaction for audit trail
+      await supabase.from('wallet_transactions').insert({
+        user_email: email,
+        amount: -marketFee,
+        transaction_type: 'fee',
+        related_id: market_id,
+        balance_after: newBalance,
+        notes: `1% market fee on bet`
+      })
+    }
+
     return NextResponse.json({
-      message: `₦${amount.toLocaleString()} placed on ${vote.toUpperCase()}! Potential payout: ₦${potentialPayout.toLocaleString()}`,
+      message: `₦${amount.toLocaleString()} placed on ${vote.toUpperCase()}! Fee: ₦${marketFee.toLocaleString()}. Potential payout: ₦${potentialPayout.toLocaleString()}`,
       success: true,
       new_balance: newBalance,
       potential_payout: potentialPayout

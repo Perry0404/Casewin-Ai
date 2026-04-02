@@ -82,7 +82,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">7. Payment Terms</h2>
             <p>
-              Payments on CaseWin AI are processed through Korapay and other authorized payment providers. By making payments through our platform, you agree to:
+              Payments on CaseWin AI are processed through ZendFi and other authorized payment providers. By making payments through our platform, you agree to:
             </p>
             <ul className="list-disc list-inside mt-3 space-y-2 ml-4">
               <li>Pay all fees and charges incurred through your account</li>

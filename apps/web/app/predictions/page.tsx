@@ -672,7 +672,7 @@ export default function PredictionMarketPage() {
                 <button
                   onClick={() => setDepositTab('naira')}
                   className={`flex-1 py-3 text-sm font-semibold transition-all ${depositTab === 'naira' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-500 hover:text-gray-300'}`}
-                >🏦 Naira (Korapay)</button>
+                >🏦 Bank Transfer (Naira)</button>
                 <button
                   onClick={() => setDepositTab('crypto')}
                   className={`flex-1 py-3 text-sm font-semibold transition-all ${depositTab === 'crypto' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-500 hover:text-gray-300'}`}
@@ -682,7 +682,7 @@ export default function PredictionMarketPage() {
               <div className="p-6">
                 {depositTab === 'naira' ? (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-400">Deposit Naira via card, bank transfer, or USSD using Korapay secure checkout.</p>
+                    <p className="text-sm text-gray-400">Deposit Naira via bank transfer using ZendFi secure checkout.</p>
                     <div>
                       <label className="text-sm text-gray-300 mb-2 block">Amount (N)</label>
                       <div className="flex gap-2 mb-3">
@@ -709,11 +709,11 @@ export default function PredictionMarketPage() {
                       disabled={depositAmount < 100}
                       className="w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-lg hover:shadow-lg hover:shadow-green-500/30 transition-all disabled:opacity-40"
                     >
-                      Pay N{depositAmount.toLocaleString()} with Korapay
+                      Deposit ?{depositAmount.toLocaleString()}
                     </button>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                      Secured by Korapay • Card, Bank Transfer, USSD
+                      Secured by ZendFi • Bank Transfer
                     </div>
                   </div>
                 ) : (
@@ -928,7 +928,7 @@ export default function PredictionMarketPage() {
             <div className="text-center">
               <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">💰</div>
               <h3 className="text-lg font-bold text-white mb-2">1. Deposit</h3>
-              <p className="text-gray-400 text-sm">Fund with Naira via Korapay, or send ETH/USDC to your auto-generated Base wallet</p>
+              <p className="text-gray-400 text-sm">Fund with Naira via ZendFi, or send ETH/USDC to your auto-generated Base wallet</p>
             </div>
             <div className="text-center">
               <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🤖</div>

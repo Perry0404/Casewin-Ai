@@ -340,7 +340,7 @@ export default function LawyerProfilePage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-500 mt-0.5">✓</span>
-                    <span>Secure Korapay payments</span>
+                    <span>Secure payments via ZendFi</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-500 mt-0.5">✓</span>

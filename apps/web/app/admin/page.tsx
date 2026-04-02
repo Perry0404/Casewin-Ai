@@ -1,426 +1,486 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 
-interface RevenueData {
-  period: number;
-  revenue: {
-    total: number;
-    tradeFees: number;
-    withdrawalFees: number;
-    byDay: Record<string, number>;
-    recentEvents: any[];
-  };
-  transactions: {
-    summary: {
-      totalDeposits: number;
-      totalTradeBuys: number;
-      totalTradeSells: number;
-      totalPayouts: number;
-      totalFees: number;
-      count: number;
-    };
-    recent: any[];
-  };
-  users: {
-    total: number;
-    activeTraders: number;
-    totalUsersBalance: number;
-    totalDeposited: number;
-    totalWithdrawn: number;
-  };
-  markets: {
-    total: number;
-    open: number;
-    totalPoolValue: number;
-  };
-  topTraders: any[];
+/* --- Types --- */
+interface Stats {
+  totalUsers: number
+  totalDeposits: number
+  totalWithdrawals: number
+  totalWalletBalance: number
+  totalBetVolume: number
+  totalMarketPool: number
+  activeMarkets: number
+  totalMarkets: number
+  totalBets: number
+  totalPlatformFees: number
+  marketFees: number
+  depositFees: number
+  successPayments: number
+  pendingPayments: number
+  netRevenue: number
 }
 
-function formatMoney(amount: number) {
-  return `₦${Math.abs(amount).toLocaleString()}`;
+interface Market {
+  id: string
+  title: string
+  total_pool: number
+  status: string
+  created_at: string
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleString('en-NG', {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
+interface RecentUser {
+  user_email: string
+  naira_balance: number
+  total_deposits: number
+  created_at: string
 }
 
+interface Transaction {
+  user_email: string
+  amount: number
+  transaction_type: string
+  balance_after: number
+  notes: string
+  created_at: string
+}
+
+/* --- Page --- */
 export default function AdminDashboard() {
-  const [data, setData] = useState<RevenueData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [period, setPeriod] = useState(30);
-  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'traders'>('overview');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [addingAdmin, setAddingAdmin] = useState(false);
+  const { user } = useAuth()
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [markets, setMarkets] = useState<Market[]>([])
+  const [recentUsers, setRecentUsers] = useState<RecentUser[]>([])
+  const [recentTx, setRecentTx] = useState<Transaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [tab, setTab] = useState<'overview' | 'markets' | 'users' | 'transactions'>('overview')
 
-  const fetchData = useCallback(async () => {
+  // Resolve market state
+  const [resolveId, setResolveId] = useState('')
+  const [resolveOutcome, setResolveOutcome] = useState<'yes' | 'no'>('yes')
+  const [resolving, setResolving] = useState(false)
+  const [resolveMsg, setResolveMsg] = useState('')
+
+  // Create market state
+  const [showCreate, setShowCreate] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [newDesc, setNewDesc] = useState('')
+  const [newCategory, setNewCategory] = useState('Sports')
+  const [newDeadline, setNewDeadline] = useState('')
+  const [creating, setCreating] = useState(false)
+
+  const fetchStats = useCallback(async () => {
     try {
-      setIsLoading(true);
-      const res = await fetch(`/api/admin/revenue?period=${period}`);
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json.error || 'Access denied');
-        return;
+      setLoading(true)
+      const res = await fetch('/api/admin/stats')
+      if (res.status === 403) {
+        setError('Access denied. You are not an admin.')
+        return
       }
-      setData(json);
-      setError('');
-    } catch (err) {
-      setError('Failed to load dashboard data');
+      const data = await res.json()
+      if (data.error) {
+        setError(data.error)
+        return
+      }
+      setStats(data.stats)
+      setMarkets(data.markets || [])
+      setRecentUsers(data.recentUsers || [])
+      setRecentTx(data.recentTransactions || [])
+    } catch {
+      setError('Failed to load admin data')
     } finally {
-      setIsLoading(false);
+      setLoading(false)
     }
-  }, [period]);
+  }, [])
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchStats() }, [fetchStats])
 
-  const handleAddAdmin = async () => {
-    if (!adminEmail) return;
-    setAddingAdmin(true);
+  const handleResolve = async () => {
+    if (!resolveId) return
+    setResolving(true)
+    setResolveMsg('')
     try {
-      const res = await fetch('/api/admin/revenue', {
+      const res = await fetch('/api/admin/stats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add_admin', email: adminEmail })
-      });
-      const json = await res.json();
-      alert(res.ok ? json.message : json.error);
-      if (res.ok) setAdminEmail('');
-    } catch { alert('Failed'); } finally { setAddingAdmin(false); }
-  };
+        body: JSON.stringify({ action: 'resolve_market', market_id: resolveId, outcome: resolveOutcome })
+      })
+      const data = await res.json()
+      setResolveMsg(data.message || data.error || 'Done')
+      if (data.success) {
+        fetchStats()
+        setResolveId('')
+      }
+    } catch {
+      setResolveMsg('Failed to resolve market')
+    } finally {
+      setResolving(false)
+    }
+  }
+
+  const handleCreateMarket = async () => {
+    if (!newTitle || !newDeadline) return
+    setCreating(true)
+    try {
+      const res = await fetch('/api/admin/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_market',
+          title: newTitle,
+          description: newDesc,
+          category: newCategory,
+          deadline: newDeadline
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setShowCreate(false)
+        setNewTitle('')
+        setNewDesc('')
+        setNewDeadline('')
+        fetchStats()
+      }
+    } catch {
+      // silent
+    } finally {
+      setCreating(false)
+    }
+  }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900/10 to-slate-900 flex items-center justify-center">
-        <div className="bg-slate-800/50 rounded-2xl p-8 border border-red-500/30 text-center max-w-md">
-          <p className="text-4xl mb-4">🔒</p>
-          <h1 className="text-xl font-bold text-red-400 mb-2">Access Denied</h1>
-          <p className="text-slate-400 text-sm mb-4">{error}</p>
-          <Link href="/predictions" className="text-green-400 hover:text-green-300 text-sm">Back to Markets</Link>
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 flex items-center justify-center">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 max-w-md text-center">
+          <div className="text-4xl mb-4">🚫</div>
+          <h2 className="text-xl font-bold text-white mb-2">Admin Access Required</h2>
+          <p className="text-red-400 mb-4">{error}</p>
+          <Link href="/predictions" className="text-green-400 hover:text-green-300 underline text-sm">
+            Back to Markets
+          </Link>
         </div>
-      </div>
-    );
+      </main>
+    )
   }
 
-  if (isLoading || !data) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/10 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-slate-400">Loading admin dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  const N = (n: number) => `₦${n.toLocaleString()}`
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900/10 to-slate-900">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900">
+      {/* BG */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-green-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-slate-700/50 backdrop-blur-xl bg-slate-900/80 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+      <header className="relative bg-black/30 backdrop-blur-xl border-b border-white/10">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="text-3xl">⚖️</div>
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                Admin Dashboard
-              </h1>
-              <p className="text-xs text-slate-400">Revenue &amp; Transaction Monitoring</p>
+              <h1 className="text-2xl font-bold text-white">CaseWin Admin</h1>
+              <p className="text-xs text-green-300">Dashboard</p>
             </div>
-            <div className="flex items-center gap-3">
-              <select
-                value={period}
-                onChange={(e) => setPeriod(parseInt(e.target.value))}
-                className="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm"
-              >
-                <option value={7}>Last 7 days</option>
-                <option value={30}>Last 30 days</option>
-                <option value={90}>Last 90 days</option>
-                <option value={365}>Last year</option>
-              </select>
-              <button onClick={fetchData} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-500">
-                Refresh
-              </button>
-              <Link href="/predictions" className="px-3 py-1.5 text-slate-300 bg-slate-800 rounded-lg text-sm hover:bg-slate-700">
-                Markets
-              </Link>
-            </div>
+          </Link>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">{user?.email}</span>
+            <Link href="/predictions" className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs border border-white/10">
+              Back to Markets
+            </Link>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Revenue Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-2xl p-5 border border-green-500/30">
-            <p className="text-xs text-slate-400 mb-1">Total Revenue</p>
-            <p className="text-2xl font-bold text-green-400">{formatMoney(data.revenue.total)}</p>
-            <p className="text-xs text-slate-500 mt-1">Last {data.period} days</p>
+      <div className="relative container mx-auto px-4 py-8">
+        {loading ? (
+          <div className="text-center py-20">
+            <div className="inline-block w-14 h-14 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-400 mt-4">Loading admin data...</p>
           </div>
-          <div className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 rounded-2xl p-5 border border-blue-500/30">
-            <p className="text-xs text-slate-400 mb-1">Trade Fees</p>
-            <p className="text-2xl font-bold text-blue-400">{formatMoney(data.revenue.tradeFees)}</p>
-            <p className="text-xs text-slate-500 mt-1">2% per trade</p>
-          </div>
-          <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-2xl p-5 border border-green-500/30">
-            <p className="text-xs text-slate-400 mb-1">Withdrawal Fees</p>
-            <p className="text-2xl font-bold text-green-400">{formatMoney(data.revenue.withdrawalFees)}</p>
-            <p className="text-xs text-slate-500 mt-1">1.5% per payout</p>
-          </div>
-          <div className="bg-gradient-to-br from-orange-600/20 to-amber-600/20 rounded-2xl p-5 border border-orange-500/30">
-            <p className="text-xs text-slate-400 mb-1">Trading Volume</p>
-            <p className="text-2xl font-bold text-orange-400">
-              {formatMoney(data.transactions.summary.totalTradeBuys + data.transactions.summary.totalTradeSells)}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">{data.transactions.summary.count} transactions</p>
-          </div>
-        </div>
-
-        {/* Platform Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
-            <p className="text-xl font-bold text-white">{data.users.total}</p>
-            <p className="text-xs text-slate-400">Total Users</p>
-          </div>
-          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
-            <p className="text-xl font-bold text-green-400">{data.users.activeTraders}</p>
-            <p className="text-xs text-slate-400">Active Traders</p>
-          </div>
-          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
-            <p className="text-xl font-bold text-blue-400">{formatMoney(data.users.totalDeposited)}</p>
-            <p className="text-xs text-slate-400">Total Deposited</p>
-          </div>
-          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
-            <p className="text-xl font-bold text-red-400">{formatMoney(data.users.totalWithdrawn)}</p>
-            <p className="text-xs text-slate-400">Total Withdrawn</p>
-          </div>
-          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 text-center">
-            <p className="text-xl font-bold text-yellow-400">{data.markets.open}/{data.markets.total}</p>
-            <p className="text-xs text-slate-400">Open Markets</p>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4 border-b border-slate-700/50 pb-2">
-          {(['overview', 'transactions', 'traders'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-all ${
-                activeTab === tab
-                  ? 'bg-slate-800 text-white border-b-2 border-green-400'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {tab === 'overview' ? '📊 Revenue Overview' : tab === 'transactions' ? '💸 All Transactions' : '🏆 Top Traders'}
-            </button>
-          ))}
-        </div>
-
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* Daily Revenue Chart */}
-            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
-              <h3 className="font-bold text-white mb-4">Daily Revenue</h3>
-              {Object.keys(data.revenue.byDay).length === 0 ? (
-                <p className="text-slate-400 text-sm">No revenue recorded yet. Revenue comes from trade fees (2%) and withdrawal fees (1.5%).</p>
-              ) : (
-                <div className="space-y-2">
-                  {Object.entries(data.revenue.byDay)
-                    .sort((a, b) => b[0].localeCompare(a[0]))
-                    .slice(0, 14)
-                    .map(([day, amount]) => {
-                      const maxAmount = Math.max(...Object.values(data.revenue.byDay));
-                      const width = maxAmount > 0 ? (amount / maxAmount * 100) : 0;
-                      return (
-                        <div key={day} className="flex items-center gap-3">
-                          <span className="text-xs text-slate-400 w-20">{day.slice(5)}</span>
-                          <div className="flex-1 h-6 bg-slate-700/30 rounded overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded flex items-center px-2"
-                              style={{ width: `${Math.max(2, width)}%` }}
-                            >
-                              <span className="text-xs text-white font-bold whitespace-nowrap">
-                                {formatMoney(amount)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              )}
-            </div>
-
-            {/* Recent Revenue Events */}
-            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
-              <h3 className="font-bold text-white mb-4">Recent Revenue Events</h3>
-              {(data.revenue.recentEvents || []).length === 0 ? (
-                <p className="text-slate-400 text-sm">No revenue events yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {data.revenue.recentEvents.map((e: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-slate-700/30">
-                      <div>
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium mr-2 ${
-                          e.type === 'trade_fee' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'
-                        }`}>
-                          {e.type === 'trade_fee' ? 'Trade Fee' : 'Withdrawal Fee'}
-                        </span>
-                        <span className="text-sm text-slate-300">{e.description}</span>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-green-400">+{formatMoney(e.amount)}</p>
-                        <p className="text-xs text-slate-500">{formatDate(e.created_at)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Admin Management */}
-            <div className="bg-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
-              <h3 className="font-bold text-white mb-4">Admin Management</h3>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="user@email.com"
-                  className="flex-1 px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm"
-                />
+        ) : stats ? (
+          <>
+            {/* Tab Nav */}
+            <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+              {(['overview', 'markets', 'users', 'transactions'] as const).map(t => (
                 <button
-                  onClick={handleAddAdmin}
-                  disabled={addingAdmin || !adminEmail}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-500 disabled:opacity-50"
-                >
-                  {addingAdmin ? 'Adding...' : 'Add Admin'}
-                </button>
-              </div>
-              <p className="text-xs text-slate-500 mt-2">Add admins by email. They can view this dashboard and manage settings.</p>
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all whitespace-nowrap capitalize ${
+                    tab === t
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10'
+                  }`}
+                >{t}</button>
+              ))}
             </div>
-          </div>
-        )}
 
-        {/* Transactions Tab */}
-        {activeTab === 'transactions' && (
-          <div className="bg-slate-800/30 rounded-2xl border border-slate-700/50 overflow-hidden">
-            <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs font-semibold text-slate-400 uppercase bg-slate-800/50 border-b border-slate-700/50">
-              <div className="col-span-2">Type</div>
-              <div className="col-span-2 text-right">Amount</div>
-              <div className="col-span-2 text-right">Fee</div>
-              <div className="col-span-1 text-center">Status</div>
-              <div className="col-span-3">Description</div>
-              <div className="col-span-2 text-right">Time</div>
-            </div>
-            {(data.transactions.recent || []).length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">No transactions recorded yet.</div>
-            ) : (
-              data.transactions.recent.map((tx: any, i: number) => (
-                <div key={i} className="grid grid-cols-12 gap-2 px-4 py-2.5 border-b border-slate-700/30 hover:bg-slate-700/20 text-sm">
-                  <div className="col-span-2">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                      tx.type === 'crypto_deposit' ? 'bg-green-500/20 text-green-400' :
-                      tx.type === 'trade_buy' ? 'bg-blue-500/20 text-blue-400' :
-                      tx.type === 'trade_sell' ? 'bg-cyan-500/20 text-cyan-400' :
-                      tx.type === 'bank_payout' ? 'bg-red-500/20 text-red-400' :
-                      'bg-slate-500/20 text-slate-400'
-                    }`}>
-                      {tx.type.replace(/_/g, ' ')}
-                    </span>
+            {/* ======= OVERVIEW TAB ======= */}
+            {tab === 'overview' && (
+              <div className="space-y-8">
+                {/* Revenue cards */}
+                <div>
+                  <h2 className="text-lg font-bold text-white mb-4">💰 Revenue & Fees</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="Platform Revenue" value={N(stats.netRevenue)} color="green" />
+                    <StatCard label="Market Fees (1%)" value={N(stats.marketFees)} color="green" />
+                    <StatCard label="Deposit Fees (1%)" value={N(stats.depositFees)} color="green" />
+                    <StatCard label="Total Fees Collected" value={N(stats.totalPlatformFees)} color="emerald" />
                   </div>
-                  <div className="col-span-2 text-right font-mono">
-                    <span className={
-                      tx.type.includes('deposit') || tx.type === 'trade_sell'
-                        ? 'text-green-400'
-                        : 'text-red-400'
-                    }>
-                      {tx.type.includes('deposit') || tx.type === 'trade_sell' ? '+' : '-'}
-                      {formatMoney(tx.amount)}
-                    </span>
-                  </div>
-                  <div className="col-span-2 text-right font-mono text-yellow-400">
-                    {tx.fee > 0 ? formatMoney(tx.fee) : '-'}
-                  </div>
-                  <div className="col-span-1 text-center">
-                    <span className={`text-xs ${
-                      tx.status === 'completed' ? 'text-green-400' :
-                      tx.status === 'pending' ? 'text-yellow-400' :
-                      'text-red-400'
-                    }`}>
-                      {tx.status === 'completed' ? '✓' : tx.status}
-                    </span>
-                  </div>
-                  <div className="col-span-3 text-slate-300 truncate text-xs">{tx.description}</div>
-                  <div className="col-span-2 text-right text-xs text-slate-500">{formatDate(tx.created_at)}</div>
                 </div>
-              ))
-            )}
-          </div>
-        )}
 
-        {/* Top Traders Tab */}
-        {activeTab === 'traders' && (
-          <div className="bg-slate-800/30 rounded-2xl border border-slate-700/50 overflow-hidden">
-            <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs font-semibold text-slate-400 uppercase bg-slate-800/50 border-b border-slate-700/50">
-              <div className="col-span-1">#</div>
-              <div className="col-span-2">Trader</div>
-              <div className="col-span-2 text-right">Deposited</div>
-              <div className="col-span-2 text-right">Balance</div>
-              <div className="col-span-1 text-right">Trades</div>
-              <div className="col-span-1 text-right">Wins</div>
-              <div className="col-span-1 text-right">Withdrawn</div>
-              <div className="col-span-2 text-right">XP</div>
-            </div>
-            {(data.topTraders || []).map((t: any, i: number) => (
-              <div key={i} className="grid grid-cols-12 gap-2 px-4 py-2.5 border-b border-slate-700/30 hover:bg-slate-700/20 text-sm">
-                <div className="col-span-1 text-slate-400 font-mono">{i + 1}</div>
-                <div className="col-span-2 text-white font-medium truncate">{t.displayName}</div>
-                <div className="col-span-2 text-right text-green-400">{formatMoney(t.deposited)}</div>
-                <div className="col-span-2 text-right text-blue-400">{formatMoney(t.balance)}</div>
-                <div className="col-span-1 text-right text-slate-300">{t.trades}</div>
-                <div className="col-span-1 text-right text-emerald-400">{t.wins}</div>
-                <div className="col-span-1 text-right text-red-400">{formatMoney(t.withdrawn)}</div>
-                <div className="col-span-2 text-right text-green-400">{(t.xp || 0).toLocaleString()}</div>
+                {/* Volume cards */}
+                <div>
+                  <h2 className="text-lg font-bold text-white mb-4">📊 Platform Volume</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="Total Deposits" value={N(stats.totalDeposits)} color="blue" />
+                    <StatCard label="Total Withdrawals" value={N(stats.totalWithdrawals)} color="red" />
+                    <StatCard label="Wallet Balances" value={N(stats.totalWalletBalance)} color="yellow" />
+                    <StatCard label="Bet Volume" value={N(stats.totalBetVolume)} color="purple" />
+                  </div>
+                </div>
+
+                {/* Users & Markets cards */}
+                <div>
+                  <h2 className="text-lg font-bold text-white mb-4">👥 Users & Markets</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="Total Users" value={String(stats.totalUsers)} color="blue" />
+                    <StatCard label="Active Markets" value={`${stats.activeMarkets} / ${stats.totalMarkets}`} color="green" />
+                    <StatCard label="Total Bets" value={String(stats.totalBets)} color="yellow" />
+                    <StatCard label="Market Pool" value={N(stats.totalMarketPool)} color="emerald" />
+                  </div>
+                </div>
+
+                {/* Payments */}
+                <div>
+                  <h2 className="text-lg font-bold text-white mb-4">💳 Payments</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <StatCard label="Successful Payments" value={String(stats.successPayments)} color="green" />
+                    <StatCard label="Pending Payments" value={String(stats.pendingPayments)} color="yellow" />
+                  </div>
+                </div>
               </div>
-            ))}
-            {(data.topTraders || []).length === 0 && (
-              <div className="p-8 text-center text-slate-400 text-sm">No traders yet.</div>
             )}
-          </div>
-        )}
 
-        {/* Platform Money Flow */}
-        <div className="mt-6 bg-gradient-to-br from-slate-800/50 to-slate-800/30 rounded-2xl p-6 border border-slate-700/50">
-          <h3 className="font-bold text-white mb-4">💰 Platform Money Flow</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <p className="text-3xl mb-2">📥</p>
-              <p className="text-lg font-bold text-green-400">{formatMoney(data.users.totalDeposited)}</p>
-              <p className="text-xs text-slate-400">Total Deposits</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl mb-2">🏛️</p>
-              <p className="text-lg font-bold text-blue-400">{formatMoney(data.markets.totalPoolValue)}</p>
-              <p className="text-xs text-slate-400">In Market Pools</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl mb-2">📤</p>
-              <p className="text-lg font-bold text-red-400">{formatMoney(data.users.totalWithdrawn)}</p>
-              <p className="text-xs text-slate-400">Total Payouts</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl mb-2">🏆</p>
-              <p className="text-lg font-bold text-green-400">{formatMoney(data.revenue.total)}</p>
-              <p className="text-xs text-slate-400">Platform Revenue</p>
-            </div>
-          </div>
-        </div>
+            {/* ======= MARKETS TAB ======= */}
+            {tab === 'markets' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-white">📊 Markets ({markets.length})</h2>
+                  <button
+                    onClick={() => setShowCreate(true)}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold"
+                  >+ Create Market</button>
+                </div>
+
+                {/* Create market modal */}
+                {showCreate && (
+                  <div className="bg-white/5 border border-green-500/30 rounded-xl p-6 space-y-4">
+                    <h3 className="text-white font-bold">Create New Market</h3>
+                    <input
+                      value={newTitle}
+                      onChange={e => setNewTitle(e.target.value)}
+                      placeholder="Market title (question)"
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
+                    />
+                    <textarea
+                      value={newDesc}
+                      onChange={e => setNewDesc(e.target.value)}
+                      placeholder="Description (optional)"
+                      rows={2}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <select
+                        value={newCategory}
+                        onChange={e => setNewCategory(e.target.value)}
+                        className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
+                      >
+                        {['Sports', 'Entertainment', 'World Politics', 'Crypto', 'Technology', 'Nigerian Law', 'Financial Law', 'Criminal Law'].map(c => (
+                          <option key={c} value={c} className="bg-slate-900">{c}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="datetime-local"
+                        value={newDeadline}
+                        onChange={e => setNewDeadline(e.target.value)}
+                        className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCreateMarket}
+                        disabled={creating || !newTitle || !newDeadline}
+                        className="px-5 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold disabled:opacity-40"
+                      >{creating ? 'Creating...' : 'Create Market'}</button>
+                      <button onClick={() => setShowCreate(false)} className="px-5 py-2 bg-white/10 text-white rounded-lg text-sm">Cancel</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Resolve market */}
+                <div className="bg-white/5 border border-yellow-500/30 rounded-xl p-6 space-y-4">
+                  <h3 className="text-white font-bold">⚡ Resolve Market</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <select
+                      value={resolveId}
+                      onChange={e => setResolveId(e.target.value)}
+                      className="col-span-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-green-500"
+                    >
+                      <option value="" className="bg-slate-900">Select market...</option>
+                      {markets.filter(m => m.status === 'open').map(m => (
+                        <option key={m.id} value={m.id} className="bg-slate-900">{m.title} (Pool: ₦{m.total_pool.toLocaleString()})</option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setResolveOutcome('yes')}
+                        className={`flex-1 py-2 rounded-lg text-sm font-bold ${resolveOutcome === 'yes' ? 'bg-green-500 text-white' : 'bg-white/5 text-gray-400'}`}
+                      >YES</button>
+                      <button
+                        onClick={() => setResolveOutcome('no')}
+                        className={`flex-1 py-2 rounded-lg text-sm font-bold ${resolveOutcome === 'no' ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-400'}`}
+                      >NO</button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleResolve}
+                    disabled={resolving || !resolveId}
+                    className="px-5 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg text-sm font-semibold disabled:opacity-40"
+                  >{resolving ? 'Resolving...' : 'Resolve & Pay Winners'}</button>
+                  {resolveMsg && <p className="text-sm text-green-400">{resolveMsg}</p>}
+                </div>
+
+                {/* Markets table */}
+                <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-gray-400">
+                        <th className="text-left p-3">Market</th>
+                        <th className="text-right p-3">Pool</th>
+                        <th className="text-right p-3">Status</th>
+                        <th className="text-right p-3">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {markets.map(m => (
+                        <tr key={m.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="p-3 text-white max-w-[300px] truncate">{m.title}</td>
+                          <td className="p-3 text-right text-green-400 font-semibold">₦{m.total_pool.toLocaleString()}</td>
+                          <td className="p-3 text-right">
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                              m.status === 'open' ? 'bg-green-500/20 text-green-400' :
+                              m.status === 'resolved' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>{m.status}</span>
+                          </td>
+                          <td className="p-3 text-right text-gray-500 text-xs">{new Date(m.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ======= USERS TAB ======= */}
+            {tab === 'users' && (
+              <div className="space-y-6">
+                <h2 className="text-lg font-bold text-white">👥 Recent Users ({stats.totalUsers} total)</h2>
+                <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-gray-400">
+                        <th className="text-left p-3">Email</th>
+                        <th className="text-right p-3">Balance</th>
+                        <th className="text-right p-3">Total Deposits</th>
+                        <th className="text-right p-3">Joined</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentUsers.map((u, i) => (
+                        <tr key={i} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="p-3 text-white">{u.user_email}</td>
+                          <td className="p-3 text-right text-green-400 font-semibold">₦{(u.naira_balance || 0).toLocaleString()}</td>
+                          <td className="p-3 text-right text-blue-400">₦{(u.total_deposits || 0).toLocaleString()}</td>
+                          <td className="p-3 text-right text-gray-500 text-xs">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* ======= TRANSACTIONS TAB ======= */}
+            {tab === 'transactions' && (
+              <div className="space-y-6">
+                <h2 className="text-lg font-bold text-white">💸 Recent Transactions</h2>
+                <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-gray-400">
+                        <th className="text-left p-3">User</th>
+                        <th className="text-right p-3">Amount</th>
+                        <th className="text-right p-3">Type</th>
+                        <th className="text-right p-3">Balance After</th>
+                        <th className="text-left p-3">Notes</th>
+                        <th className="text-right p-3">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentTx.map((tx, i) => (
+                        <tr key={i} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="p-3 text-white text-xs">{tx.user_email}</td>
+                          <td className={`p-3 text-right font-semibold ${tx.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {tx.amount >= 0 ? '+' : ''}₦{Math.abs(tx.amount).toLocaleString()}
+                          </td>
+                          <td className="p-3 text-right">
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                              tx.transaction_type === 'deposit' ? 'bg-green-500/20 text-green-400' :
+                              tx.transaction_type === 'withdrawal' ? 'bg-red-500/20 text-red-400' :
+                              tx.transaction_type === 'bet' ? 'bg-yellow-500/20 text-yellow-400' :
+                              tx.transaction_type === 'payout' ? 'bg-blue-500/20 text-blue-400' :
+                              tx.transaction_type === 'fee' ? 'bg-purple-500/20 text-purple-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>{tx.transaction_type}</span>
+                          </td>
+                          <td className="p-3 text-right text-gray-300">₦{(tx.balance_after || 0).toLocaleString()}</td>
+                          <td className="p-3 text-gray-500 text-xs max-w-[200px] truncate">{tx.notes || '—'}</td>
+                          <td className="p-3 text-right text-gray-500 text-xs">{tx.created_at ? new Date(tx.created_at).toLocaleString() : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        ) : null}
       </div>
-    </div>
-  );
+    </main>
+  )
 }
 
+/* --- Stat Card Component --- */
+function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
+  const colorMap: Record<string, string> = {
+    green: 'from-green-500/20 to-emerald-500/20 border-green-500/30 text-green-400',
+    emerald: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30 text-emerald-400',
+    blue: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30 text-blue-400',
+    red: 'from-red-500/20 to-rose-500/20 border-red-500/30 text-red-400',
+    yellow: 'from-yellow-500/20 to-amber-500/20 border-yellow-500/30 text-yellow-400',
+    purple: 'from-purple-500/20 to-violet-500/20 border-purple-500/30 text-purple-400',
+  }
+  const cls = colorMap[color] || colorMap.green
+
+  return (
+    <div className={`bg-gradient-to-br ${cls} border rounded-xl p-4`}>
+      <div className="text-xs text-gray-400 mb-1">{label}</div>
+      <div className={`text-xl font-bold ${cls.split(' ').pop()}`}>{value}</div>
+    </div>
+  )
+}

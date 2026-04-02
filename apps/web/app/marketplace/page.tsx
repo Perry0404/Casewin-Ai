@@ -536,7 +536,7 @@ export default function MarketplacePage() {
             <Link href="/predictions" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📊</div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Prediction Markets</h3>
-              <p className="text-sm text-gray-600 mb-3">Bet on sports, crypto, politics, entertainment & legal outcomes. Deposit via Korapay or Base (ETH/USDC).</p>
+              <p className="text-sm text-gray-600 mb-3">Bet on sports, crypto, politics, entertainment & legal outcomes. Deposit via bank transfer or Base (ETH/USDC).</p>
               <span className="text-green-600 text-sm font-medium">Trade Now →</span>
             </Link>
           </div>

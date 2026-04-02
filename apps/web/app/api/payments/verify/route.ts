@@ -3,9 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const korapaySecretKey = process.env.KORAPAY_SECRET_KEY || ''
+const zendfiApiKey = process.env.ZENDFI_API_KEY || ''
+const ZENDFI_BASE = 'https://api.zendfi.tech/api/v1'
 
-// GET /api/payments/verify?reference=xxx - Verify payment status
+// GET /api/payments/verify?reference=xxx - Verify payment status with ZendFi
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -18,133 +19,127 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Require Korapay API key
-    if (!korapaySecretKey) {
-      return NextResponse.json(
-        { error: 'Payment system not configured. Please contact support.' },
-        { status: 503 }
-      )
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({ error: 'Server not configured' }, { status: 503 })
     }
 
-    // Verify payment with Korapay
-    const korapayResponse = await fetch(
-      `https://api.korapay.com/merchant/api/v1/charges/${reference}`,
-      {
-        method: 'GET',
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Look up the payment in our database
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('reference', reference)
+      .single()
+
+    if (paymentError || !payment) {
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
+    }
+
+    // If already confirmed via webhook, just return status
+    if (payment.status === 'success') {
+      return NextResponse.json({
+        status: 'success',
+        message: 'Payment verified successfully',
+        data: { status: 'success', amount: payment.amount, reference }
+      })
+    }
+
+    // If there's a ZendFi payment ID, check status with ZendFi API
+    if (zendfiApiKey && payment.provider_payment_id) {
+      const zendfiRes = await fetch(`${ZENDFI_BASE}/payments/${payment.provider_payment_id}`, {
         headers: {
-          'Authorization': `Bearer ${korapaySecretKey}`,
+          'Authorization': `Bearer ${zendfiApiKey}`,
           'Content-Type': 'application/json'
         }
-      }
-    )
+      })
 
-    const korapayData = await korapayResponse.json()
+      if (zendfiRes.ok) {
+        const zendfiData = await zendfiRes.json()
+        const paymentStatus = zendfiData.status || zendfiData.data?.status
 
-    if (!korapayResponse.ok || !korapayData.status) {
-      console.error('Korapay verification error:', korapayData)
-      return NextResponse.json(
-        { error: korapayData.message || 'Payment verification failed' },
-        { status: 500 }
-      )
-    }
+        if (paymentStatus === 'confirmed' || paymentStatus === 'completed') {
+          // Payment confirmed via polling — credit wallet if not yet done
+          if (payment.status !== 'success') {
+            const userEmail = payment.user_email
+            const amount = payment.amount
 
-    const transactionData = korapayData.data
+            // Update payment status
+            await supabase
+              .from('payments')
+              .update({
+                status: 'success',
+                paid_at: new Date().toISOString(),
+                paystack_data: zendfiData
+              })
+              .eq('reference', reference)
 
-    // Update payment record in database
-    if (supabaseUrl && supabaseKey) {
-      const supabase = createClient(supabaseUrl, supabaseKey)
+            // Credit wallet
+            const { data: wallet } = await supabase
+              .from('user_wallets')
+              .select('*')
+              .eq('user_email', userEmail)
+              .single()
 
-      // Update payment status
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({
-          status: transactionData.status,
-          paid_at: transactionData.paid_at,
-          paystack_data: transactionData
-        })
-        .eq('reference', reference)
+            if (!wallet) {
+              await supabase.from('user_wallets').insert({
+                user_email: userEmail,
+                naira_balance: amount,
+                total_deposits: amount
+              })
+            } else {
+              await supabase
+                .from('user_wallets')
+                .update({
+                  naira_balance: (wallet.naira_balance || 0) + amount,
+                  total_deposits: (wallet.total_deposits || 0) + amount,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('user_email', userEmail)
+            }
 
-      if (updateError) {
-        console.error('Error updating payment:', updateError)
-      }
+            const newBalance = (wallet?.naira_balance || 0) + amount
+            await supabase.from('wallet_transactions').insert({
+              user_email: userEmail,
+              amount,
+              transaction_type: 'deposit',
+              related_id: payment.provider_payment_id,
+              balance_after: newBalance,
+              notes: `ZendFi deposit verified - ${reference}`
+            })
 
-      // If payment successful, update wallet
-      if (transactionData.status === 'success') {
-        const userEmail = transactionData.customer.email
-        const amountInKobo = transactionData.amount
+            await supabase.from('notifications').insert({
+              user_email: userEmail,
+              type: 'deposit',
+              title: 'Deposit Successful!',
+              message: `₦${amount.toLocaleString()} has been added to your wallet.`,
+              read: false,
+            })
+          }
 
-        // Get or create wallet
-        const { data: wallet } = await supabase
-          .from('user_wallets')
-          .select('*')
-          .eq('user_email', userEmail)
-          .single()
-
-        if (!wallet) {
-          // Create new wallet
-          await supabase.from('user_wallets').insert({
-            user_email: userEmail,
-            lawcoins_balance: 5000, // Initial bonus
-            naira_balance: amountInKobo,
-            total_deposits: amountInKobo
+          return NextResponse.json({
+            status: 'success',
+            message: 'Payment verified successfully',
+            data: { status: 'success', amount: payment.amount, reference }
           })
-        } else {
-          // Update existing wallet
-          await supabase
-            .from('user_wallets')
-            .update({
-              naira_balance: wallet.naira_balance + amountInKobo,
-              total_deposits: wallet.total_deposits + amountInKobo,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_email', userEmail)
         }
 
-        // Record transaction
-        const newBalance = (wallet?.naira_balance || 0) + amountInKobo
-        await supabase.from('wallet_transactions').insert({
-          user_email: userEmail,
-          amount: amountInKobo,
-          transaction_type: 'deposit',
-          related_id: transactionData.id,
-          balance_after: newBalance,
-          notes: `Korapay deposit - ${reference}`
-        })
-
-        // Store notification for the user to pick up client-side
-        const { error: notifError } = await supabase.from('notifications').insert({
-          user_email: userEmail,
-          type: 'deposit',
-          title: 'Deposit Successful!',
-          message: `₦${(amountInKobo / 100).toLocaleString()} has been added to your wallet. Ref: ${reference}`,
-          read: false,
-        })
-        if (notifError) {
-          // notifications table may not exist yet — non-critical
-          console.warn('Notification insert failed:', notifError.message)
-        }
-
-        // If payment is for booking, update booking status
-        const paymentType = transactionData.metadata?.payment_type
-        const relatedId = transactionData.metadata?.related_id
-
-        if (paymentType === 'booking' && relatedId) {
-          await supabase
-            .from('bookings')
-            .update({
-              status: 'confirmed',
-              total_amount: amountInKobo / 100, // Store in naira
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', relatedId)
+        if (paymentStatus === 'failed') {
+          await supabase.from('payments').update({ status: 'failed' }).eq('reference', reference)
+          return NextResponse.json({
+            status: 'failed',
+            message: 'Payment failed',
+            data: { status: 'failed', reference }
+          })
         }
       }
     }
 
+    // Payment still pending
     return NextResponse.json({
-      status: 'success',
-      message: 'Payment verified successfully',
-      data: transactionData
+      status: 'pending',
+      message: 'Payment is still pending',
+      data: { status: payment.status, amount: payment.amount, reference }
     })
   } catch (error) {
     console.error('Error verifying payment:', error)

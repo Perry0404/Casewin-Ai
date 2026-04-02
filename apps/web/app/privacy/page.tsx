@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
               <li><strong>Account Information:</strong> Name, email address, phone number, password</li>
               <li><strong>Profile Information:</strong> User type (client, lawyer, law firm), profile photo</li>
               <li><strong>Lawyer Credentials:</strong> NBA enrollment number, specializations, years of experience, law firm affiliation</li>
-              <li><strong>Payment Information:</strong> Billing address, payment method details (processed securely by Korapay)</li>
+              <li><strong>Payment Information:</strong> Billing address, payment method details (processed securely by ZendFi)</li>
               <li><strong>Communication Data:</strong> Messages, consultations, and correspondence through our platform</li>
             </ul>
 
@@ -75,7 +75,7 @@ export default function PrivacyPolicy() {
             <p>We share data with trusted third-party service providers who assist us in operating our platform:</p>
             <ul className="list-disc list-inside mt-3 space-y-2 ml-4">
               <li><strong>Supabase:</strong> Database and authentication services</li>
-              <li><strong>Korapay:</strong> Payment processing</li>
+              <li><strong>ZendFi:</strong> Payment processing</li>
               <li><strong>xAI:</strong> AI-powered document analysis and generation</li>
               <li><strong>Vercel:</strong> Hosting and infrastructure</li>
             </ul>

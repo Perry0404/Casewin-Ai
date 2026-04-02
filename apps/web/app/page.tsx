@@ -239,7 +239,7 @@ export default function Home() {
               🏛️ Legal Marketplace
             </h2>
             <p className="text-gray-300 mb-8 text-lg max-w-2xl mx-auto">
-              Connect with verified Nigerian lawyers for consultations, case reviews, and legal representation. Pay securely in Naira via Korapay.
+              Connect with verified Nigerian lawyers for consultations, case reviews, and legal representation. Pay securely in Naira via bank transfer.
             </p>
             <div className="flex justify-center gap-8 mb-8">
               <div className="text-center">
@@ -336,7 +336,7 @@ export default function Home() {
               </a>
             </div>
             <div className="flex justify-center gap-8 text-sm text-gray-500 mt-4">
-              <span>Payments by Korapay</span>
+              <span>Payments by ZendFi</span>
               <span>•</span>
               <span>Database by Supabase</span>
             </div>
