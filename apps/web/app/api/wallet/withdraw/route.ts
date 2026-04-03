@@ -4,6 +4,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
 const ZENDFI_BASE = 'https://api.zendfi.tech/api/v1'
 const ZENDFI_KEY_FALLBACK = 'zfi_live_5uRZX6VuCMDNq3ZYEZMyen5YwypToRY7chR7fRHuVtQJ'
+// Single merchant-level signing grant — one for ALL users/withdrawals
+const ZENDFI_SIGNING_GRANT_FALLBACK = '' // Set after one-time admin approval
 
 async function getAuthUser(request: NextRequest) {
   const response = NextResponse.next()
@@ -110,13 +112,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'No payment account found. Please make a deposit first.' }, { status: 400 })
       }
 
-      // Check for signing grant (pre-approved by admin)
-      const signingGrant = wallet.zendfi_signing_grant
+      // Use single merchant-level signing grant for ALL withdrawals
+      const signingGrant = process.env.ZENDFI_SIGNING_GRANT || ZENDFI_SIGNING_GRANT_FALLBACK
       if (!signingGrant) {
         return NextResponse.json({
-          error: 'Withdrawal not yet enabled for your account. Please allow up to 24 hours after your first deposit.',
-          need_approval: true
-        }, { status: 400 })
+          error: 'Withdrawals are temporarily unavailable. Please try again later.',
+        }, { status: 503 })
       }
 
       const ngnToUsdcRate = 1600

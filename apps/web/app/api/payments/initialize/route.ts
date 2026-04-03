@@ -84,44 +84,6 @@ async function getOrCreateSubAccount(supabase: any, email: string, apiKey: strin
     console.error('Failed to save sub-account to DB:', upsertErr)
   }
 
-  // Auto-start signing grant browser intent for this sub-account
-  // So that the admin can approve it and enable withdrawals
-  try {
-    const intentRes = await fetch(`${ZENDFI_BASE}/subaccounts/signing-grants/browser-intents/start`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        sub_account_id: subAccountId,
-        ttl_seconds: 31536000,  // 1 year
-        max_uses: 10000,
-        total_limit_usdc: 50000,
-        per_tx_limit_usdc: 5000,
-        mode: 'live'
-      })
-    })
-    const intentText = await intentRes.text()
-    console.log('Signing grant intent response:', intentRes.status, intentText.substring(0, 300))
-    if (intentRes.ok) {
-      const intentData = JSON.parse(intentText)
-      // Store the intent so admin can approve later
-      await supabase.from('signing_grant_intents').insert({
-        user_email: email,
-        subaccount_id: subAccountId,
-        intent_id: intentData.intent_id,
-        intent_token: intentData.intent_token,
-        approval_url: intentData.approval_url,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      })
-      console.log('Signing grant intent created for', email, '- approval URL:', intentData.approval_url)
-    }
-  } catch (intentErr) {
-    console.error('Failed to start signing grant intent (non-critical):', intentErr)
-  }
-
   return { id: subAccountId }
 }
 
