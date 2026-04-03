@@ -135,16 +135,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Ensure user has a ZendFi sub-account (creates one if not exists)
-    const subAccount = await getOrCreateSubAccount(supabase, email, zendfiApiKey)
-    if (!subAccount.id) {
-      console.error('Sub-account creation failed:', subAccount.error)
-      return NextResponse.json(
-        { error: `Failed to create payment account: ${subAccount.error || 'Unknown error'}` },
-        { status: 500 }
-      )
+    // Try to get/create a ZendFi sub-account (optional - payments work without it)
+    let subAccountId: string | null = null
+    try {
+      const subAccount = await getOrCreateSubAccount(supabase, email, zendfiApiKey)
+      subAccountId = subAccount.id
+      if (!subAccountId) {
+        console.warn('Sub-account creation failed (will proceed without split):', subAccount.error)
+      }
+    } catch (subErr) {
+      console.warn('Sub-account error (proceeding without split):', subErr)
     }
-    const subAccountId = subAccount.id
 
     // Convert NGN to USD for ZendFi
     const NGN_TO_USD_RATE = 1600
@@ -176,13 +177,15 @@ export async function POST(request: NextRequest) {
         related_id: related_id || null,
         naira_amount: amount
       },
-      // Route payment directly to user's sub-account
-      split_recipients: [
-        {
-          recipient_type: 'wallet',
-          sub_account_id: subAccountId
-        }
-      ],
+      // Route payment directly to user's sub-account (if available)
+      ...(subAccountId ? {
+        split_recipients: [
+          {
+            recipient_type: 'wallet',
+            sub_account_id: subAccountId
+          }
+        ]
+      } : {}),
       webhook_url: `${appUrl}/api/webhooks/zendfi`
     }
 
@@ -200,10 +203,10 @@ export async function POST(request: NextRequest) {
     const zendfiData = await zendfiRes.json()
 
     if (!zendfiRes.ok) {
-      console.error('ZendFi payment-link error:', JSON.stringify(zendfiData))
+      console.error('ZendFi payment-link error:', zendfiRes.status, JSON.stringify(zendfiData))
       const errorMsg = zendfiData.message || zendfiData.error || JSON.stringify(zendfiData)
       return NextResponse.json(
-        { error: errorMsg, details: zendfiData },
+        { error: `ZendFi error: ${errorMsg}`, details: zendfiData },
         { status: 500 }
       )
     }
@@ -237,9 +240,10 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Error initializing payment:', error)
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('Error initializing payment:', msg, error)
     return NextResponse.json(
-      { error: 'Failed to initialize payment' },
+      { error: `Failed to initialize payment: ${msg}` },
       { status: 500 }
     )
   }
