@@ -28,15 +28,35 @@ export async function GET(request: NextRequest) {
     }
 
     const admin = getAdmin()
+    const email = user.email
 
-    // Check if user already has a CDP wallet
-    const { data: existing } = await admin
+    // Check if user already has a CDP wallet — look up by user_id OR user_email
+    // (ZendFi flow creates rows with user_email, CDP flow uses user_id)
+    let existing = null
+    const { data: byId } = await admin
       .from('user_wallets')
       .select('*')
       .eq('user_id', user.id)
       .single()
 
-    if (existing) {
+    if (byId?.wallet_address) {
+      existing = byId
+    } else if (email) {
+      const { data: byEmail } = await admin
+        .from('user_wallets')
+        .select('*')
+        .eq('user_email', email)
+        .single()
+      if (byEmail?.wallet_address) {
+        existing = byEmail
+        // Backfill user_id so future lookups are faster
+        await admin.from('user_wallets')
+          .update({ user_id: user.id })
+          .eq('user_email', email)
+      }
+    }
+
+    if (existing && existing.wallet_address) {
       // Wallet exists — return address + fetch on-chain balance
       let onChainBalance = null
       try {
@@ -71,14 +91,43 @@ export async function GET(request: NextRequest) {
     // No wallet yet — create one via CDP
     const { walletId, address, seed } = await createUserWallet()
 
-    // Store wallet data in DB
-    await admin.from('user_wallets').insert({
-      user_id: user.id,
-      cdp_wallet_id: walletId,
-      wallet_address: address.toLowerCase(),
-      wallet_seed: seed, // encrypted seed for re-importing
-      network: 'base-mainnet',
-    })
+    // Store wallet data in DB (upsert in case a row exists from ZendFi flow without wallet_address)
+    if (email) {
+      // Check if there's a ZendFi-created row without a CDP wallet
+      const { data: existingByEmail } = await admin.from('user_wallets')
+        .select('user_email')
+        .eq('user_email', email)
+        .single()
+
+      if (existingByEmail) {
+        // Update existing row
+        await admin.from('user_wallets').update({
+          user_id: user.id,
+          cdp_wallet_id: walletId,
+          wallet_address: address.toLowerCase(),
+          wallet_seed: seed,
+          network: 'base-mainnet',
+          updated_at: new Date().toISOString(),
+        }).eq('user_email', email)
+      } else {
+        await admin.from('user_wallets').insert({
+          user_id: user.id,
+          user_email: email,
+          cdp_wallet_id: walletId,
+          wallet_address: address.toLowerCase(),
+          wallet_seed: seed,
+          network: 'base-mainnet',
+        })
+      }
+    } else {
+      await admin.from('user_wallets').insert({
+        user_id: user.id,
+        cdp_wallet_id: walletId,
+        wallet_address: address.toLowerCase(),
+        wallet_seed: seed,
+        network: 'base-mainnet',
+      })
+    }
 
     // Create user_balances row if it doesn't exist
     const { data: existingBalance } = await admin.from('user_balances')

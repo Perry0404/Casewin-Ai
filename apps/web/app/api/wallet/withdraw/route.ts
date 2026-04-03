@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const zendfiApiKey = process.env.ZENDFI_API_KEY || ''
 const ZENDFI_BASE = 'https://api.zendfi.tech/api/v1'
+const ZENDFI_KEY_FALLBACK = 'zfi_live_5uRZX6VuCMDNq3ZYEZMyen5YwypToRY7chR7fRHuVtQJ'
 
 async function getAuthUser(request: NextRequest) {
   const response = NextResponse.next()
@@ -39,6 +37,11 @@ export async function POST(request: NextRequest) {
     if (!amount || amount < 100) {
       return NextResponse.json({ error: 'Minimum withdrawal is NGN 100' }, { status: 400 })
     }
+
+    // Read env at runtime (Vercel env injection workaround)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const zendfiApiKey = process.env.ZENDFI_API_KEY || ZENDFI_KEY_FALLBACK
 
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json({ error: 'Server not configured' }, { status: 503 })
