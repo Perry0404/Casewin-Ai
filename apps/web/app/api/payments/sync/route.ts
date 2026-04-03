@@ -167,5 +167,5 @@ async function creditWallet(supabase: any, email: string, payment: any, zendfiDa
     related_id: payment.provider_payment_id,
     balance_after: newBalance,
     notes: `ZendFi deposit synced - ${payment.reference}`
-  }).catch(() => {}) // Don't fail if wallet_transactions table doesn't exist
+  }) // Don't fail if wallet_transactions table doesn't exist
 }
