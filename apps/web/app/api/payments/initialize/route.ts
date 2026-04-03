@@ -115,13 +115,30 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Ensure user has a sub-account
-    await getOrCreateSubAccount(supabase, email, zendfiApiKey)
+    // Skip sub-account creation for now — go straight to payment
+    // await getOrCreateSubAccount(supabase, email, zendfiApiKey)
 
     // Create ZendFi payment — generates payment link with virtual account
     const reference = `casewin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || APP_URL_FALLBACK
     const redirectUrl = callback_url || `${appUrl}/predictions`
+
+    const paymentBody = {
+      amount,
+      currency: 'NGN',
+      token: 'USDC',
+      description: `CaseWin deposit - ${reference}`,
+      metadata: {
+        reference,
+        user_email: email,
+        payment_type,
+        related_id: related_id || null
+      },
+      redirect_url: redirectUrl,
+      webhook_url: `${appUrl}/api/webhooks/zendfi`
+    }
+
+    console.log('ZendFi request:', JSON.stringify({ url: `${ZENDFI_BASE}/payments`, body: paymentBody }))
 
     const zendfiRes = await fetch(`${ZENDFI_BASE}/payments`, {
       method: 'POST',
@@ -129,28 +146,16 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${zendfiApiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        amount,
-        currency: 'NGN',
-        token: 'USDC',
-        description: `CaseWin deposit - ${reference}`,
-        metadata: {
-          reference,
-          user_email: email,
-          payment_type,
-          related_id: related_id || null
-        },
-        redirect_url: redirectUrl,
-        webhook_url: `${appUrl}/api/webhooks/zendfi`
-      })
+      body: JSON.stringify(paymentBody)
     })
 
     const zendfiData = await zendfiRes.json()
 
     if (!zendfiRes.ok) {
-      console.error('ZendFi payment error:', zendfiData)
+      console.error('ZendFi payment error:', JSON.stringify(zendfiData))
+      const errorMsg = zendfiData.message || zendfiData.error || JSON.stringify(zendfiData)
       return NextResponse.json(
-        { error: zendfiData.message || 'Failed to initialize payment' },
+        { error: errorMsg, details: zendfiData },
         { status: 500 }
       )
     }
