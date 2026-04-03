@@ -91,47 +91,76 @@ export async function POST(request: NextRequest) {
       }
 
       let withdrawalId = null
+      let zendfiError = null
       if (zendfiApiKey && wallet.zendfi_subaccount_id) {
-        try {
-          const ngnToUsdcRate = 1600
-          const usdcAmount = Math.round((amount / ngnToUsdcRate) * 100) / 100
+        const ngnToUsdcRate = 1600
+        const usdcAmount = Math.round((amount / ngnToUsdcRate) * 100) / 100
 
-          const zendfiRes = await fetch(
-            `${ZENDFI_BASE}/subaccounts/${wallet.zendfi_subaccount_id}/withdraw-bank`,
-            {
+        // Try multiple ZendFi offramp endpoints
+        const endpoints = [
+          { url: `${ZENDFI_BASE}/offramp`, body: {
+            amount: usdcAmount,
+            currency: 'USD',
+            token: 'USDC',
+            sub_account_id: wallet.zendfi_subaccount_id,
+            bank_name: bank_details.bank,
+            account_number: bank_details.account,
+            account_name: bank_details.name,
+            country: 'NG'
+          }},
+          { url: `${ZENDFI_BASE}/subaccounts/${wallet.zendfi_subaccount_id}/withdraw`, body: {
+            amount_usdc: usdcAmount,
+            destination: 'bank',
+            bank_name: bank_details.bank,
+            account_number: bank_details.account,
+            account_name: bank_details.name
+          }},
+          { url: `${ZENDFI_BASE}/payouts`, body: {
+            amount: usdcAmount,
+            currency: 'USD',
+            token: 'USDC',
+            sub_account_id: wallet.zendfi_subaccount_id,
+            recipient: {
+              type: 'bank',
+              bank_name: bank_details.bank,
+              account_number: bank_details.account,
+              account_name: bank_details.name,
+              country: 'NG'
+            }
+          }}
+        ]
+
+        for (const endpoint of endpoints) {
+          try {
+            console.log(`Trying ZendFi withdrawal: ${endpoint.url}`)
+            const zendfiRes = await fetch(endpoint.url, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${zendfiApiKey}`,
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({
-                amount_usdc: usdcAmount,
-                bank_id: bank_details.bank,
-                account_number: bank_details.account,
-                account_name: bank_details.name
-              })
-            }
-          )
+              body: JSON.stringify(endpoint.body)
+            })
 
-          const zendfiData = await zendfiRes.json()
-          if (zendfiRes.ok) {
-            withdrawalId = zendfiData.id || zendfiData.data?.id
-          } else {
-            console.error('ZendFi withdrawal error:', zendfiData)
-            await supabase
-              .from('user_wallets')
-              .update({
-                naira_balance: wallet.naira_balance,
-                total_withdrawals: wallet.total_withdrawals || 0,
-                updated_at: new Date().toISOString()
-              })
-              .eq('user_email', email)
-            return NextResponse.json({
-              error: zendfiData.message || 'Withdrawal failed. Your balance has been restored.'
-            }, { status: 500 })
+            const zendfiData = await zendfiRes.json()
+            console.log(`ZendFi withdrawal response (${endpoint.url}):`, zendfiRes.status, JSON.stringify(zendfiData))
+
+            if (zendfiRes.ok) {
+              withdrawalId = zendfiData.id || zendfiData.data?.id
+              zendfiError = null
+              break // Success
+            } else {
+              zendfiError = zendfiData.message || zendfiData.error || JSON.stringify(zendfiData)
+            }
+          } catch (err) {
+            console.error(`ZendFi withdrawal endpoint ${endpoint.url} failed:`, err)
+            zendfiError = err instanceof Error ? err.message : 'Request failed'
           }
-        } catch (err) {
-          console.error('ZendFi withdrawal request failed:', err)
+        }
+
+        // If all ZendFi endpoints failed, refund the user
+        if (!withdrawalId && zendfiError) {
+          console.error('All ZendFi withdrawal endpoints failed:', zendfiError)
           await supabase
             .from('user_wallets')
             .update({
@@ -140,8 +169,13 @@ export async function POST(request: NextRequest) {
               updated_at: new Date().toISOString()
             })
             .eq('user_email', email)
-          return NextResponse.json({ error: 'Withdrawal service unavailable. Please try again.' }, { status: 503 })
+          return NextResponse.json({
+            error: `Withdrawal failed: ${zendfiError}. Your balance has been restored.`
+          }, { status: 500 })
         }
+      } else {
+        // No ZendFi key or sub-account — record as pending manual withdrawal
+        console.warn('No ZendFi key/sub-account for withdrawal. Recording as pending.')
       }
 
       await supabase.from('wallet_transactions').insert({

@@ -72,10 +72,10 @@ export async function GET(request: NextRequest) {
       throw error
     }
 
-    // If user has a ZendFi sub-account, fetch USDC balance as info only.
-    // IMPORTANT: Do NOT modify naira_balance here. naira_balance is the source
-    // of truth for all platform operations (bets, payouts, withdrawals).
-    // Deposits are credited only via /api/payments/sync or /api/webhooks/zendfi.
+    // If user has a ZendFi sub-account, fetch USDC balance and auto-credit
+    // any new deposits that weren't picked up by webhooks/sync.
+    // Uses total_deposits as tracker: if ZendFi USDC (in NGN) > total_deposits,
+    // the difference is an uncredited deposit.
     let zendfiBalance = null
     if (wallet?.zendfi_subaccount_id && zendfiApiKey) {
       try {
@@ -85,14 +85,38 @@ export async function GET(request: NextRequest) {
         )
         if (balRes.ok) {
           const balData = await balRes.json()
-          const usdcBalance = balData.usdc_balance || balData.data?.usdc_balance || 0
-          const solBalance = balData.sol_balance || balData.data?.sol_balance || 0
+          const usdcBalance = parseFloat(balData.usdc_balance || balData.data?.usdc_balance || balData.balance?.usdc || '0') || 0
+          const solBalance = parseFloat(balData.sol_balance || balData.data?.sol_balance || balData.balance?.sol || '0') || 0
           const nairaFromUsdc = Math.round(usdcBalance * NGN_PER_USD)
 
           zendfiBalance = {
             usdc: usdcBalance,
             sol: solBalance,
             naira_equivalent: nairaFromUsdc
+          }
+
+          // Auto-credit: if ZendFi has more USDC value than we've tracked in total_deposits,
+          // credit the difference to naira_balance
+          const totalDeposits = wallet.total_deposits || 0
+          if (nairaFromUsdc > totalDeposits && nairaFromUsdc > 0) {
+            const uncredited = nairaFromUsdc - totalDeposits
+            const updatedBalance = (wallet.naira_balance || 0) + uncredited
+
+            const { error: creditErr } = await supabase
+              .from('user_wallets')
+              .update({
+                naira_balance: updatedBalance,
+                total_deposits: nairaFromUsdc,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_email', email)
+
+            if (!creditErr) {
+              console.log(`Auto-credited ${uncredited} NGN to ${email} (ZendFi USDC: ${usdcBalance})`)
+              wallet = { ...wallet, naira_balance: updatedBalance, total_deposits: nairaFromUsdc }
+            } else {
+              console.error('Failed to auto-credit wallet:', creditErr)
+            }
           }
         }
       } catch (err) {

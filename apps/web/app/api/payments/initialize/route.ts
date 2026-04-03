@@ -211,8 +211,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const paymentId = zendfiData.id || zendfiData.data?.id
-    const paymentUrl = zendfiData.payment_url || zendfiData.data?.payment_url || zendfiData.url || zendfiData.data?.url
+    const paymentId = zendfiData.id || zendfiData.data?.id || zendfiData.payment_link_id || zendfiData.data?.payment_link_id
+    const paymentUrl = zendfiData.payment_url || zendfiData.data?.payment_url || zendfiData.url || zendfiData.data?.url || zendfiData.checkout_url || zendfiData.data?.checkout_url
+
+    console.log('ZendFi payment-link created:', JSON.stringify({ paymentId, paymentUrl, fullResponse: zendfiData }))
 
     // Store payment record (don't fail if table doesn't exist yet)
     const { error: insertErr } = await supabase.from('payments').insert({
@@ -224,7 +226,7 @@ export async function POST(request: NextRequest) {
       related_id,
       status: 'pending',
       provider: 'zendfi',
-      provider_payment_id: paymentId,
+      provider_payment_id: paymentId || reference,
       paystack_data: zendfiData
     })
     if (insertErr) console.error('Failed to save payment record:', insertErr)
