@@ -170,31 +170,43 @@ export default function PredictionMarketPage() {
         body: JSON.stringify({ action: 'sync' })
       })
       const data = await res.json()
-      if (data.success) {
-        if (data.credited > 0) {
-          notify({ type: 'success', title: 'Deposit Synced!', message: data.message })
-          fetchWallet()
-        } else {
-          notify({ type: 'info', title: 'No New Deposits', message: 'Send ETH or USDC to your wallet address first.' })
-        }
-        fetchBaseWallet()
-      } else {
-        notify({ type: 'error', title: 'Sync Failed', message: data.error || 'Try again' })
+      if (data.success && data.credited > 0) {
+        notify({ type: 'success', title: 'Deposit Synced!', message: data.message })
+        fetchWallet()
       }
+      fetchBaseWallet()
     } catch {
-      notify({ type: 'error', title: 'Error', message: 'Failed to sync balance' })
+      // silent
     } finally {
       setSyncing(false)
     }
   }
+
+  // Auto-sync: check pending payments and credit confirmed ones
+  const autoSyncPayments = useCallback(async () => {
+    try {
+      const res = await fetch('/api/payments/sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.success && data.credited > 0) {
+        notify({ type: 'success', title: 'Deposit Confirmed!', message: data.message })
+        fetchWallet()
+      }
+    } catch {
+      // silent
+    }
+  }, [fetchWallet])
 
   useEffect(() => { fetchMarkets() }, [fetchMarkets])
   useEffect(() => {
     if (user) {
       fetchWallet()
       fetchBaseWallet()
+      // Auto-sync: check for confirmed payments on page load
+      autoSyncPayments()
+      // Also auto-sync crypto balance
+      syncCryptoBalance()
     }
-  }, [user, fetchWallet, fetchBaseWallet])
+  }, [user, fetchWallet, fetchBaseWallet, autoSyncPayments])
 
   /* --- AI Analysis --- */
   const fetchAI = async (market: PredictionMarket) => {
@@ -767,7 +779,7 @@ export default function PredictionMarketPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-400">Your personal Base wallet accepts ETH and USDC. Deposit to your address below and sync to credit your balance.</p>
+                    <p className="text-sm text-gray-400">Your personal Base wallet accepts ETH and USDC. Deposits are credited automatically.</p>
 
                     {baseWalletLoading ? (
                       <div className="flex items-center gap-3 py-6 justify-center">
@@ -803,19 +815,18 @@ export default function PredictionMarketPage() {
                           </div>
                         </div>
 
-                        <button
-                          onClick={syncCryptoBalance}
-                          disabled={syncing}
-                          className="w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-green-500/30 transition-all disabled:opacity-40"
-                        >
-                          {syncing ? 'Syncing...' : '🔄 Sync & Credit Balance'}
-                        </button>
+                        {syncing && (
+                          <div className="flex items-center justify-center gap-2 py-2">
+                            <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-xs text-green-400">Syncing balances...</span>
+                          </div>
+                        )}
 
                         <div className="bg-white/5 rounded-lg p-3">
                           <h4 className="text-xs font-semibold text-green-400 mb-2">How it works:</h4>
                           <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                             <li>Send ETH or USDC (Base network) to your address above</li>
-                            <li>Click "Sync & Credit Balance" after transaction confirms</li>
+                            <li>Your balance is detected and credited automatically</li>
                             <li>Your Naira trading balance updates automatically at live rates</li>
                           </ol>
                         </div>

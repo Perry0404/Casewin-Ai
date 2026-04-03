@@ -171,9 +171,9 @@ export async function POST(request: NextRequest) {
     }
 
     const paymentId = zendfiData.id || zendfiData.data?.id
-    const paymentUrl = zendfiData.payment_url || zendfiData.data?.payment_url
+    const paymentUrl = zendfiData.payment_url || zendfiData.data?.payment_url || zendfiData.url || zendfiData.data?.url
 
-    // Store payment record
+    // Store payment record (don't fail if table doesn't exist yet)
     await supabase.from('payments').insert({
       reference,
       user_email: email,
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
       provider: 'zendfi',
       provider_payment_id: paymentId,
       paystack_data: zendfiData
-    })
+    }).catch((err: Error) => console.error('Failed to save payment record:', err))
 
     return NextResponse.json({
       status: 'success',
@@ -193,7 +193,8 @@ export async function POST(request: NextRequest) {
       data: {
         checkout_url: paymentUrl,
         reference,
-        payment_id: paymentId
+        payment_id: paymentId,
+        zendfi_response: zendfiData
       }
     })
   } catch (error) {
