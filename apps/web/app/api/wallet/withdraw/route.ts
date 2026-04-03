@@ -142,15 +142,25 @@ export async function POST(request: NextRequest) {
               body: JSON.stringify(endpoint.body)
             })
 
-            const zendfiData = await zendfiRes.json()
+            // Safely parse response — may be empty or HTML
+            const responseText = await zendfiRes.text()
+            let zendfiData: Record<string, unknown> = {}
+            try {
+              zendfiData = responseText ? JSON.parse(responseText) : {}
+            } catch {
+              console.log(`ZendFi non-JSON response (${endpoint.url}): ${zendfiRes.status} — ${responseText.substring(0, 200)}`)
+              zendfiError = `Endpoint ${endpoint.url.split('/api/v1')[1]} returned ${zendfiRes.status}`
+              continue
+            }
+
             console.log(`ZendFi withdrawal response (${endpoint.url}):`, zendfiRes.status, JSON.stringify(zendfiData))
 
             if (zendfiRes.ok) {
-              withdrawalId = zendfiData.id || zendfiData.data?.id
+              withdrawalId = zendfiData.id || (zendfiData.data as Record<string, unknown>)?.id
               zendfiError = null
               break // Success
             } else {
-              zendfiError = zendfiData.message || zendfiData.error || JSON.stringify(zendfiData)
+              zendfiError = (zendfiData.message || zendfiData.error || JSON.stringify(zendfiData)) as string
             }
           } catch (err) {
             console.error(`ZendFi withdrawal endpoint ${endpoint.url} failed:`, err)
