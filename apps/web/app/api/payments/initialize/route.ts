@@ -115,10 +115,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Convert NGN to USD for ZendFi (ZendFi only supports USD/EUR/GBP)
-    const NGN_TO_USD_RATE = 1600 // approximate NGN/USD rate
-    const amountUsd = Math.round((amount / NGN_TO_USD_RATE) * 100) / 100 // round to 2 decimal places
-    
+    // Convert NGN to USD for ZendFi
+    const NGN_TO_USD_RATE = 1600
+    const amountUsd = Math.round((amount / NGN_TO_USD_RATE) * 100) / 100
+
     if (amountUsd < 0.01) {
       return NextResponse.json(
         { error: 'Amount too small for processing' },
@@ -126,16 +126,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create ZendFi payment
+    // Create ZendFi payment link with onramp (NGN bank transfer → USDC)
     const reference = `casewin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || APP_URL_FALLBACK
-    const redirectUrl = callback_url || `${appUrl}/predictions`
 
     const paymentBody = {
       amount: amountUsd,
+      amount_ngn: amount,
       currency: 'USD',
       token: 'USDC',
-      description: `CaseWin deposit - ${'\u20A6'}${amount.toLocaleString()} (${reference})`,
+      onramp: true,
+      payer_service_charge: true,
+      description: `CaseWin deposit - ${reference}`,
       metadata: {
         reference,
         user_email: email,
@@ -146,9 +148,9 @@ export async function POST(request: NextRequest) {
       webhook_url: `${appUrl}/api/webhooks/zendfi`
     }
 
-    console.log('ZendFi request:', JSON.stringify({ url: `${ZENDFI_BASE}/payments`, body: paymentBody }))
+    console.log('ZendFi payment-link request:', JSON.stringify(paymentBody))
 
-    const zendfiRes = await fetch(`${ZENDFI_BASE}/payments`, {
+    const zendfiRes = await fetch(`${ZENDFI_BASE}/payment-links`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${zendfiApiKey}`,
@@ -160,7 +162,7 @@ export async function POST(request: NextRequest) {
     const zendfiData = await zendfiRes.json()
 
     if (!zendfiRes.ok) {
-      console.error('ZendFi payment error:', JSON.stringify(zendfiData))
+      console.error('ZendFi payment-link error:', JSON.stringify(zendfiData))
       const errorMsg = zendfiData.message || zendfiData.error || JSON.stringify(zendfiData)
       return NextResponse.json(
         { error: errorMsg, details: zendfiData },
