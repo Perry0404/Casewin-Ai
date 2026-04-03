@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const ZENDFI_BASE = 'https://api.zendfi.tech/api/v1'
+const ZENDFI_KEY_FALLBACK = 'zfi_live_5uRZX6VuCMDNq3ZYEZMyen5YwypToRY7chR7fRHuVtQJ'
+const NGN_PER_USD = 1600
 
 async function getAuthUser(request: NextRequest) {
   const response = NextResponse.next()
@@ -25,6 +26,10 @@ async function getAuthUser(request: NextRequest) {
 // GET /api/wallet - Get authenticated user's wallet balance
 export async function GET(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const zendfiApiKey = process.env.ZENDFI_API_KEY || ZENDFI_KEY_FALLBACK
+
     const authUser = await getAuthUser(request)
     if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -39,22 +44,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // If no Supabase configured, return mock wallet
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json({
-        wallet: {
-          user_email: email,
-          naira_balance: 0,
-          total_deposits: 0,
-          total_withdrawals: 0
-        },
+        wallet: { user_email: email, naira_balance: 0, total_deposits: 0, total_withdrawals: 0 },
         mock: true
       })
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Get or create wallet
+    // Get or create wallet record
     let { data: wallet, error } = await supabase
       .from('user_wallets')
       .select('*')
@@ -62,26 +61,55 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error && error.code === 'PGRST116') {
-      // Wallet doesn't exist, create it
       const { data: newWallet, error: createError } = await supabase
         .from('user_wallets')
-        .insert({
-          user_email: email,
-          naira_balance: 0
-        })
+        .insert({ user_email: email, naira_balance: 0 })
         .select()
         .single()
-
-      if (createError) {
-        throw createError
-      }
-
+      if (createError) throw createError
       wallet = newWallet
     } else if (error) {
       throw error
     }
 
-    return NextResponse.json({ wallet })
+    // If user has a ZendFi sub-account, fetch real USDC balance from ZendFi
+    let zendfiBalance = null
+    if (wallet?.zendfi_subaccount_id && zendfiApiKey) {
+      try {
+        const balRes = await fetch(
+          `${ZENDFI_BASE}/subaccounts/${wallet.zendfi_subaccount_id}/balance`,
+          { headers: { 'Authorization': `Bearer ${zendfiApiKey}` } }
+        )
+        if (balRes.ok) {
+          const balData = await balRes.json()
+          const usdcBalance = balData.usdc_balance || balData.data?.usdc_balance || 0
+          const solBalance = balData.sol_balance || balData.data?.sol_balance || 0
+          const nairaFromUsdc = Math.round(usdcBalance * NGN_PER_USD)
+
+          zendfiBalance = {
+            usdc: usdcBalance,
+            sol: solBalance,
+            naira_equivalent: nairaFromUsdc
+          }
+
+          // Update the local wallet with the ZendFi balance
+          if (nairaFromUsdc !== (wallet.naira_balance || 0)) {
+            await supabase
+              .from('user_wallets')
+              .update({
+                naira_balance: nairaFromUsdc,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_email', email)
+            wallet = { ...wallet, naira_balance: nairaFromUsdc }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch ZendFi sub-account balance:', err)
+      }
+    }
+
+    return NextResponse.json({ wallet, zendfi_balance: zendfiBalance })
   } catch (error) {
     console.error('Error fetching wallet:', error)
     return NextResponse.json(
@@ -94,6 +122,9 @@ export async function GET(request: NextRequest) {
 // POST /api/wallet - Update wallet balance (internal use)
 export async function POST(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+
     const authUser = await getAuthUser(request)
     if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

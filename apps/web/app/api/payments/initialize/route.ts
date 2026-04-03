@@ -115,6 +115,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // Ensure user has a ZendFi sub-account (creates one if not exists)
+    const subAccountId = await getOrCreateSubAccount(supabase, email, zendfiApiKey)
+    if (!subAccountId) {
+      return NextResponse.json(
+        { error: 'Failed to create payment account. Please try again.' },
+        { status: 500 }
+      )
+    }
+
     // Convert NGN to USD for ZendFi
     const NGN_TO_USD_RATE = 1600
     const amountUsd = Math.round((amount / NGN_TO_USD_RATE) * 100) / 100
@@ -126,7 +135,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create ZendFi payment link with onramp (NGN bank transfer → USDC)
+    // Create ZendFi payment link with onramp + route to user's sub-account
     const reference = `casewin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || APP_URL_FALLBACK
 
@@ -145,6 +154,13 @@ export async function POST(request: NextRequest) {
         related_id: related_id || null,
         naira_amount: amount
       },
+      // Route payment directly to user's sub-account
+      split_recipients: [
+        {
+          recipient_type: 'wallet',
+          sub_account_id: subAccountId
+        }
+      ],
       webhook_url: `${appUrl}/api/webhooks/zendfi`
     }
 
