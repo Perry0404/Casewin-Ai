@@ -22,7 +22,38 @@ async function getAuthUser(request: NextRequest) {
   return user
 }
 
-// POST /api/wallet/withdraw - Withdraw to Nigerian bank account via ZendFi
+// Mint a single-use delegation token for withdrawal (API-key, fully automatic)
+async function mintDelegationToken(
+  subAccountId: string,
+  spendLimitUsdc: number,
+  apiKey: string
+): Promise<string | null> {
+  try {
+    const res = await fetch(`${ZENDFI_BASE}/subaccounts/${subAccountId}/session-key`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        scope: 'withdraw_only',
+        spend_limit_usdc: spendLimitUsdc,
+        expires_in_seconds: 600,
+        single_use: true
+      })
+    })
+    const text = await res.text()
+    console.log('Delegation token response:', res.status, text.substring(0, 300))
+    if (!res.ok) return null
+    const data = text ? JSON.parse(text) : {}
+    return data.delegation_token || null
+  } catch (err) {
+    console.error('Failed to mint delegation token:', err)
+    return null
+  }
+}
+
+// POST /api/wallet/withdraw - Withdraw to Nigerian bank via ZendFi withdraw-bank
 export async function POST(request: NextRequest) {
   try {
     const authUser = await getAuthUser(request)
@@ -38,7 +69,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Minimum withdrawal is NGN 100' }, { status: 400 })
     }
 
-    // Read env at runtime (Vercel env injection workaround)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const zendfiApiKey = process.env.ZENDFI_API_KEY || ZENDFI_KEY_FALLBACK
@@ -49,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Check wallet balance
+    // Get wallet
     const { data: wallet, error: walletError } = await supabase
       .from('user_wallets')
       .select('*')
@@ -62,11 +92,11 @@ export async function POST(request: NextRequest) {
 
     if ((wallet.naira_balance || 0) < amount) {
       return NextResponse.json({
-        error: `Insufficient balance. You have NGN ${(wallet.naira_balance || 0).toLocaleString()}`
+        error: `Insufficient balance. You have \u20A6${(wallet.naira_balance || 0).toLocaleString()}`
       }, { status: 400 })
     }
 
-    // Bank withdrawal via ZendFi
+    // ==================== BANK WITHDRAWAL ====================
     if (method === 'bank') {
       if (!bank_details?.bank || !bank_details?.account || !bank_details?.name) {
         return NextResponse.json({ error: 'Bank name, account number, and account name are required' }, { status: 400 })
@@ -76,6 +106,36 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Account number must be 10 digits' }, { status: 400 })
       }
 
+      if (!wallet.zendfi_subaccount_id) {
+        return NextResponse.json({ error: 'No payment account found. Please make a deposit first.' }, { status: 400 })
+      }
+
+      // Check for signing grant (pre-approved by admin)
+      const signingGrant = wallet.zendfi_signing_grant
+      if (!signingGrant) {
+        return NextResponse.json({
+          error: 'Withdrawal not yet enabled for your account. Please allow up to 24 hours after your first deposit.',
+          need_approval: true
+        }, { status: 400 })
+      }
+
+      const ngnToUsdcRate = 1600
+      const usdcAmount = Math.round((amount / ngnToUsdcRate) * 100) / 100
+
+      // Step 1: Mint delegation token (API-key compatible, fully automatic)
+      const delegationToken = await mintDelegationToken(
+        wallet.zendfi_subaccount_id,
+        usdcAmount + 1,
+        zendfiApiKey
+      )
+
+      if (!delegationToken) {
+        return NextResponse.json({
+          error: 'Failed to authorize withdrawal. Please try again.'
+        }, { status: 500 })
+      }
+
+      // Step 2: Deduct balance (before calling ZendFi — will refund on failure)
       const newBalance = wallet.naira_balance - amount
       const { error: deductErr } = await supabase
         .from('user_wallets')
@@ -90,139 +150,92 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to process withdrawal' }, { status: 500 })
       }
 
-      let withdrawalId = null
-      let zendfiError = null
-      if (zendfiApiKey && wallet.zendfi_subaccount_id) {
-        const ngnToUsdcRate = 1600
-        const usdcAmount = Math.round((amount / ngnToUsdcRate) * 100) / 100
-
-        // Try multiple ZendFi offramp endpoints
-        const endpoints = [
-          { url: `${ZENDFI_BASE}/offramp`, body: {
-            amount: usdcAmount,
-            currency: 'USD',
-            token: 'USDC',
-            sub_account_id: wallet.zendfi_subaccount_id,
-            bank_name: bank_details.bank,
-            account_number: bank_details.account,
-            account_name: bank_details.name,
-            country: 'NG'
-          }},
-          { url: `${ZENDFI_BASE}/subaccounts/${wallet.zendfi_subaccount_id}/withdraw`, body: {
-            amount_usdc: usdcAmount,
-            destination: 'bank',
-            bank_name: bank_details.bank,
-            account_number: bank_details.account,
-            account_name: bank_details.name
-          }},
-          { url: `${ZENDFI_BASE}/payouts`, body: {
-            amount: usdcAmount,
-            currency: 'USD',
-            token: 'USDC',
-            sub_account_id: wallet.zendfi_subaccount_id,
-            recipient: {
-              type: 'bank',
-              bank_name: bank_details.bank,
-              account_number: bank_details.account,
-              account_name: bank_details.name,
-              country: 'NG'
-            }
-          }}
-        ]
-
-        for (const endpoint of endpoints) {
-          try {
-            console.log(`Trying ZendFi withdrawal: ${endpoint.url}`)
-            const zendfiRes = await fetch(endpoint.url, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${zendfiApiKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(endpoint.body)
-            })
-
-            // Safely parse response — may be empty or HTML
-            const responseText = await zendfiRes.text()
-            let zendfiData: Record<string, unknown> = {}
-            try {
-              zendfiData = responseText ? JSON.parse(responseText) : {}
-            } catch {
-              console.log(`ZendFi non-JSON response (${endpoint.url}): ${zendfiRes.status} — ${responseText.substring(0, 200)}`)
-              zendfiError = `Endpoint ${endpoint.url.split('/api/v1')[1]} returned ${zendfiRes.status}`
-              continue
-            }
-
-            console.log(`ZendFi withdrawal response (${endpoint.url}):`, zendfiRes.status, JSON.stringify(zendfiData))
-
-            if (zendfiRes.ok) {
-              withdrawalId = zendfiData.id || (zendfiData.data as Record<string, unknown>)?.id
-              zendfiError = null
-              break // Success
-            } else {
-              zendfiError = (zendfiData.message || zendfiData.error || JSON.stringify(zendfiData)) as string
-            }
-          } catch (err) {
-            console.error(`ZendFi withdrawal endpoint ${endpoint.url} failed:`, err)
-            zendfiError = err instanceof Error ? err.message : 'Request failed'
-          }
-        }
-
-        // If all ZendFi endpoints failed, refund the user
-        if (!withdrawalId && zendfiError) {
-          console.error('All ZendFi withdrawal endpoints failed:', zendfiError)
-          await supabase
-            .from('user_wallets')
-            .update({
-              naira_balance: wallet.naira_balance,
-              total_withdrawals: wallet.total_withdrawals || 0,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_email', email)
-          return NextResponse.json({
-            error: `Withdrawal failed: ${zendfiError}. Your balance has been restored.`
-          }, { status: 500 })
-        }
-      } else {
-        // No ZendFi key or sub-account — record as pending manual withdrawal
-        console.warn('No ZendFi key/sub-account for withdrawal. Recording as pending.')
+      // Step 3: Call ZendFi withdraw-bank with delegation_token + signing_grant
+      const withdrawBody = {
+        amount_usdc: usdcAmount,
+        bank_id: bank_details.bank,
+        account_number: bank_details.account,
+        mode: 'live',
+        delegation_token: delegationToken,
+        signing_grant: signingGrant
       }
 
+      console.log('ZendFi withdraw-bank:', JSON.stringify({
+        ...withdrawBody,
+        delegation_token: delegationToken.substring(0, 10) + '***',
+        signing_grant: signingGrant.substring(0, 10) + '***'
+      }))
+
+      const zendfiRes = await fetch(
+        `${ZENDFI_BASE}/subaccounts/${wallet.zendfi_subaccount_id}/withdraw-bank`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${zendfiApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(withdrawBody)
+        }
+      )
+
+      const responseText = await zendfiRes.text()
+      let zendfiData: Record<string, unknown> = {}
+      try { zendfiData = responseText ? JSON.parse(responseText) : {} } catch { /* */ }
+      console.log('ZendFi withdraw-bank response:', zendfiRes.status, responseText.substring(0, 500))
+
+      if (!zendfiRes.ok) {
+        // Refund on ZendFi failure
+        await supabase.from('user_wallets').update({
+          naira_balance: wallet.naira_balance,
+          total_withdrawals: wallet.total_withdrawals || 0,
+          updated_at: new Date().toISOString()
+        }).eq('user_email', email)
+
+        const errMsg = (zendfiData.message || zendfiData.error || responseText.substring(0, 200)) as string
+        return NextResponse.json({
+          error: `Withdrawal failed: ${errMsg}. Your balance has been restored.`
+        }, { status: 500 })
+      }
+
+      const orderId = (zendfiData.order_id || zendfiData.id) as string
+      const fiatAmount = (zendfiData.fiat_amount as number) || amount
+      const exchangeRate = (zendfiData.exchange_rate as number) || ngnToUsdcRate
+
+      // Record transaction
       await supabase.from('wallet_transactions').insert({
         user_email: email,
         amount: -amount,
         transaction_type: 'withdrawal',
-        related_id: withdrawalId,
+        related_id: orderId,
         balance_after: newBalance,
-        notes: `Bank withdrawal to ${bank_details.bank} - ${bank_details.account}`
+        notes: `Bank withdrawal to ${bank_details.bank} - ${bank_details.account} (${usdcAmount} USDC @ ${exchangeRate})`
       })
 
       return NextResponse.json({
         success: true,
-        message: `NGN ${amount.toLocaleString()} withdrawal to ${bank_details.bank} is being processed.`,
-        new_balance: newBalance
+        message: `\u20A6${fiatAmount.toLocaleString()} withdrawal to ${bank_details.bank} is being processed.`,
+        new_balance: newBalance,
+        order_id: orderId,
+        exchange_rate: exchangeRate
       })
     }
 
-    // Crypto withdrawal (Base wallet)
+    // ==================== CRYPTO WITHDRAWAL ====================
     if (method === 'crypto') {
       if (!wallet_address) {
         return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 })
       }
 
-      if (!/^0x[a-fA-F0-9]{40}$/.test(wallet_address)) {
+      if (!/^0x[a-fA-F0-9]{40}$/.test(wallet_address) && !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet_address)) {
         return NextResponse.json({ error: 'Invalid wallet address format' }, { status: 400 })
       }
 
       const newBalance = wallet.naira_balance - amount
-      await supabase
-        .from('user_wallets')
-        .update({
-          naira_balance: newBalance,
-          total_withdrawals: (wallet.total_withdrawals || 0) + amount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_email', email)
+      await supabase.from('user_wallets').update({
+        naira_balance: newBalance,
+        total_withdrawals: (wallet.total_withdrawals || 0) + amount,
+        updated_at: new Date().toISOString()
+      }).eq('user_email', email)
 
       await supabase.from('wallet_transactions').insert({
         user_email: email,
@@ -234,14 +247,15 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: `NGN ${amount.toLocaleString()} crypto withdrawal submitted. Processing within 1 hour.`,
+        message: `\u20A6${amount.toLocaleString()} crypto withdrawal submitted. Processing within 1 hour.`,
         new_balance: newBalance
       })
     }
 
-    return NextResponse.json({ error: 'Invalid withdrawal method' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid withdrawal method. Use "bank" or "crypto".' }, { status: 400 })
   } catch (error) {
     console.error('Withdrawal error:', error)
-    return NextResponse.json({ error: 'Failed to process withdrawal' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: `Failed to process withdrawal: ${msg}` }, { status: 500 })
   }
 }
