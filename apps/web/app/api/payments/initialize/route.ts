@@ -115,26 +115,34 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Skip sub-account creation for now — go straight to payment
-    // await getOrCreateSubAccount(supabase, email, zendfiApiKey)
+    // Convert NGN to USD for ZendFi (ZendFi only supports USD/EUR/GBP)
+    const NGN_TO_USD_RATE = 1600 // approximate NGN/USD rate
+    const amountUsd = Math.round((amount / NGN_TO_USD_RATE) * 100) / 100 // round to 2 decimal places
+    
+    if (amountUsd < 0.01) {
+      return NextResponse.json(
+        { error: 'Amount too small for processing' },
+        { status: 400 }
+      )
+    }
 
-    // Create ZendFi payment — generates payment link with virtual account
+    // Create ZendFi payment
     const reference = `casewin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || APP_URL_FALLBACK
     const redirectUrl = callback_url || `${appUrl}/predictions`
 
     const paymentBody = {
-      amount,
-      currency: 'NGN',
+      amount: amountUsd,
+      currency: 'USD',
       token: 'USDC',
-      description: `CaseWin deposit - ${reference}`,
+      description: `CaseWin deposit - ${'\u20A6'}${amount.toLocaleString()} (${reference})`,
       metadata: {
         reference,
         user_email: email,
         payment_type,
-        related_id: related_id || null
+        related_id: related_id || null,
+        naira_amount: amount
       },
-      redirect_url: redirectUrl,
       webhook_url: `${appUrl}/api/webhooks/zendfi`
     }
 

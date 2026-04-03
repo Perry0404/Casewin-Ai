@@ -271,8 +271,9 @@ export default function PredictionMarketPage() {
         })
       })
       const data = await res.json()
-      if (data.data?.checkout_url) {
-        window.location.href = data.data.checkout_url
+      const checkoutUrl = data.data?.checkout_url || data.data?.payment_url
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl
       } else {
         notify({ type: 'error', title: 'Error', message: data.error || 'Failed to start payment' })
       }

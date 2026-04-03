@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
       const metadata = paymentData.metadata || {}
       const reference = metadata.reference
       const userEmail = metadata.user_email
-      const amount = paymentData.amount || metadata.amount
+      // Use the original Naira amount from metadata (we convert NGN->USD for ZendFi)
+      const amount = metadata.naira_amount || paymentData.amount || metadata.amount
 
       if (!userEmail || !amount) {
         console.error('ZendFi webhook: missing user_email or amount in metadata')
