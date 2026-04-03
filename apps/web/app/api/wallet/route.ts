@@ -73,6 +73,9 @@ export async function GET(request: NextRequest) {
     }
 
     // If user has a ZendFi sub-account, fetch real USDC balance from ZendFi
+    // NOTE: This is shown as a separate "deposited" balance, but does NOT
+    // overwrite naira_balance. The local naira_balance is the source of truth
+    // for platform operations (bets, payouts, withdrawals).
     let zendfiBalance = null
     if (wallet?.zendfi_subaccount_id && zendfiApiKey) {
       try {
@@ -92,16 +95,24 @@ export async function GET(request: NextRequest) {
             naira_equivalent: nairaFromUsdc
           }
 
-          // Update the local wallet with the ZendFi balance
-          if (nairaFromUsdc !== (wallet.naira_balance || 0)) {
+          // Only credit the wallet if ZendFi balance is HIGHER than what we've
+          // already tracked — this means a new deposit arrived that wasn't
+          // picked up by the webhook. We add the DIFFERENCE, not overwrite.
+          const trackedZendfi = wallet.zendfi_synced_usdc || 0
+          if (usdcBalance > trackedZendfi) {
+            const newUsdc = usdcBalance - trackedZendfi
+            const newNaira = Math.round(newUsdc * NGN_PER_USD)
+            const updatedBalance = (wallet.naira_balance || 0) + newNaira
+
             await supabase
               .from('user_wallets')
               .update({
-                naira_balance: nairaFromUsdc,
+                naira_balance: updatedBalance,
+                zendfi_synced_usdc: usdcBalance,
                 updated_at: new Date().toISOString()
               })
               .eq('user_email', email)
-            wallet = { ...wallet, naira_balance: nairaFromUsdc }
+            wallet = { ...wallet, naira_balance: updatedBalance, zendfi_synced_usdc: usdcBalance }
           }
         }
       } catch (err) {
