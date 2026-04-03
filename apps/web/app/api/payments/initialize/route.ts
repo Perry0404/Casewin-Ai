@@ -23,49 +23,69 @@ async function getAuthUser(request: NextRequest) {
 
 // Ensure user has a ZendFi sub-account (one per user, like Bayse Markets)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getOrCreateSubAccount(supabase: any, email: string, apiKey: string) {
-  // Check if user already has a sub-account
-  const { data: wallet } = await supabase
-    .from('user_wallets')
-    .select('zendfi_subaccount_id')
-    .eq('user_email', email)
-    .single() as { data: Record<string, string> | null }
+async function getOrCreateSubAccount(supabase: any, email: string, apiKey: string): Promise<{ id: string | null; error?: string }> {
+  // Check if user already has a sub-account stored locally
+  try {
+    const { data: wallet } = await supabase
+      .from('user_wallets')
+      .select('zendfi_subaccount_id')
+      .eq('user_email', email)
+      .single()
 
-  if (wallet?.zendfi_subaccount_id) return wallet.zendfi_subaccount_id
+    if (wallet?.zendfi_subaccount_id) {
+      return { id: wallet.zendfi_subaccount_id }
+    }
+  } catch (dbErr) {
+    console.log('No existing wallet found, will create sub-account:', dbErr)
+  }
 
   // Create ZendFi sub-account for this user
+  const createBody = {
+    label: email.replace(/[^a-zA-Z0-9@._-]/g, '_').slice(0, 50),
+    spend_limit_usdc: 50000,
+    access_mode: 'delegated',
+    yield_enabled: false
+  }
+
+  console.log('Creating ZendFi sub-account:', JSON.stringify(createBody))
+
   const res = await fetch(`${ZENDFI_BASE}/subaccounts`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      label: email,
-      spend_limit_usdc: 50000,
-      access_mode: 'full'
-    })
+    body: JSON.stringify(createBody)
   })
 
   const data = await res.json()
+  console.log('ZendFi sub-account response:', res.status, JSON.stringify(data))
+
   if (!res.ok) {
-    console.error('ZendFi sub-account creation failed:', data)
-    return null
+    return { id: null, error: data.error || data.message || JSON.stringify(data) }
   }
 
   const subAccountId = data.id || data.data?.id
+  if (!subAccountId) {
+    return { id: null, error: 'No sub-account ID in response: ' + JSON.stringify(data) }
+  }
 
   // Save sub-account ID to user wallet
-  await supabase
+  const { error: upsertErr } = await supabase
     .from('user_wallets')
     .upsert({
       user_email: email,
       zendfi_subaccount_id: subAccountId,
       zendfi_wallet_address: data.wallet_address || data.data?.wallet_address || null,
       updated_at: new Date().toISOString()
-    } as any, { onConflict: 'user_email' })
+    } as Record<string, unknown>, { onConflict: 'user_email' })
 
-  return subAccountId
+  if (upsertErr) {
+    console.error('Failed to save sub-account to DB:', upsertErr)
+    // Still return the ID — sub-account was created on ZendFi
+  }
+
+  return { id: subAccountId }
 }
 
 // Server-side fallback: Vercel env vars for ZENDFI are not being injected
@@ -116,13 +136,15 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Ensure user has a ZendFi sub-account (creates one if not exists)
-    const subAccountId = await getOrCreateSubAccount(supabase, email, zendfiApiKey)
-    if (!subAccountId) {
+    const subAccount = await getOrCreateSubAccount(supabase, email, zendfiApiKey)
+    if (!subAccount.id) {
+      console.error('Sub-account creation failed:', subAccount.error)
       return NextResponse.json(
-        { error: 'Failed to create payment account. Please try again.' },
+        { error: `Failed to create payment account: ${subAccount.error || 'Unknown error'}` },
         { status: 500 }
       )
     }
+    const subAccountId = subAccount.id
 
     // Convert NGN to USD for ZendFi
     const NGN_TO_USD_RATE = 1600
