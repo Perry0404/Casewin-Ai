@@ -1,40 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-// Admin emails — add your admin email(s) here
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase())
+// Admin password — set via env var or fallback
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'casewinadmin2024'
 
-async function getAuthUser(request: NextRequest) {
-  const response = NextResponse.next()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) { return request.cookies.get(name)?.value },
-        set(name: string, value: string, options: CookieOptions) { response.cookies.set({ name, value, ...options }) },
-        remove(name: string, options: CookieOptions) { response.cookies.set({ name, value: '', ...options }) },
-      },
-    }
-  )
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
-}
-
-function isAdmin(email: string | undefined): boolean {
-  if (!email) return false
-  return ADMIN_EMAILS.includes(email.toLowerCase())
+function isAdmin(request: NextRequest): boolean {
+  const key = request.headers.get('x-admin-key')
+  return key === ADMIN_PASSWORD
 }
 
 // GET /api/admin/stats - Get admin dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    const authUser = await getAuthUser(request)
-    if (!authUser?.email || !isAdmin(authUser.email)) {
+    if (!isAdmin(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -83,6 +64,7 @@ export async function GET(request: NextRequest) {
     const totalPlatformFees = fees.reduce((s, f) => s + (f.amount || 0), 0)
     const marketFees = fees.filter(f => f.fee_type === 'market').reduce((s, f) => s + (f.amount || 0), 0)
     const depositFees = fees.filter(f => f.fee_type === 'deposit').reduce((s, f) => s + (f.amount || 0), 0)
+    const feeWithdrawals = fees.filter(f => f.fee_type === 'fee_withdrawal').reduce((s, f) => s + (f.amount || 0), 0)
     const successPayments = payments.filter(p => p.status === 'success').length
     const pendingPayments = payments.filter(p => p.status === 'pending').length
 
@@ -102,7 +84,8 @@ export async function GET(request: NextRequest) {
         depositFees,
         successPayments,
         pendingPayments,
-        netRevenue: totalPlatformFees
+        netRevenue: totalPlatformFees,
+        totalFeesWithdrawn: feeWithdrawals
       },
       recentUsers: (recentUsersRes.data || []).slice(0, 10),
       recentTransactions: (recentTxRes.data || []).slice(0, 20),
@@ -117,8 +100,7 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/stats - Admin actions (resolve markets, etc.)
 export async function POST(request: NextRequest) {
   try {
-    const authUser = await getAuthUser(request)
-    if (!authUser?.email || !isAdmin(authUser.email)) {
+    if (!isAdmin(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
@@ -154,7 +136,7 @@ export async function POST(request: NextRequest) {
           status: 'resolved',
           resolved_outcome: outcome,
           resolved_at: new Date().toISOString(),
-          resolved_by: authUser.email
+          resolved_by: 'admin'
         })
         .eq('id', market_id)
 
@@ -242,7 +224,7 @@ export async function POST(request: NextRequest) {
           status: 'open',
           total_pool: 0,
           outcome_options: { yes_shares: 20000, no_shares: 20000 },
-          created_by: authUser.email
+          created_by: 'admin'
         })
         .select()
         .single()

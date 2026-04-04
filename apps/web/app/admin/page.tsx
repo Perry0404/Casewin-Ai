@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
 
 /* --- Types --- */
 interface Stats {
@@ -21,6 +20,7 @@ interface Stats {
   successPayments: number
   pendingPayments: number
   netRevenue: number
+  totalFeesWithdrawn: number
 }
 
 interface Market {
@@ -62,13 +62,17 @@ interface Lawyer {
 
 /* --- Page --- */
 export default function AdminDashboard() {
-  const { user } = useAuth()
+  // Admin auth (password-based)
+  const [adminKey, setAdminKey] = useState('')
+  const [passwordInput, setPasswordInput] = useState('')
+  const [authError, setAuthError] = useState('')
+
   const [stats, setStats] = useState<Stats | null>(null)
   const [markets, setMarkets] = useState<Market[]>([])
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([])
   const [recentTx, setRecentTx] = useState<Transaction[]>([])
   const [lawyers, setLawyers] = useState<Lawyer[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'overview' | 'markets' | 'users' | 'transactions' | 'lawyers'>('overview')
   const [verifyingId, setVerifyingId] = useState('')
@@ -87,26 +91,72 @@ export default function AdminDashboard() {
   const [newDeadline, setNewDeadline] = useState('')
   const [creating, setCreating] = useState(false)
 
+  // Fee withdrawal state
+  const [feeWithdrawAmount, setFeeWithdrawAmount] = useState(0)
+  const [feeBankName, setFeeBankName] = useState('')
+  const [feeBankAccount, setFeeBankAccount] = useState('')
+  const [feeAccountName, setFeeAccountName] = useState('')
+  const [withdrawingFees, setWithdrawingFees] = useState(false)
+  const [feeWithdrawMsg, setFeeWithdrawMsg] = useState('')
+
+  // Load saved admin key from sessionStorage
+  useEffect(() => {
+    const saved = sessionStorage.getItem('casewin_admin_key')
+    if (saved) setAdminKey(saved)
+  }, [])
+
+  const adminHeaders = useCallback(() => ({
+    'Content-Type': 'application/json',
+    'x-admin-key': adminKey
+  }), [adminKey])
+
+  const handleLogin = async () => {
+    setAuthError('')
+    try {
+      const res = await fetch('/api/admin/stats', {
+        headers: { 'x-admin-key': passwordInput }
+      })
+      if (res.status === 403) {
+        setAuthError('Wrong password')
+        return
+      }
+      if (res.ok) {
+        setAdminKey(passwordInput)
+        sessionStorage.setItem('casewin_admin_key', passwordInput)
+        setPasswordInput('')
+      } else {
+        setAuthError('Login failed')
+      }
+    } catch {
+      setAuthError('Connection error')
+    }
+  }
+
+  const handleLogout = () => {
+    setAdminKey('')
+    sessionStorage.removeItem('casewin_admin_key')
+    setStats(null)
+  }
+
   const fetchStats = useCallback(async () => {
+    if (!adminKey) return
     try {
       setLoading(true)
-      const res = await fetch('/api/admin/stats')
+      const res = await fetch('/api/admin/stats', { headers: { 'x-admin-key': adminKey } })
       if (res.status === 403) {
-        setError('Access denied. You are not an admin.')
+        setError('Access denied.')
+        setAdminKey('')
+        sessionStorage.removeItem('casewin_admin_key')
         return
       }
       const data = await res.json()
-      if (data.error) {
-        setError(data.error)
-        return
-      }
+      if (data.error) { setError(data.error); return }
       setStats(data.stats)
       setMarkets(data.markets || [])
       setRecentUsers(data.recentUsers || [])
       setRecentTx(data.recentTransactions || [])
-      // Fetch lawyers
       try {
-        const lRes = await fetch('/api/admin/lawyers')
+        const lRes = await fetch('/api/admin/lawyers', { headers: { 'x-admin-key': adminKey } })
         if (lRes.ok) { const lData = await lRes.json(); setLawyers(lData.lawyers || []) }
       } catch { /* ignore */ }
     } catch {
@@ -114,9 +164,9 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [adminKey])
 
-  useEffect(() => { fetchStats() }, [fetchStats])
+  useEffect(() => { if (adminKey) fetchStats() }, [adminKey, fetchStats])
 
   const handleResolve = async () => {
     if (!resolveId) return
@@ -125,15 +175,12 @@ export default function AdminDashboard() {
     try {
       const res = await fetch('/api/admin/stats', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders(),
         body: JSON.stringify({ action: 'resolve_market', market_id: resolveId, outcome: resolveOutcome })
       })
       const data = await res.json()
       setResolveMsg(data.message || data.error || 'Done')
-      if (data.success) {
-        fetchStats()
-        setResolveId('')
-      }
+      if (data.success) { fetchStats(); setResolveId('') }
     } catch {
       setResolveMsg('Failed to resolve market')
     } finally {
@@ -147,35 +194,84 @@ export default function AdminDashboard() {
     try {
       const res = await fetch('/api/admin/stats', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders(),
         body: JSON.stringify({
           action: 'create_market',
-          title: newTitle,
-          description: newDesc,
-          category: newCategory,
-          deadline: newDeadline
+          title: newTitle, description: newDesc, category: newCategory, deadline: newDeadline
         })
       })
       const data = await res.json()
-      if (data.success) {
-        setShowCreate(false)
-        setNewTitle('')
-        setNewDesc('')
-        setNewDeadline('')
-        fetchStats()
-      }
-    } catch {
-      // silent
-    } finally {
-      setCreating(false)
+      if (data.success) { setShowCreate(false); setNewTitle(''); setNewDesc(''); setNewDeadline(''); fetchStats() }
+    } catch { /* silent */ }
+    finally { setCreating(false) }
+  }
+
+  const handleFeeWithdraw = async () => {
+    if (!feeWithdrawAmount || feeWithdrawAmount < 100 || !feeBankName || !feeBankAccount || !feeAccountName) {
+      setFeeWithdrawMsg('Fill all fields. Minimum \u20A6100.')
+      return
     }
+    setWithdrawingFees(true)
+    setFeeWithdrawMsg('')
+    try {
+      const res = await fetch('/api/admin/withdraw-fees', {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          amount: feeWithdrawAmount,
+          bank_name: feeBankName,
+          account_number: feeBankAccount,
+          account_name: feeAccountName
+        })
+      })
+      const data = await res.json()
+      setFeeWithdrawMsg(data.message || data.error || 'Done')
+      if (data.success) { fetchStats(); setFeeWithdrawAmount(0) }
+    } catch {
+      setFeeWithdrawMsg('Withdrawal failed')
+    } finally {
+      setWithdrawingFees(false)
+    }
+  }
+
+  // --- LOGIN SCREEN ---
+  if (!adminKey) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 flex items-center justify-center">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 w-full max-w-sm">
+          <div className="text-center mb-6">
+            <div className="text-4xl mb-2">\u2696\uFE0F</div>
+            <h1 className="text-2xl font-bold text-white">CaseWin Admin</h1>
+            <p className="text-gray-400 text-sm mt-1">Enter admin password</p>
+          </div>
+          <input
+            type="password"
+            value={passwordInput}
+            onChange={e => setPasswordInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            placeholder="Password"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-center text-lg tracking-widest focus:outline-none focus:border-green-500 mb-4"
+            autoFocus
+          />
+          <button
+            onClick={handleLogin}
+            disabled={!passwordInput}
+            className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-40 transition-all"
+          >Sign In</button>
+          {authError && <p className="text-red-400 text-sm text-center mt-3">{authError}</p>}
+          <Link href="/predictions" className="block text-center text-green-400 hover:text-green-300 text-xs mt-4">
+            Back to Markets
+          </Link>
+        </div>
+      </main>
+    )
   }
 
   if (error) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 flex items-center justify-center">
         <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 max-w-md text-center">
-          <div className="text-4xl mb-4">🚫</div>
+          <div className="text-4xl mb-4">\uD83D\uDEAB</div>
           <h2 className="text-xl font-bold text-white mb-2">Admin Access Required</h2>
           <p className="text-red-400 mb-4">{error}</p>
           <Link href="/predictions" className="text-green-400 hover:text-green-300 underline text-sm">
@@ -207,7 +303,9 @@ export default function AdminDashboard() {
             </div>
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400">{user?.email}</span>
+            <button onClick={handleLogout} className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs border border-red-500/20">
+              Logout
+            </button>
             <Link href="/predictions" className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs border border-white/10">
               Back to Markets
             </Link>
@@ -280,6 +378,68 @@ export default function AdminDashboard() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <StatCard label="Successful Payments" value={String(stats.successPayments)} color="green" />
                     <StatCard label="Pending Payments" value={String(stats.pendingPayments)} color="yellow" />
+                  </div>
+                </div>
+
+                {/* Fee Withdrawal */}
+                <div>
+                  <h2 className="text-lg font-bold text-white mb-4">💸 Withdraw Platform Fees</h2>
+                  <div className="bg-white/5 border border-green-500/30 rounded-xl p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-400 text-sm">Available Fees</p>
+                        <p className="text-2xl font-bold text-green-400">₦{((stats.totalPlatformFees || 0) - (stats.totalFeesWithdrawn || 0)).toLocaleString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-gray-400 text-sm">Total Collected</p>
+                        <p className="text-lg font-semibold text-gray-300">₦{(stats.totalPlatformFees || 0).toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs">Withdrawn: ₦{(stats.totalFeesWithdrawn || 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="number"
+                        value={feeWithdrawAmount || ''}
+                        onChange={e => setFeeWithdrawAmount(Number(e.target.value))}
+                        placeholder="Amount (₦)"
+                        className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
+                      />
+                      <input
+                        value={feeBankName}
+                        onChange={e => setFeeBankName(e.target.value)}
+                        placeholder="Bank name (e.g. Access)"
+                        className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
+                      />
+                      <input
+                        value={feeBankAccount}
+                        onChange={e => setFeeBankAccount(e.target.value)}
+                        placeholder="Account number"
+                        maxLength={10}
+                        className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
+                      />
+                      <input
+                        value={feeAccountName}
+                        onChange={e => setFeeAccountName(e.target.value)}
+                        placeholder="Account name"
+                        className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500 text-sm"
+                      />
+                    </div>
+                    <div className="flex gap-3 items-center">
+                      <button
+                        onClick={handleFeeWithdraw}
+                        disabled={withdrawingFees || !feeWithdrawAmount || !feeBankName || !feeBankAccount}
+                        className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-sm font-semibold disabled:opacity-40 hover:opacity-90"
+                      >{withdrawingFees ? 'Processing...' : 'Withdraw to Bank'}</button>
+                      <button
+                        onClick={() => setFeeWithdrawAmount((stats.totalPlatformFees || 0) - (stats.totalFeesWithdrawn || 0))}
+                        className="px-4 py-2.5 bg-white/10 text-gray-300 rounded-lg text-sm hover:bg-white/20"
+                      >Withdraw All</button>
+                    </div>
+                    {feeWithdrawMsg && (
+                      <p className={`text-sm ${feeWithdrawMsg.includes('success') || feeWithdrawMsg.includes('processing') ? 'text-green-400' : 'text-red-400'}`}>
+                        {feeWithdrawMsg}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
