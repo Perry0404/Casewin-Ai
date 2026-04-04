@@ -66,6 +66,7 @@ export default function AdminDashboard() {
   const [adminKey, setAdminKey] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
   const [authError, setAuthError] = useState('')
+  const [mounted, setMounted] = useState(false)
 
   const [stats, setStats] = useState<Stats | null>(null)
   const [markets, setMarkets] = useState<Market[]>([])
@@ -99,10 +100,11 @@ export default function AdminDashboard() {
   const [withdrawingFees, setWithdrawingFees] = useState(false)
   const [feeWithdrawMsg, setFeeWithdrawMsg] = useState('')
 
-  // Load saved admin key from sessionStorage
+  // Load saved admin key from sessionStorage (only after mount)
   useEffect(() => {
     const saved = sessionStorage.getItem('casewin_admin_key')
     if (saved) setAdminKey(saved)
+    setMounted(true)
   }, [])
 
   const adminHeaders = useCallback(() => ({
@@ -234,13 +236,25 @@ export default function AdminDashboard() {
     }
   }
 
+  // --- LOADING SCREEN (pre-mount) ---
+  if (!mounted) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 mt-3 text-sm">Loading admin...</p>
+        </div>
+      </main>
+    )
+  }
+
   // --- LOGIN SCREEN ---
   if (!adminKey) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 flex items-center justify-center">
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 w-full max-w-sm">
           <div className="text-center mb-6">
-            <div className="text-4xl mb-2">\u2696\uFE0F</div>
+            <div className="text-4xl mb-2">{'⚖️'}</div>
             <h1 className="text-2xl font-bold text-white">CaseWin Admin</h1>
             <p className="text-gray-400 text-sm mt-1">Enter admin password</p>
           </div>
@@ -271,7 +285,7 @@ export default function AdminDashboard() {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 flex items-center justify-center">
         <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 max-w-md text-center">
-          <div className="text-4xl mb-4">\uD83D\uDEAB</div>
+          <div className="text-4xl mb-4">{'🚫'}</div>
           <h2 className="text-xl font-bold text-white mb-2">Admin Access Required</h2>
           <p className="text-red-400 mb-4">{error}</p>
           <Link href="/predictions" className="text-green-400 hover:text-green-300 underline text-sm">
