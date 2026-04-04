@@ -5,7 +5,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 const ZENDFI_BASE = 'https://api.zendfi.tech/api/v1'
 const ZENDFI_KEY_FALLBACK = 'zfi_live_5uRZX6VuCMDNq3ZYEZMyen5YwypToRY7chR7fRHuVtQJ'
 // Single merchant-level signing grant — one for ALL users/withdrawals
-const ZENDFI_SIGNING_GRANT_FALLBACK = '' // Set after one-time admin approval
+const ZENDFI_SIGNING_GRANT_FALLBACK = 'ssgt_P2xaGSwvZcC7YICe7W0OWjsbtwYG3l35VEf6Cl72nFwlgMKN'
 
 async function getAuthUser(request: NextRequest) {
   const response = NextResponse.next()
