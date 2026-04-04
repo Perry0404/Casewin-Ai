@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       const ngnToUsdcRate = 1600
       const usdcAmount = Math.round((amount / ngnToUsdcRate) * 100) / 100
 
-      // Step 1: Mint delegation token (API-key compatible, fully automatic)
+      // Step 1: Try to mint delegation token (optional — withdraw-bank may work with just signing_grant)
       const delegationToken = await mintDelegationToken(
         wallet.zendfi_subaccount_id,
         usdcAmount + 1,
@@ -131,9 +131,7 @@ export async function POST(request: NextRequest) {
       )
 
       if (!delegationToken) {
-        return NextResponse.json({
-          error: 'Failed to authorize withdrawal. Please try again.'
-        }, { status: 500 })
+        console.warn('Delegation token minting failed — proceeding with signing_grant only')
       }
 
       // Step 2: Deduct balance (before calling ZendFi — will refund on failure)
@@ -151,20 +149,22 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to process withdrawal' }, { status: 500 })
       }
 
-      // Step 3: Call ZendFi withdraw-bank with delegation_token + signing_grant
-      const withdrawBody = {
+      // Step 3: Call ZendFi withdraw-bank with signing_grant (+ delegation_token if available)
+      const withdrawBody: Record<string, unknown> = {
         amount_usdc: usdcAmount,
         bank_id: bank_details.bank,
         account_number: bank_details.account,
         mode: 'live',
-        delegation_token: delegationToken,
         signing_grant: signingGrant
+      }
+      if (delegationToken) {
+        withdrawBody.delegation_token = delegationToken
       }
 
       console.log('ZendFi withdraw-bank:', JSON.stringify({
         ...withdrawBody,
-        delegation_token: delegationToken.substring(0, 10) + '***',
-        signing_grant: signingGrant.substring(0, 10) + '***'
+        signing_grant: signingGrant.substring(0, 10) + '***',
+        ...(delegationToken ? { delegation_token: delegationToken.substring(0, 10) + '***' } : {})
       }))
 
       const zendfiRes = await fetch(
