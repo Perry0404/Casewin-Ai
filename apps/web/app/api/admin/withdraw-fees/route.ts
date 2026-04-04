@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const ZENDFI_BASE = 'https://api.zendfi.tech/api/v1'
 const ZENDFI_KEY_FALLBACK = 'zfi_live_5uRZX6VuCMDNq3ZYEZMyen5YwypToRY7chR7fRHuVtQJ'
-const ZENDFI_SIGNING_GRANT_FALLBACK = 'ssgt_P2xaGSwvZcC7YICe7W0OWjsbtwYG3l35VEf6Cl72nFwlgMKN'
+const ZENDFI_SIGNING_GRANT_FALLBACK = 'ssgt_jqOwNCgIGszx9b1LgCZ5f9f4HEqyY7ptmIGbotNsT25or9uA'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'casewinadmin2024'
 
 // POST /api/admin/withdraw-fees - Withdraw platform fees to admin bank
