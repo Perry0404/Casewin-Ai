@@ -459,6 +459,12 @@ export default function PredictionMarketPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                 Create Market
               </button>
+              <Link
+                href="/predictions/portfolio"
+                className="px-4 py-2 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all border border-yellow-500/30"
+              >
+                {'\u{1F4BC}'} Portfolio
+              </Link>
             </div>
           </div>
         </div>

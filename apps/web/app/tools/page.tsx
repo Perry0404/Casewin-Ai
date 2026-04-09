@@ -156,6 +156,24 @@ const tools = [
     href: '/tools/clauses',
     features: ['Save & Reuse', 'AI Generate', 'Nigerian Law']
   },
+  {
+    id: 'intelligence',
+    title: 'Daily Intelligence Brief',
+    icon: '📰',
+    description: 'Personalized daily legal news, regulatory alerts, and action items',
+    color: 'from-indigo-500 to-purple-500',
+    href: '/tools/intelligence',
+    features: ['Legislation', 'Court Decisions', 'Regulatory', 'Deadlines']
+  },
+  {
+    id: 'knowledge',
+    title: 'Firm Knowledge Agent',
+    icon: '🧠',
+    description: 'Upload documents and query your firm\'s private knowledge base with AI',
+    color: 'from-emerald-500 to-teal-500',
+    href: '/tools/knowledge',
+    features: ['Document Upload', 'AI Search', 'Firm-Isolated', 'Citations']
+  },
 ]
 
 export default function ToolsPage() {

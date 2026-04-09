@@ -56,27 +56,39 @@ export default function PortfolioPage() {
       const balanceData = await balanceRes.json();
       setUserBalance(balanceData.balance || 0);
 
-      // Fetch positions
-      const positionsRes = await fetch('/api/wallet/positions');
-      const positionsData = await positionsRes.json();
-      if (positionsData.positions) {
-        setPositions(positionsData.positions.map((p: any) => ({
+      // Fetch positions from the new portfolio API
+      const portfolioRes = await fetch('/api/predictions/portfolio');
+      const portfolioData = await portfolioRes.json();
+      if (portfolioData.positions) {
+        setPositions(portfolioData.positions.map((p: any) => ({
           id: p.id,
-          marketId: p.market_id,
-          marketTitle: p.market_title || 'Unknown Market',
-          outcome: p.outcome,
-          shares: p.shares,
-          avgPrice: p.avg_price,
-          currentPrice: p.current_price || p.avg_price,
-          currentValue: p.current_value || p.shares * p.avg_price,
-          profitLoss: p.profit_loss || 0,
-          purchaseDate: p.created_at
+          marketId: p.marketId,
+          marketTitle: p.marketTitle || 'Unknown Market',
+          outcome: p.selectedOutcome,
+          shares: p.amount,
+          avgPrice: p.amount > 0 ? p.currentPrice / 100 : 0,
+          currentPrice: p.currentPrice / 100,
+          currentValue: p.currentValue || 0,
+          profitLoss: p.pnl || 0,
+          purchaseDate: p.createdAt
         })));
       }
 
-      // Fetch trades (from positions API or separate)
-      if (positionsData.trades) {
-        setTrades(positionsData.trades);
+      // Sold/resolved positions as trades
+      if (portfolioData.positions) {
+        setTrades(portfolioData.positions
+          .filter((p: any) => p.status === 'sold' || p.status === 'won' || p.status === 'lost')
+          .map((p: any) => ({
+            id: p.id,
+            marketId: p.marketId,
+            marketTitle: p.marketTitle,
+            action: p.status === 'sold' ? 'sell' : 'buy',
+            outcome: p.selectedOutcome,
+            shares: p.amount,
+            price: p.currentPrice / 100,
+            total: p.currentValue || 0,
+            created_at: p.soldAt || p.createdAt,
+          })));
       }
 
     } catch (err) {
@@ -102,14 +114,11 @@ export default function PortfolioPage() {
     setIsSelling(positionId);
     
     try {
-      const res = await fetch('/api/predictions/trade', {
+      const res = await fetch('/api/predictions/sell', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          marketId: position.marketId,
-          action: 'sell',
-          outcome: position.outcome,
-          shares: position.shares
+          bet_id: positionId
         })
       });
 
@@ -119,6 +128,8 @@ export default function PortfolioPage() {
         throw new Error(data.error || 'Sell failed');
       }
 
+      alert(data.message || 'Position sold successfully!');
+      
       // Refresh portfolio data
       await fetchPortfolioData();
       

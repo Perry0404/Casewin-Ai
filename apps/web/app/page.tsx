@@ -68,6 +68,14 @@ export default function Home() {
       description: 'Check against Nigerian regulations',
       color: 'from-pink-500 to-rose-500',
       href: '/tools/compliance'
+    },
+    {
+      id: 'intelligence',
+      title: 'Daily Intelligence',
+      icon: '📰',
+      description: 'Personalized legal news & regulatory alerts',
+      color: 'from-indigo-500 to-purple-500',
+      href: '/tools/intelligence'
     }
   ]
 
@@ -100,6 +108,9 @@ export default function Home() {
               </Link>
               <Link href="/predictions" className="text-gray-300 hover:text-white transition-colors font-semibold">
                 Predictions
+              </Link>
+              <Link href="/pricing" className="text-gray-300 hover:text-white transition-colors font-semibold">
+                Pricing
               </Link>
               <Link href="/auth/login" className="text-gray-300 hover:text-white transition-colors">
                 Sign In

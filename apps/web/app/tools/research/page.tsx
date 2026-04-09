@@ -12,6 +12,9 @@ interface SearchResult {
   summary: string
   relevance: number
   keyPrinciples: string[]
+  source?: 'database' | 'ai'
+  category?: string
+  isLandmark?: boolean
 }
 
 const jurisdictions = [
@@ -46,11 +49,13 @@ export default function ResearchPage() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [selectedCase, setSelectedCase] = useState<SearchResult | null>(null)
   const [totalResults, setTotalResults] = useState(0)
+  const [searchMeta, setSearchMeta] = useState<{ dbCount: number; aiCount: number } | null>(null)
 
   const handleSearch = async () => {
     if (!query.trim()) return
 
     setIsSearching(true)
+    setSearchMeta(null)
     
     try {
       const response = await fetch('/api/research', {
@@ -67,9 +72,14 @@ export default function ResearchPage() {
 
       const data = await response.json()
       
-      if (data.success) {
+      if (data.success && data.results) {
         setResults(data.results)
         setTotalResults(data.total)
+        setSearchMeta({ dbCount: data.dbCount || 0, aiCount: data.aiCount || 0 })
+      } else if (data.success && data.research) {
+        // Legacy text-only response — convert to display
+        setResults([])
+        setTotalResults(0)
       }
     } catch (err) {
       console.error('Search error:', err)
@@ -206,6 +216,13 @@ export default function ResearchPage() {
           <div className="mb-4 flex items-center justify-between">
             <p className="text-gray-400">
               Found <span className="text-white font-semibold">{totalResults}</span> results
+              {searchMeta && (
+                <span className="ml-2 text-sm">
+                  ({searchMeta.dbCount > 0 && <span className="text-green-400">{searchMeta.dbCount} from database</span>}
+                  {searchMeta.dbCount > 0 && searchMeta.aiCount > 0 && ', '}
+                  {searchMeta.aiCount > 0 && <span className="text-blue-400">{searchMeta.aiCount} from AI</span>})
+                </span>
+              )}
             </p>
             <select className="bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none">
               <option>Sort by Relevance</option>
@@ -231,9 +248,16 @@ export default function ResearchPage() {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="text-lg font-semibold text-white">{result.title}</h3>
-                    <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
-                      {result.relevance}% match
-                    </span>
+                    <div className="flex items-center space-x-2 shrink-0 ml-2">
+                      {result.source === 'database' ? (
+                        <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">DB</span>
+                      ) : result.source === 'ai' ? (
+                        <span className="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs">AI</span>
+                      ) : null}
+                      <span className="bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs">
+                        {result.relevance}% match
+                      </span>
+                    </div>
                   </div>
                   <p className="text-green-400 text-sm mb-2">{result.citation}</p>
                   <p className="text-gray-400 text-sm mb-3">{result.summary}</p>
