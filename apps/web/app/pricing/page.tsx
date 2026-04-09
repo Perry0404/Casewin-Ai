@@ -96,10 +96,13 @@ export default function PricingPage() {
       {/* Header */}
       <div className="py-16 text-center">
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-          Simple, Transparent Pricing
+          Free Tools. Premium Automation.
         </h1>
-        <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-          AI-powered tools built for Nigerian legal professionals
+        <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-3">
+          All AI legal tools are free for everyone — students, lawyers, firms.
+        </p>
+        <p className="text-lg text-green-400 max-w-2xl mx-auto mb-8">
+          Subscribe for premium automation: Daily Intelligence Brief, Firm Knowledge Agent & more.
         </p>
 
         {/* Currency Toggle */}
@@ -215,16 +218,20 @@ export default function PricingPage() {
           <div className="space-y-4">
             {[
               {
+                q: 'Which tools are free?',
+                a: 'All 18 AI legal tools are free for everyone — research, drafting, contract analysis, predictions, case manager, chatbot, and more. No account needed for basic use.',
+              },
+              {
+                q: 'What do I get with a subscription?',
+                a: 'Premium automation tools for lawyers & firms: Daily Intelligence Brief (personalized legal news), Firm Knowledge Agent (upload & search your firm documents), unlimited AI queries, and priority processing.',
+              },
+              {
                 q: 'Can I cancel anytime?',
                 a: 'Yes, you can cancel your subscription at any time. Your access will continue until the end of your billing period.',
               },
               {
                 q: 'How do payments work?',
                 a: 'We accept Nigerian bank transfers, cards, and USSD payments through our secure payment partner. All transactions are in Naira.',
-              },
-              {
-                q: 'What happens after the free trial?',
-                a: 'The free tier stays free forever with limited daily queries. Upgrade anytime for unlimited access to all tools.',
               },
               {
                 q: 'Can I add more users to the Firm plan?',

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import SubscriptionGuard from '@/components/SubscriptionGuard'
 
 interface Document {
   document_name: string
@@ -16,6 +17,14 @@ interface Message {
 }
 
 export default function KnowledgePage() {
+  return (
+    <SubscriptionGuard tool="knowledge">
+      <KnowledgePageContent />
+    </SubscriptionGuard>
+  )
+}
+
+function KnowledgePageContent() {
   const [firmId, setFirmId] = useState('')
   const [documents, setDocuments] = useState<Document[]>([])
   const [messages, setMessages] = useState<Message[]>([])

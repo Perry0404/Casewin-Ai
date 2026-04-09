@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import SubscriptionGuard from '@/components/SubscriptionGuard'
 
 interface BriefSection {
   title: string
@@ -65,6 +66,14 @@ const impactColors: Record<string, string> = {
 }
 
 export default function IntelligenceBriefPage() {
+  return (
+    <SubscriptionGuard tool="intelligence">
+      <IntelligenceBriefContent />
+    </SubscriptionGuard>
+  )
+}
+
+function IntelligenceBriefContent() {
   const [brief, setBrief] = useState<DailyBrief | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')

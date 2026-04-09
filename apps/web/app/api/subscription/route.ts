@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/lib/supabase'
 
+// FREE tools (open to everyone — students, public, anyone):
+//   research, draft, predict, analyze, summarize, translate, arguments,
+//   compliance, deadlines, billing, cases, filing, citations, chatbot,
+//   fees, hearing-prep, clauses
+//
+// PREMIUM tools (subscription required — lawyers & firms only):
+//   intelligence (Daily Intelligence Brief)
+//   knowledge (Firm Knowledge Agent)
+//   Plus: unlimited queries, priority processing, firm analytics
+
+const PREMIUM_TOOLS = ['intelligence', 'knowledge']
+
 const PLANS = {
   individual: {
     id: 'individual',
@@ -9,13 +21,14 @@ const PLANS = {
     priceUSD: 20,
     interval: 'monthly',
     features: [
-      'All 18 AI Legal Tools',
+      'All Free Tools (unlimited)',
       'Daily Intelligence Brief',
-      'Case Law Database Search',
       'Unlimited AI Queries',
+      'Priority AI Processing',
       '1 User Seat',
     ],
-    toolLimit: -1, // unlimited
+    premiumTools: PREMIUM_TOOLS,
+    maxSeats: 1,
   },
   firm: {
     id: 'firm',
@@ -25,26 +38,29 @@ const PLANS = {
     interval: 'monthly',
     features: [
       'Everything in Individual',
-      'Up to 10 User Seats',
       'Firm Knowledge Agent (PDF Upload)',
-      'Priority AI Processing',
+      'Up to 10 User Seats',
       'Firm-wide Analytics',
       'Custom Brief Templates',
     ],
-    toolLimit: -1,
+    premiumTools: [...PREMIUM_TOOLS],
+    maxSeats: 10,
   },
   free: {
     id: 'free',
-    name: 'Free Trial',
+    name: 'Free',
     priceNGN: 0,
     priceUSD: 0,
     interval: 'monthly',
     features: [
-      '3 AI Queries per Day',
-      'Basic Case Search',
-      'Limited Intelligence Brief',
+      'All AI Legal Tools (open)',
+      'Case Search & Research',
+      'Document Drafting',
+      'Contract Analysis',
+      'Prediction Markets',
     ],
-    toolLimit: 3,
+    premiumTools: [] as string[],
+    maxSeats: 1,
   },
 }
 
@@ -106,7 +122,7 @@ export async function GET(req: NextRequest) {
       plans,
       subscription: sub || { plan: 'free', status: 'active' },
       dailyUsage,
-      dailyLimit: sub ? -1 : PLANS.free.toolLimit,
+      premiumTools: sub ? (PLANS as any)[sub.plan]?.premiumTools || [] : [],
     })
   } catch (error) {
     console.error('Subscription check error:', error)
