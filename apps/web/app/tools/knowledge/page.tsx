@@ -16,6 +16,24 @@ interface Message {
   sources?: string[]
 }
 
+const DOCUMENT_CATEGORIES = [
+  { id: 'contract-templates', label: 'Contract Templates', icon: '\u{1F4DD}', desc: 'Standard agreements, MOUs, NDAs' },
+  { id: 'precedents', label: 'Case Precedents', icon: '\u{2696}\u{FE0F}', desc: 'Past case briefs, judgments, opinions' },
+  { id: 'policies', label: 'Firm Policies', icon: '\u{1F4CB}', desc: 'Internal procedures, billing, onboarding' },
+  { id: 'research', label: 'Legal Research', icon: '\u{1F4DA}', desc: 'Memos, legal opinions, analysis' },
+  { id: 'client-docs', label: 'Client Documents', icon: '\u{1F465}', desc: 'Client correspondence, intake forms' },
+  { id: 'compliance', label: 'Compliance & Regulatory', icon: '\u{2705}', desc: 'NBA rules, court rules, regulatory guides' },
+  { id: 'general', label: 'General / Other', icon: '\u{1F4C4}', desc: 'Any other firm documents' },
+]
+
+const TRAINING_TIPS = [
+  { title: 'Upload contract templates', desc: 'Your standard agreements so the AI knows your firm\'s preferred terms and clauses', category: 'contract-templates' },
+  { title: 'Add past case briefs', desc: 'Historical case briefs and judgments so the AI can reference your firm\'s precedents', category: 'precedents' },
+  { title: 'Include firm policies', desc: 'Onboarding procedures, billing rules, and internal policies for quick staff lookups', category: 'policies' },
+  { title: 'Upload legal research memos', desc: 'Research memos and opinions so the AI builds your firm\'s institutional knowledge', category: 'research' },
+  { title: 'Add regulatory guides', desc: 'NBA rules, court practice directions, and compliance documents', category: 'compliance' },
+]
+
 export default function KnowledgePage() {
   return (
     <SubscriptionGuard tool="knowledge">
@@ -32,7 +50,8 @@ function KnowledgePageContent() {
   const [isQuerying, setIsQuerying] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState('')
-  const [activeTab, setActiveTab] = useState<'chat' | 'upload'>('chat')
+  const [activeTab, setActiveTab] = useState<'chat' | 'upload' | 'training'>('chat')
+  const [selectedCategory, setSelectedCategory] = useState('general')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
@@ -87,7 +106,7 @@ function KnowledgePageContent() {
           userId: localStorage.getItem('casewin_user_id') || '',
           documentName: file.name,
           documentText: text,
-          documentType: file.name.endsWith('.pdf') ? 'pdf' : 'text',
+          documentType: selectedCategory,
         }),
       })
 
@@ -227,15 +246,142 @@ function KnowledgePageContent() {
               >
                 Upload ({documents.length})
               </button>
+              <button
+                onClick={() => setActiveTab('training')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                  activeTab === 'training' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Training Guide
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'upload' ? (
+        {activeTab === 'training' ? (
+          /* Training Guide Tab */
+          <div className="space-y-6">
+            {/* Training Status */}
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-green-500/20">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">{'\u{1F9E0}'} Agent Training Status</h3>
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                  documents.length >= 5 ? 'bg-green-600/20 text-green-400 border border-green-500/30' :
+                  documents.length >= 1 ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-500/30' :
+                  'bg-red-600/20 text-red-400 border border-red-500/30'
+                }`}>
+                  {documents.length >= 5 ? 'Well Trained' : documents.length >= 1 ? 'Basic Training' : 'Not Trained'}
+                </span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-3 mb-2">
+                <div
+                  className="bg-gradient-to-r from-green-500 to-emerald-400 rounded-full h-3 transition-all"
+                  style={{ width: `${Math.min(100, (documents.length / 10) * 100)}%` }}
+                />
+              </div>
+              <p className="text-gray-400 text-sm">{documents.length} documents uploaded &bull; Upload at least 10 for best results</p>
+            </div>
+
+            {/* How to Train Your Agent */}
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+              <h3 className="text-xl font-bold text-white mb-2">{'\u{1F4D6}'} How to Train Your Firm&apos;s AI Agent</h3>
+              <p className="text-gray-400 mb-6">Follow these steps to build a powerful, firm-specific knowledge base that your entire team can query.</p>
+
+              <div className="space-y-4">
+                {[
+                  { step: 1, title: 'Gather Your Documents', desc: 'Collect contract templates, case briefs, research memos, internal policies, and compliance documents. Export them as .txt, .md, or .csv files.' },
+                  { step: 2, title: 'Categorize Before Uploading', desc: 'Use the Upload tab to select a document category before each upload. This helps the AI understand the type and context of each document.' },
+                  { step: 3, title: 'Upload in Batches', desc: 'Upload documents one at a time. Each file is chunked into searchable segments. Start with your most-used templates and policies.' },
+                  { step: 4, title: 'Test with Queries', desc: 'Switch to the Chat tab and ask questions like "What are our standard payment terms?" or "Summarize our client onboarding process."' },
+                  { step: 5, title: 'Iterate and Improve', desc: 'If the AI can\'t answer a question, upload more relevant documents. The more context you give, the smarter your agent becomes.' },
+                ].map(item => (
+                  <div key={item.step} className="flex items-start space-x-4 bg-gray-700/20 rounded-lg p-4">
+                    <div className="w-8 h-8 bg-purple-600/30 border border-purple-500/30 rounded-full flex items-center justify-center text-purple-400 font-bold text-sm shrink-0">
+                      {item.step}
+                    </div>
+                    <div>
+                      <h4 className="text-white font-semibold">{item.title}</h4>
+                      <p className="text-gray-400 text-sm mt-1">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recommended Documents Checklist */}
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-green-500/20">
+              <h3 className="text-lg font-bold text-white mb-4">{'\u{2705}'} Training Checklist</h3>
+              <p className="text-gray-400 text-sm mb-4">Upload these document types for a well-trained agent:</p>
+              <div className="space-y-3">
+                {TRAINING_TIPS.map((tip, i) => {
+                  const hasType = documents.some(d => d.document_type === tip.category)
+                  return (
+                    <div key={i} className="flex items-start space-x-3">
+                      <span className={`mt-0.5 text-lg ${hasType ? 'text-green-400' : 'text-gray-600'}`}>
+                        {hasType ? '\u{2705}' : '\u{2B1C}'}
+                      </span>
+                      <div>
+                        <p className={`font-medium text-sm ${hasType ? 'text-green-400' : 'text-white'}`}>{tip.title}</p>
+                        <p className="text-gray-500 text-xs">{tip.desc}</p>
+                      </div>
+                      {!hasType && (
+                        <button
+                          onClick={() => { setSelectedCategory(tip.category); setActiveTab('upload') }}
+                          className="ml-auto text-xs text-green-400 hover:text-green-300 shrink-0"
+                        >
+                          Upload now {'\u2192'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Best Practices */}
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
+              <h3 className="text-lg font-bold text-white mb-4">{'\u{1F4A1}'} Best Practices</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { title: 'Remove sensitive client data', desc: 'Redact names and personal details before uploading client-related documents.' },
+                  { title: 'Use clear file names', desc: 'Name files descriptively: "Standard-NDA-Template.txt" not "doc1.txt"' },
+                  { title: 'Upload updated versions', desc: 'When policies change, upload the latest version. The AI uses all uploaded content.' },
+                  { title: 'Train all practice areas', desc: 'Cover all your firm\'s practice areas for comprehensive knowledge coverage.' },
+                ].map((tip, i) => (
+                  <div key={i} className="bg-gray-700/20 rounded-lg p-4">
+                    <h4 className="text-white font-semibold text-sm">{tip.title}</h4>
+                    <p className="text-gray-400 text-xs mt-1">{tip.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'upload' ? (
           /* Upload Tab */
           <div className="space-y-6">
+            {/* Category Selection */}
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-green-500/20">
+              <h3 className="text-lg font-semibold text-white mb-3">{'\u{1F4C1}'} Select Document Category</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {DOCUMENT_CATEGORIES.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`text-left p-3 rounded-lg border transition ${
+                      selectedCategory === cat.id
+                        ? 'bg-green-600/20 border-green-500 text-white'
+                        : 'bg-gray-700/30 border-gray-600 text-gray-400 hover:border-gray-500'
+                    }`}
+                  >
+                    <span className="text-lg">{cat.icon}</span>
+                    <p className="text-xs font-medium mt-1">{cat.label}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Upload Area */}
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-dashed border-green-500/30 text-center">
               <span className="text-5xl block mb-3">{'\u{1F4C4}'}</span>
