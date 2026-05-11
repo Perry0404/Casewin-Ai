@@ -194,11 +194,11 @@ export default function DashboardPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                  { label: 'Hire Lawyer', href: '/marketplace', icon: '👨\u200D\u2696\uFE0F', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
+                  { label: 'Hire Lawyer', href: '/marketplace', icon: '👨‍⚖️', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Draft Document', href: '/tools/draft', icon: '📝', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Analyze Contract', href: '/tools/analyze', icon: '🔍', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Predict Case', href: '/tools/predict', icon: '🎯', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
-                  { label: 'Legal Research', href: '/tools/research', icon: '📚', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
+                  { label: 'Invoices', href: '/invoices', icon: '🧾', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Predictions', href: '/predictions', icon: '📊', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                 ].map((action) => (
                   <Link
