@@ -134,16 +134,44 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Try to get/create a ZendFi sub-account (optional - payments work without it)
-    let subAccountId: string | null = null
-    try {
-      const subAccount = await getOrCreateSubAccount(supabase, email, zendfiApiKey)
-      subAccountId = subAccount.id
-      if (!subAccountId) {
-        console.warn('Sub-account creation failed (will proceed without split):', subAccount.error)
+    // Platform fee config
+    // For lawyer bookings: lawyer gets 85%, CaseWin keeps 15%
+    // For AI tools / deposits: CaseWin keeps 100% (no split)
+    const LAWYER_SHARE_PCT = 85
+    const isBookingPayment = payment_type === 'booking'
+
+    // For booking payments, get the lawyer's ZendFi sub-account
+    let lawyerSubAccountId: string | null = null
+    if (isBookingPayment && related_id) {
+      try {
+        // related_id = lawyer's profile user_id for bookings
+        const { data: lawyerWallet } = await supabase
+          .from('user_wallets')
+          .select('zendfi_subaccount_id')
+          .eq('user_id', related_id)
+          .single()
+
+        if (lawyerWallet?.zendfi_subaccount_id) {
+          lawyerSubAccountId = lawyerWallet.zendfi_subaccount_id
+        } else {
+          // Try by email fallback — get lawyer's email from profiles
+          const { data: lawyerProfile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', related_id)
+            .single()
+
+          if (lawyerProfile?.email) {
+            const subAccount = await getOrCreateSubAccount(supabase, lawyerProfile.email, zendfiApiKey)
+            lawyerSubAccountId = subAccount.id
+            if (!lawyerSubAccountId) {
+              console.warn('Lawyer sub-account creation failed (will proceed without split):', subAccount.error)
+            }
+          }
+        }
+      } catch (subErr) {
+        console.warn('Lawyer sub-account lookup failed (proceeding without split):', subErr)
       }
-    } catch (subErr) {
-      console.warn('Sub-account error (proceeding without split):', subErr)
     }
 
     // Convert NGN to USD for ZendFi
@@ -157,9 +185,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create ZendFi payment link with onramp + route to user's sub-account
     const reference = `casewin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || APP_URL_FALLBACK
+
+    // Build split_recipients:
+    // - Booking: lawyer sub-account gets LAWYER_SHARE_PCT, remainder stays with CaseWin merchant
+    // - AI tools / deposits: full amount stays with CaseWin merchant (no split)
+    const splitRecipients = isBookingPayment && lawyerSubAccountId
+      ? [{
+          recipient_type: 'wallet',
+          sub_account_id: lawyerSubAccountId,
+          share: LAWYER_SHARE_PCT,        // percentage
+          share_type: 'percentage',
+        }]
+      : []
 
     const paymentBody = {
       amount: amountUsd,
@@ -168,23 +207,18 @@ export async function POST(request: NextRequest) {
       token: 'USDC',
       onramp: true,
       payer_service_charge: true,
-      description: `CaseWin deposit - ${reference}`,
+      description: isBookingPayment
+        ? `CaseWin lawyer booking - ${reference}`
+        : `CaseWin ${payment_type} - ${reference}`,
       metadata: {
         reference,
         user_email: email,
         payment_type,
         related_id: related_id || null,
-        naira_amount: amount
+        naira_amount: amount,
+        platform_fee_pct: isBookingPayment ? (100 - LAWYER_SHARE_PCT) : 100,
       },
-      // Route payment directly to user's sub-account (if available)
-      ...(subAccountId ? {
-        split_recipients: [
-          {
-            recipient_type: 'wallet',
-            sub_account_id: subAccountId
-          }
-        ]
-      } : {}),
+      ...(splitRecipients.length > 0 ? { split_recipients: splitRecipients } : {}),
       webhook_url: `${appUrl}/api/webhooks/zendfi`
     }
 
