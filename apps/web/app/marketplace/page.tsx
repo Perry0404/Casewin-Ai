@@ -574,6 +574,29 @@ export default function MarketplacePage() {
                 <p className="text-sm text-gray-600 mb-3">AI estimates legal fees by matter type, court level, complexity, and jurisdiction. Includes court fees and VAT.</p>
                 <span className="text-green-600 text-sm font-medium">Estimate Fees →</span>
               </Link>
+
+              <Link href="/tools/chatbot" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🤖</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Legal Chatbot</h3>
+                <p className="text-sm text-gray-600 mb-3">Chat with AI about any Nigerian legal question — statutes, case law, procedures, and firm-specific matters.</p>
+                <span className="text-green-600 text-sm font-medium">Start Chat →</span>
+              </Link>
+
+              <Link href="/tools/intelligence" className="bg-white rounded-xl shadow-sm border border-purple-200 p-6 hover:border-purple-300 hover:shadow-md transition-all group relative">
+                <span className="absolute top-3 right-3 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">⭐ Premium</span>
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📰</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Daily Intelligence Brief</h3>
+                <p className="text-sm text-gray-600 mb-3">Personalized daily legal news, regulatory alerts, legislative updates, and deadline reminders for your practice.</p>
+                <span className="text-purple-600 text-sm font-medium">Read Brief →</span>
+              </Link>
+
+              <Link href="/tools/knowledge" className="bg-white rounded-xl shadow-sm border border-purple-200 p-6 hover:border-purple-300 hover:shadow-md transition-all group relative">
+                <span className="absolute top-3 right-3 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">⭐ Premium</span>
+                <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🧠</div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Firm Knowledge Agent</h3>
+                <p className="text-sm text-gray-600 mb-3">Upload your firm's documents and query your private knowledge base with AI. Isolated per firm with citations.</p>
+                <span className="text-teal-600 text-sm font-medium">Query Knowledge →</span>
+              </Link>
             </div>
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center max-w-lg mx-auto">
@@ -582,7 +605,7 @@ export default function MarketplacePage() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">Lawyer & Law Firm Tools</h3>
               <p className="text-sm text-gray-600 mb-4">
-                9 professional tools including Case Manager, Time & Billing, Hearing Prep, Court Filing, and more are exclusively available to registered legal practitioners.
+                12 professional tools including Case Manager, Time & Billing, AI Chatbot, Hearing Prep, Daily Intelligence Brief, Firm Knowledge Agent, and more are exclusively available to registered legal practitioners.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 {!user ? (

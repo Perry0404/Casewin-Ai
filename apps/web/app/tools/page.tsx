@@ -2,244 +2,80 @@
 
 import Link from 'next/link'
 
-const generalTools = [
+const tools = [
   {
     id: 'draft',
     title: 'Document Drafting',
-    icon: '📝',
+    icon: '??',
     description: 'Generate contracts, letters, pleadings, and other legal documents',
     color: 'from-blue-500 to-cyan-500',
     href: '/tools/draft',
-    features: ['Contracts', 'Letters', 'Affidavits', 'Pleadings']
+    features: ['Contracts', 'Letters', 'Affidavits', 'Pleadings'],
   },
   {
     id: 'predict',
     title: 'Case Prediction',
-    icon: '🔮',
+    icon: '??',
     description: 'Predict case outcomes based on Nigerian case law analysis',
     color: 'from-green-500 to-emerald-500',
     href: '/tools/predict',
-    features: ['Win Probability', 'Similar Cases', 'Risk Analysis']
+    features: ['Win Probability', 'Similar Cases', 'Risk Analysis'],
   },
   {
     id: 'research',
     title: 'Legal Research',
-    icon: '🔍',
+    icon: '??',
     description: 'Search through 10,000+ Nigerian court judgments',
     color: 'from-green-500 to-emerald-500',
     href: '/tools/research',
-    features: ['Case Search', 'Statute Lookup', 'Legal Principles']
+    features: ['Case Search', 'Statute Lookup', 'Legal Principles'],
   },
   {
     id: 'analyze',
     title: 'Contract Analysis',
-    icon: '📄',
+    icon: '??',
     description: 'Identify risks, unfair terms, and compliance issues',
     color: 'from-orange-500 to-red-500',
     href: '/tools/analyze',
-    features: ['Risk Assessment', 'Clause Review', 'Recommendations']
+    features: ['Risk Assessment', 'Clause Review', 'Recommendations'],
   },
   {
     id: 'summarize',
     title: 'Judgment Summarization',
-    icon: '📋',
+    icon: '??',
     description: 'Extract key points from lengthy court judgments',
     color: 'from-green-500 to-blue-500',
     href: '/tools/summarize',
-    features: ['Facts', 'Issues', 'Ratio Decidendi']
+    features: ['Facts', 'Issues', 'Ratio Decidendi'],
   },
   {
     id: 'translate',
     title: 'Legal Translation',
-    icon: '🌍',
+    icon: '??',
     description: 'Translate documents to Yoruba, Igbo, Hausa',
     color: 'from-teal-500 to-green-500',
     href: '/tools/translate',
-    features: ['Yoruba', 'Igbo', 'Hausa', 'Pidgin']
+    features: ['Yoruba', 'Igbo', 'Hausa', 'Pidgin'],
   },
   {
     id: 'arguments',
     title: 'Argument Generation',
-    icon: '⚖️',
+    icon: '??',
     description: 'Generate persuasive legal arguments with authorities',
     color: 'from-yellow-500 to-orange-500',
     href: '/tools/arguments',
-    features: ['Main Arguments', 'Counter-Arguments', 'Authorities']
+    features: ['Main Arguments', 'Counter-Arguments', 'Authorities'],
   },
   {
     id: 'compliance',
     title: 'Compliance Check',
-    icon: '✅',
+    icon: '?',
     description: 'Check documents against Nigerian regulations',
     color: 'from-emerald-500 to-rose-500',
     href: '/tools/compliance',
-    features: ['CAMA', 'NDPR', 'CBN', 'Tax Laws']
+    features: ['CAMA', 'NDPR', 'CBN', 'Tax Laws'],
   },
 ]
-
-const lawyerTools = [
-  {
-    id: 'chatbot',
-    title: 'AI Legal Chatbot',
-    icon: '🤖',
-    description: 'Chat with AI about any Nigerian legal question — statutes, case law, and procedures',
-    color: 'from-blue-500 to-green-500',
-    href: '/tools/chatbot',
-    features: ['Conversational', 'Nigerian Law', 'Real-time'],
-    isPremium: false,
-  },
-  {
-    id: 'deadlines',
-    title: 'Deadline Calculator',
-    icon: '📅',
-    description: 'AI calculates statutory deadlines and limitation periods for Nigerian courts',
-    color: 'from-green-500 to-green-500',
-    href: '/tools/deadlines',
-    features: ['Limitation Periods', 'Filing Dates', 'Court Rules'],
-    isPremium: false,
-  },
-  {
-    id: 'citations',
-    title: 'Citation Generator',
-    icon: '📚',
-    description: 'Format Nigerian legal citations in NWLR, LPELR, SC, and more',
-    color: 'from-green-500 to-green-500',
-    href: '/tools/citations',
-    features: ['NWLR', 'LPELR', 'Batch Format'],
-    isPremium: false,
-  },
-  {
-    id: 'fees',
-    title: 'Legal Fee Estimator',
-    icon: '💸',
-    description: 'AI estimates legal fees by matter type, court, and complexity using NBA scales',
-    color: 'from-rose-500 to-emerald-500',
-    href: '/tools/fees',
-    features: ['Fee Breakdown', 'Court Fees', 'VAT'],
-    isPremium: false,
-  },
-  {
-    id: 'billing',
-    title: 'Time & Billing',
-    icon: '💰',
-    description: 'Track billable hours, manage rates, and generate invoices with AI',
-    color: 'from-emerald-500 to-teal-500',
-    href: '/tools/billing',
-    features: ['Timer', 'Invoicing', 'Rate Tracking'],
-    isPremium: false,
-  },
-  {
-    id: 'cases',
-    title: 'Case Manager',
-    icon: '📁',
-    description: 'Track active cases with suit numbers, courts, parties, and dates',
-    color: 'from-amber-500 to-yellow-500',
-    href: '/tools/cases',
-    features: ['Active Cases', 'Court Dates', 'Status Tracking'],
-    isPremium: false,
-  },
-  {
-    id: 'filing',
-    title: 'Court Filing Prep',
-    icon: '📝',
-    description: 'Get filing checklists, formatting rules, and fees for Nigerian courts',
-    color: 'from-cyan-500 to-sky-500',
-    href: '/tools/filing',
-    features: ['Checklists', 'Format Rules', 'Fee Schedules'],
-    isPremium: false,
-  },
-  {
-    id: 'hearing-prep',
-    title: 'Hearing Prep Assistant',
-    icon: '🎯',
-    description: 'AI generates examination questions, cross-exam strategies, and court prep',
-    color: 'from-green-500 to-emerald-500',
-    href: '/tools/hearing-prep',
-    features: ['Exam-in-Chief', 'Cross-Exam', 'Objections'],
-    isPremium: false,
-  },
-  {
-    id: 'clauses',
-    title: 'Clause Library',
-    icon: '📚',
-    description: 'Save, search, and reuse Nigerian legal clauses with AI generation',
-    color: 'from-sky-500 to-blue-500',
-    href: '/tools/clauses',
-    features: ['Save & Reuse', 'AI Generate', 'Nigerian Law'],
-    isPremium: false,
-  },
-  {
-    id: 'intelligence',
-    title: 'Daily Intelligence Brief',
-    icon: '📰',
-    description: 'Personalized daily legal news, regulatory alerts, and action items',
-    color: 'from-indigo-500 to-purple-500',
-    href: '/tools/intelligence',
-    features: ['Legislation', 'Court Decisions', 'Regulatory', 'Deadlines'],
-    isPremium: true,
-  },
-  {
-    id: 'knowledge',
-    title: 'Firm Knowledge Agent',
-    icon: '🧠',
-    description: 'Upload documents and query your firm\'s private knowledge base with AI',
-    color: 'from-emerald-500 to-teal-500',
-    href: '/tools/knowledge',
-    features: ['Document Upload', 'AI Search', 'Firm-Isolated', 'Citations'],
-    isPremium: true,
-  },
-]
-
-function ToolCard({ tool, showBadge }: { tool: typeof generalTools[0]; showBadge?: boolean }) {
-  return (
-    <Link
-      href={tool.href}
-      className="group bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:transform hover:scale-[1.02]"
-    >
-      {/* Card Header */}
-      <div className={`bg-gradient-to-r ${tool.color} p-6 relative`}>
-        <span className="text-5xl">{tool.icon}</span>
-        {showBadge && (tool as any).isPremium && (
-          <span className="absolute top-3 right-3 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">
-            ⭐ Premium
-          </span>
-        )}
-        {showBadge && !(tool as any).isPremium && (
-          <span className="absolute top-3 right-3 bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-            Verified Only
-          </span>
-        )}
-      </div>
-
-      {/* Card Body */}
-      <div className="p-5">
-        <h3 className="text-lg font-bold text-white mb-2 group-hover:text-green-400 transition">
-          {tool.title}
-        </h3>
-        <p className="text-gray-400 text-sm mb-4">{tool.description}</p>
-        {/* Features */}
-        <div className="flex flex-wrap gap-2">
-          {tool.features.map((feature) => (
-            <span
-              key={feature}
-              className="bg-gray-700/50 text-gray-300 px-2 py-1 rounded-full text-xs"
-            >
-              {feature}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Card Footer */}
-      <div className="px-5 pb-5">
-        <div className="flex items-center text-green-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
-          <span>Try Now</span>
-          <span className="ml-1">→</span>
-        </div>
-      </div>
-    </Link>
-  )
-}
 
 export default function ToolsPage() {
   return (
@@ -249,7 +85,7 @@ export default function ToolsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center space-x-2">
-              <span className="text-2xl">⚖️</span>
+              <span className="text-2xl">??</span>
               <span className="text-xl font-bold text-white">CaseWin AI</span>
             </Link>
             <div className="flex items-center space-x-3 sm:space-x-4 text-sm">
@@ -271,7 +107,7 @@ export default function ToolsPage() {
       <div className="bg-gradient-to-r from-green-800/50 to-emerald-800/50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            🛠️ AI Legal Tools
+            ??? AI Legal Tools
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
             Powerful AI tools designed specifically for Nigerian legal practice
@@ -279,59 +115,54 @@ export default function ToolsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
-
-        {/* ── SECTION 1: General AI Tools ── */}
-        <section>
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-1">⚡ General AI Tools</h2>
-            <p className="text-gray-400 text-sm">Free for all registered users — no subscription required</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {generalTools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} />
-            ))}
-          </div>
-        </section>
-
-        {/* ── SECTION 2: Lawyer & Firm Tools ── */}
-        <section>
-          <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h2 className="text-2xl font-bold text-white">⚖️ Lawyer & Firm Tools</h2>
-                <span className="bg-green-600/30 border border-green-500/50 text-green-400 text-xs font-semibold px-2.5 py-1 rounded-full">Verified Lawyers Only</span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Available after admin verification. <span className="text-yellow-400">⭐ Premium</span> tools additionally require a subscription.
-              </p>
-            </div>
-            <Link href="/auth/signup?type=lawyer" className="shrink-0 inline-flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
-              Register as a Lawyer →
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {lawyerTools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} showBadge />
-            ))}
-          </div>
-        </section>
-
-        {/* Bottom CTA */}
-        <div className="text-center">
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-green-500/20 max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold text-white mb-4">Need Help Choosing?</h2>
-            <p className="text-gray-400 mb-6">
-              Not sure which tool is right for your legal matter? Our AI can guide you to the right solution.
-            </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {tools.map((tool) => (
             <Link
-              href="/"
-              className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition"
+              key={tool.id}
+              href={tool.href}
+              className="group bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:transform hover:scale-[1.02]"
             >
-              <span className="mr-2">🤖</span>
-              Ask CaseWin AI
+              <div className={`bg-gradient-to-r ${tool.color} p-6`}>
+                <span className="text-5xl">{tool.icon}</span>
+              </div>
+              <div className="p-5">
+                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-green-400 transition">
+                  {tool.title}
+                </h3>
+                <p className="text-gray-400 text-sm mb-4">{tool.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  {tool.features.map((feature) => (
+                    <span key={feature} className="bg-gray-700/50 text-gray-300 px-2 py-1 rounded-full text-xs">
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="px-5 pb-5">
+                <div className="flex items-center text-green-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
+                  <span>Try Now</span>
+                  <span className="ml-1">?</span>
+                </div>
+              </div>
             </Link>
-          </div>
+          ))}
+        </div>
+
+        {/* Lawyer Tools CTA */}
+        <div className="mt-16 bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-green-500/20 max-w-2xl mx-auto text-center">
+          <div className="text-4xl mb-3">??</div>
+          <h2 className="text-2xl font-bold text-white mb-3">Lawyer & Firm Tools</h2>
+          <p className="text-gray-400 mb-6">
+            Verified lawyers get access to 11 professional tools � Time & Billing, Case Manager, Hearing Prep, AI Chatbot, Daily Intelligence Brief, and more.
+          </p>
+          <Link
+            href="/marketplace"
+            className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition"
+          >
+            <span className="mr-2">??</span>
+            View Lawyer Tools on Marketplace
+          </Link>
         </div>
       </div>
     </div>
