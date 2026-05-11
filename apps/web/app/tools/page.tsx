@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 
-const tools = [
+const generalTools = [
   {
     id: 'draft',
     title: 'Document Drafting',
@@ -85,33 +85,6 @@ const tools = [
     features: ['Limitation Periods', 'Filing Dates', 'Court Rules']
   },
   {
-    id: 'billing',
-    title: 'Time & Billing',
-    icon: '💰',
-    description: 'Track billable hours, manage rates, and generate invoices with AI',
-    color: 'from-emerald-500 to-teal-500',
-    href: '/tools/billing',
-    features: ['Timer', 'Invoicing', 'Rate Tracking']
-  },
-  {
-    id: 'cases',
-    title: 'Case Manager',
-    icon: '📁',
-    description: 'Track active cases with suit numbers, courts, parties, and dates',
-    color: 'from-amber-500 to-yellow-500',
-    href: '/tools/cases',
-    features: ['Active Cases', 'Court Dates', 'Status Tracking']
-  },
-  {
-    id: 'filing',
-    title: 'Court Filing Prep',
-    icon: '📝',
-    description: 'Get filing checklists, formatting rules, and fees for Nigerian courts',
-    color: 'from-cyan-500 to-sky-500',
-    href: '/tools/filing',
-    features: ['Checklists', 'Format Rules', 'Fee Schedules']
-  },
-  {
     id: 'citations',
     title: 'Citation Generator',
     icon: '📚',
@@ -119,15 +92,6 @@ const tools = [
     color: 'from-green-500 to-green-500',
     href: '/tools/citations',
     features: ['NWLR', 'LPELR', 'Batch Format']
-  },
-  {
-    id: 'chatbot',
-    title: 'AI Legal Chatbot',
-    icon: '🤖',
-    description: 'Chat with AI about any Nigerian legal question — statutes, case law, and procedures',
-    color: 'from-blue-500 to-green-500',
-    href: '/tools/chatbot',
-    features: ['Conversational', 'Nigerian Law', 'Real-time']
   },
   {
     id: 'fees',
@@ -139,13 +103,56 @@ const tools = [
     features: ['Fee Breakdown', 'Court Fees', 'VAT']
   },
   {
+    id: 'chatbot',
+    title: 'AI Legal Chatbot',
+    icon: '🤖',
+    description: 'Chat with AI about any Nigerian legal question — statutes, case law, and procedures',
+    color: 'from-blue-500 to-green-500',
+    href: '/tools/chatbot',
+    features: ['Conversational', 'Nigerian Law', 'Real-time']
+  },
+]
+
+const lawyerTools = [
+  {
+    id: 'billing',
+    title: 'Time & Billing',
+    icon: '💰',
+    description: 'Track billable hours, manage rates, and generate invoices with AI',
+    color: 'from-emerald-500 to-teal-500',
+    href: '/tools/billing',
+    features: ['Timer', 'Invoicing', 'Rate Tracking'],
+    isPremium: false,
+  },
+  {
+    id: 'cases',
+    title: 'Case Manager',
+    icon: '📁',
+    description: 'Track active cases with suit numbers, courts, parties, and dates',
+    color: 'from-amber-500 to-yellow-500',
+    href: '/tools/cases',
+    features: ['Active Cases', 'Court Dates', 'Status Tracking'],
+    isPremium: false,
+  },
+  {
+    id: 'filing',
+    title: 'Court Filing Prep',
+    icon: '📝',
+    description: 'Get filing checklists, formatting rules, and fees for Nigerian courts',
+    color: 'from-cyan-500 to-sky-500',
+    href: '/tools/filing',
+    features: ['Checklists', 'Format Rules', 'Fee Schedules'],
+    isPremium: false,
+  },
+  {
     id: 'hearing-prep',
     title: 'Hearing Prep Assistant',
     icon: '🎯',
     description: 'AI generates examination questions, cross-exam strategies, and court prep',
     color: 'from-green-500 to-emerald-500',
     href: '/tools/hearing-prep',
-    features: ['Exam-in-Chief', 'Cross-Exam', 'Objections']
+    features: ['Exam-in-Chief', 'Cross-Exam', 'Objections'],
+    isPremium: false,
   },
   {
     id: 'clauses',
@@ -154,7 +161,8 @@ const tools = [
     description: 'Save, search, and reuse Nigerian legal clauses with AI generation',
     color: 'from-sky-500 to-blue-500',
     href: '/tools/clauses',
-    features: ['Save & Reuse', 'AI Generate', 'Nigerian Law']
+    features: ['Save & Reuse', 'AI Generate', 'Nigerian Law'],
+    isPremium: false,
   },
   {
     id: 'intelligence',
@@ -163,7 +171,8 @@ const tools = [
     description: 'Personalized daily legal news, regulatory alerts, and action items',
     color: 'from-indigo-500 to-purple-500',
     href: '/tools/intelligence',
-    features: ['Legislation', 'Court Decisions', 'Regulatory', 'Deadlines']
+    features: ['Legislation', 'Court Decisions', 'Regulatory', 'Deadlines'],
+    isPremium: true,
   },
   {
     id: 'knowledge',
@@ -172,9 +181,61 @@ const tools = [
     description: 'Upload documents and query your firm\'s private knowledge base with AI',
     color: 'from-emerald-500 to-teal-500',
     href: '/tools/knowledge',
-    features: ['Document Upload', 'AI Search', 'Firm-Isolated', 'Citations']
+    features: ['Document Upload', 'AI Search', 'Firm-Isolated', 'Citations'],
+    isPremium: true,
   },
 ]
+
+function ToolCard({ tool, showBadge }: { tool: typeof generalTools[0]; showBadge?: boolean }) {
+  return (
+    <Link
+      href={tool.href}
+      className="group bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:transform hover:scale-[1.02]"
+    >
+      {/* Card Header */}
+      <div className={`bg-gradient-to-r ${tool.color} p-6 relative`}>
+        <span className="text-5xl">{tool.icon}</span>
+        {showBadge && (tool as any).isPremium && (
+          <span className="absolute top-3 right-3 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">
+            ⭐ Premium
+          </span>
+        )}
+        {showBadge && !(tool as any).isPremium && (
+          <span className="absolute top-3 right-3 bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+            Verified Only
+          </span>
+        )}
+      </div>
+
+      {/* Card Body */}
+      <div className="p-5">
+        <h3 className="text-lg font-bold text-white mb-2 group-hover:text-green-400 transition">
+          {tool.title}
+        </h3>
+        <p className="text-gray-400 text-sm mb-4">{tool.description}</p>
+        {/* Features */}
+        <div className="flex flex-wrap gap-2">
+          {tool.features.map((feature) => (
+            <span
+              key={feature}
+              className="bg-gray-700/50 text-gray-300 px-2 py-1 rounded-full text-xs"
+            >
+              {feature}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Card Footer */}
+      <div className="px-5 pb-5">
+        <div className="flex items-center text-green-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
+          <span>Try Now</span>
+          <span className="ml-1">→</span>
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 export default function ToolsPage() {
   return (
@@ -214,53 +275,46 @@ export default function ToolsPage() {
         </div>
       </div>
 
-      {/* Tools Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {tools.map((tool) => (
-            <Link
-              key={tool.id}
-              href={tool.href}
-              className="group bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:transform hover:scale-[1.02]"
-            >
-              {/* Card Header */}
-              <div className={`bg-gradient-to-r ${tool.color} p-6`}>
-                <span className="text-5xl">{tool.icon}</span>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
 
-              {/* Card Body */}
-              <div className="p-5">
-                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-green-400 transition">
-                  {tool.title}
-                </h3>
-                <p className="text-gray-400 text-sm mb-4">{tool.description}</p>
-                
-                {/* Features */}
-                <div className="flex flex-wrap gap-2">
-                  {tool.features.map((feature) => (
-                    <span
-                      key={feature}
-                      className="bg-gray-700/50 text-gray-300 px-2 py-1 rounded-full text-xs"
-                    >
-                      {feature}
-                    </span>
-                  ))}
-                </div>
-              </div>
+        {/* ── SECTION 1: General AI Tools ── */}
+        <section>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-white mb-1">⚡ General AI Tools</h2>
+            <p className="text-gray-400 text-sm">Free for all registered users — no subscription required</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {generalTools.map((tool) => (
+              <ToolCard key={tool.id} tool={tool} />
+            ))}
+          </div>
+        </section>
 
-              {/* Card Footer */}
-              <div className="px-5 pb-5">
-                <div className="flex items-center text-green-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
-                  <span>Try Now</span>
-                  <span className="ml-1">→</span>
-                </div>
+        {/* ── SECTION 2: Lawyer & Firm Tools ── */}
+        <section>
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-2xl font-bold text-white">⚖️ Lawyer & Firm Tools</h2>
+                <span className="bg-green-600/30 border border-green-500/50 text-green-400 text-xs font-semibold px-2.5 py-1 rounded-full">Verified Lawyers Only</span>
               </div>
+              <p className="text-gray-400 text-sm">
+                Available after admin verification. <span className="text-yellow-400">⭐ Premium</span> tools additionally require a subscription.
+              </p>
+            </div>
+            <Link href="/auth/signup?type=lawyer" className="shrink-0 inline-flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+              Register as a Lawyer →
             </Link>
-          ))}
-        </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {lawyerTools.map((tool) => (
+              <ToolCard key={tool.id} tool={tool} showBadge />
+            ))}
+          </div>
+        </section>
 
         {/* Bottom CTA */}
-        <div className="mt-16 text-center">
+        <div className="text-center">
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-green-500/20 max-w-2xl mx-auto">
             <h2 className="text-2xl font-bold text-white mb-4">Need Help Choosing?</h2>
             <p className="text-gray-400 mb-6">

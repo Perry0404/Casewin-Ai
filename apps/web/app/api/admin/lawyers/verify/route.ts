@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (lawyerData?.user_id) {
       await supabase
         .from('profiles')
-        .update({ user_type: is_verified ? 'lawyer' : 'client' })
+        .update({ user_type: is_verified ? 'lawyer' : 'lawyer_pending' })
         .eq('id', lawyerData.user_id)
     }
 

@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
 
     const validTypes = ['client', 'lawyer', 'law_firm']
     const safeUserType = validTypes.includes(userType) ? userType : 'client'
+    // Lawyers start as 'lawyer_pending' until admin verifies them
+    const profileUserType = safeUserType === 'lawyer' ? 'lawyer_pending' : safeUserType
 
     const admin = getAdmin()
 
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
       options: {
         data: {
           full_name: fullName || '',
-          user_type: safeUserType,
+          user_type: profileUserType,
         },
       },
     })
@@ -65,7 +67,7 @@ export async function POST(req: NextRequest) {
           id: userId,
           email: email,
           full_name: fullName || '',
-          user_type: safeUserType,
+          user_type: profileUserType,
         }, { onConflict: 'id' })
     } catch (e) {
       console.error('Profile upsert fallback error:', e)

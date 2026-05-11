@@ -117,6 +117,8 @@ export default function SignupPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               user_id: user.id,
+              full_name: formData.fullName,
+              email: formData.email,
               bar_number: formData.barNumber,
               specializations: formData.specializations,
               hourly_rate: parseFloat(formData.hourlyRate),
