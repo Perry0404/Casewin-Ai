@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const GROK_API_KEY = process.env.GROK_API_KEY || ''
+const GROK_API_KEY = process.env.GROK_API_KEY || process.env.XAI_API_KEY || ''
 const GROK_API_URL = 'https://api.x.ai/v1/chat/completions'
 const GROK_MODEL = process.env.GROK_MODEL || 'grok-3'
 
