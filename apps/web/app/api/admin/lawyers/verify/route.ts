@@ -1,8 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/lib/supabase'
 
-export async function POST(request: Request) {
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'casewinadmin2024'
+
+export async function POST(request: NextRequest) {
   try {
+    // Auth check
+    const adminKey = request.headers.get('x-admin-key')
+    if (adminKey !== ADMIN_PASSWORD) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
     const body = await request.json()
     const { lawyer_id, is_verified } = body
 

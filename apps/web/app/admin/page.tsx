@@ -701,8 +701,8 @@ export default function AdminDashboard() {
                                 try {
                                   const res = await fetch('/api/admin/lawyers/verify', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ lawyer_id: l.id, verified: !l.is_verified })
+                                    headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+                                    body: JSON.stringify({ lawyer_id: l.id, is_verified: !l.is_verified })
                                   })
                                   if (res.ok) {
                                     setLawyers(prev => prev.map(x => x.id === l.id ? { ...x, is_verified: !x.is_verified } : x))
