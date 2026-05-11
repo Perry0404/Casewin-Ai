@@ -158,7 +158,7 @@ Keep it formal, appropriate for Nigerian legal practice.`
 
       if (zendfiRes.ok) {
         const zendfiData = await zendfiRes.json()
-        paymentLink = zendfiData.payment_link || zendfiData.data?.payment_link || zendfiData.url || zendfiData.data?.url || ''
+        paymentLink = zendfiData.payment_url || zendfiData.data?.payment_url || zendfiData.payment_link || zendfiData.data?.payment_link || zendfiData.url || zendfiData.data?.url || zendfiData.checkout_url || zendfiData.data?.checkout_url || ''
         zendfiPaymentLinkId = zendfiData.id || zendfiData.data?.id || ''
       }
     }

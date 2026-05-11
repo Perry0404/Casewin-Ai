@@ -135,6 +135,56 @@ export async function POST(request: NextRequest) {
           .eq('id', metadata.related_id)
       }
 
+      // Handle subscription payment - activate the subscription
+      if (metadata.type === 'subscription' && metadata.user_id && metadata.plan) {
+        const expiresAt = new Date()
+        expiresAt.setMonth(expiresAt.getMonth() + 1)
+        await supabase
+          .from('subscriptions')
+          .update({
+            status: 'active',
+            expires_at: expiresAt.toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', metadata.user_id)
+          .eq('plan', metadata.plan)
+          .eq('status', 'pending')
+        await supabase.from('notifications').insert({
+          user_email: userEmail,
+          type: 'subscription',
+          title: 'Subscription Activated!',
+          message: `Your ${metadata.plan} plan is now active. Enjoy premium tools.`,
+          read: false,
+        })
+        console.log(`ZendFi: Activated ${metadata.plan} subscription for ${userEmail}`)
+      }
+
+      // Handle invoice payment - mark invoice paid and credit lawyer wallet
+      if (metadata.invoice_number && metadata.lawyer_id) {
+        await supabase
+          .from('invoices')
+          .update({ status: 'paid', paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('invoice_number', metadata.invoice_number)
+          .eq('lawyer_id', metadata.lawyer_id)
+        // Credit lawyer wallet (lawyer keeps 85%, CaseWin takes 15%)
+        const lawyerShare = Math.round(depositAmount * 0.85)
+        const { data: lawyerWallet } = await supabase
+          .from('user_wallets')
+          .select('*')
+          .eq('user_id', metadata.lawyer_id)
+          .single()
+        if (!lawyerWallet) {
+          await supabase.from('user_wallets').insert({ user_id: metadata.lawyer_id, naira_balance: lawyerShare, total_deposits: lawyerShare })
+        } else {
+          await supabase.from('user_wallets').update({
+            naira_balance: (lawyerWallet.naira_balance || 0) + lawyerShare,
+            total_deposits: (lawyerWallet.total_deposits || 0) + lawyerShare,
+            updated_at: new Date().toISOString(),
+          }).eq('user_id', metadata.lawyer_id)
+        }
+        console.log(`ZendFi: Invoice ${metadata.invoice_number} paid — credited NGN ${lawyerShare} to lawyer ${metadata.lawyer_id}`)
+      }
+
       console.log(`ZendFi: Credited NGN ${depositAmount} to ${userEmail}`)
     }
 

@@ -162,13 +162,16 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         amount: amountUSD,
         currency: 'USD',
+        token: 'USDC',
         onramp: true,
+        payer_service_charge: true,
         metadata: {
           type: 'subscription',
           user_id: userId,
           user_email: userEmail,
           plan: plan,
         },
+        webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://casewinai.com'}/api/webhooks/zendfi`,
         redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://casewinai.com'}/tools?subscribed=true`,
       }),
     })
