@@ -704,10 +704,14 @@ export default function AdminDashboard() {
                                     headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
                                     body: JSON.stringify({ lawyer_id: l.id, is_verified: !l.is_verified })
                                   })
+                                  const result = await res.json()
                                   if (res.ok) {
                                     setLawyers(prev => prev.map(x => x.id === l.id ? { ...x, is_verified: !x.is_verified } : x))
+                                    alert(result.message || 'Done')
+                                  } else {
+                                    alert('Error: ' + (result.error || res.status))
                                   }
-                                } catch { /* ignore */ }
+                                } catch (e) { alert('Network error: ' + e) }
                                 setVerifyingId('')
                               }}
                               className={`px-3 py-1 rounded text-xs font-semibold transition-all ${

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'casewinadmin2024'
 
@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     // Auth check
     const adminKey = request.headers.get('x-admin-key')
     if (adminKey !== ADMIN_PASSWORD) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      return NextResponse.json({ error: 'Unauthorized — wrong admin password' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -18,7 +18,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = getSupabaseClient()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    if (!supabaseUrl || !serviceKey) {
+      return NextResponse.json({ error: 'Database not configured — SUPABASE_SERVICE_ROLE_KEY missing in Vercel env vars' }, { status: 503 })
+    }
+    // Always create a fresh client with service role key — bypasses RLS
+    const supabase = createClient(supabaseUrl, serviceKey)
 
     const { data: lawyerData, error } = await supabase
       .from('lawyer_profiles')
