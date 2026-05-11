@@ -75,6 +75,19 @@ const generalTools = [
     href: '/tools/compliance',
     features: ['CAMA', 'NDPR', 'CBN', 'Tax Laws']
   },
+]
+
+const lawyerTools = [
+  {
+    id: 'chatbot',
+    title: 'AI Legal Chatbot',
+    icon: '🤖',
+    description: 'Chat with AI about any Nigerian legal question — statutes, case law, and procedures',
+    color: 'from-blue-500 to-green-500',
+    href: '/tools/chatbot',
+    features: ['Conversational', 'Nigerian Law', 'Real-time'],
+    isPremium: false,
+  },
   {
     id: 'deadlines',
     title: 'Deadline Calculator',
@@ -82,7 +95,8 @@ const generalTools = [
     description: 'AI calculates statutory deadlines and limitation periods for Nigerian courts',
     color: 'from-green-500 to-green-500',
     href: '/tools/deadlines',
-    features: ['Limitation Periods', 'Filing Dates', 'Court Rules']
+    features: ['Limitation Periods', 'Filing Dates', 'Court Rules'],
+    isPremium: false,
   },
   {
     id: 'citations',
@@ -91,7 +105,8 @@ const generalTools = [
     description: 'Format Nigerian legal citations in NWLR, LPELR, SC, and more',
     color: 'from-green-500 to-green-500',
     href: '/tools/citations',
-    features: ['NWLR', 'LPELR', 'Batch Format']
+    features: ['NWLR', 'LPELR', 'Batch Format'],
+    isPremium: false,
   },
   {
     id: 'fees',
@@ -100,20 +115,9 @@ const generalTools = [
     description: 'AI estimates legal fees by matter type, court, and complexity using NBA scales',
     color: 'from-rose-500 to-emerald-500',
     href: '/tools/fees',
-    features: ['Fee Breakdown', 'Court Fees', 'VAT']
+    features: ['Fee Breakdown', 'Court Fees', 'VAT'],
+    isPremium: false,
   },
-  {
-    id: 'chatbot',
-    title: 'AI Legal Chatbot',
-    icon: '🤖',
-    description: 'Chat with AI about any Nigerian legal question — statutes, case law, and procedures',
-    color: 'from-blue-500 to-green-500',
-    href: '/tools/chatbot',
-    features: ['Conversational', 'Nigerian Law', 'Real-time']
-  },
-]
-
-const lawyerTools = [
   {
     id: 'billing',
     title: 'Time & Billing',
