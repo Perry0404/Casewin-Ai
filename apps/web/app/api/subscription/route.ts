@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabaseClient()
 
     // Create ZendFi payment link
-    const ZENDFI_KEY = process.env.ZENDFI_SECRET_KEY || process.env.ZENDFI_KEY_FALLBACK || ''
+    const ZENDFI_KEY = process.env.ZENDFI_API_KEY || 'zfi_live_5uRZX6VuCMDNq3ZYEZMyen5YwypToRY7chR7fRHuVtQJ'
     const amountUSD = planDetails.priceUSD
 
     const paymentRes = await fetch('https://api.zendfi.tech/api/v1/payment-links', {
