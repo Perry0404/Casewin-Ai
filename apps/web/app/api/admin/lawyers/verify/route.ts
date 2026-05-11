@@ -18,22 +18,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const { error } = await getSupabaseClient()
+    const supabase = getSupabaseClient()
+
+    const { data: lawyerData, error } = await supabase
       .from('lawyer_profiles')
       .update({
         is_verified,
         verification_date: is_verified ? new Date().toISOString() : null
       })
       .eq('id', lawyer_id)
+      .select('user_id')
+      .single()
 
     if (error) {
       console.error('getSupabaseClient() error:', error)
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
+    // Sync profiles.user_type so LawyerGuard grants/revokes access immediately
+    if (lawyerData?.user_id) {
+      await supabase
+        .from('profiles')
+        .update({ user_type: is_verified ? 'lawyer' : 'client' })
+        .eq('id', lawyerData.user_id)
+    }
+
     return NextResponse.json({ 
       success: true, 
-      message: is_verified ? 'Lawyer verified' : 'Verification removed' 
+      message: is_verified ? 'Lawyer verified and granted tool access' : 'Verification removed' 
     })
   } catch (error) {
     console.error('Error:', error)
