@@ -11,6 +11,8 @@ const PUBLIC_ROUTES = [
   '/predictions',
   '/marketplace',
   '/tools',
+  '/dispute',
+  '/court',
   '/privacy',
   '/terms',
 ]

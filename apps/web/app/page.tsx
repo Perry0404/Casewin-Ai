@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import MobileNav from '@/components/MobileNav'
 import { PREDICTIONS_ENABLED } from '@/lib/features'
+import { JUSTICE_STACK } from '@/lib/justice-stack'
 
 export default function Home() {
   const features = [
@@ -133,17 +134,17 @@ export default function Home() {
       <section className="relative container mx-auto px-4 py-16">
         <div className="text-center mb-16">
           <div className="inline-block mb-6">
-            <span className="bg-gradient-to-r from-green-400 to-emerald-400 text-white px-6 py-2 rounded-full text-sm font-bold animate-pulse">
-              🇳🇬 BUILT FOR NIGERIAN LAWYERS
+            <span className="bg-gradient-to-r from-green-400 to-emerald-400 text-white px-6 py-2 rounded-full text-sm font-bold">
+              🌍 AFRICA&apos;S AI JUSTICE INFRASTRUCTURE
             </span>
           </div>
           <h2 className="text-5xl md:text-7xl font-bold text-white mb-6">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400">
-              AI-Powered Legal Tools
+              From dispute to just outcome
             </span>
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-            Transform your legal practice with cutting-edge AI. Research cases, draft documents, predict outcomes, and more - all powered by 30,000+ Nigerian case law database.
+            CaseWin isn&apos;t just AI for lawyers — it&apos;s the infrastructure that reduces the distance between a dispute and a just outcome. Knowledge, lawyer tools, dispute resolution, and court infrastructure, in one stack.
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
             <Link href="/auth/signup" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-green-500/50 hover:scale-105 transition">
@@ -180,6 +181,37 @@ export default function Home() {
                 <span className="inline-block w-full py-2 px-4 rounded-lg font-semibold transition-all duration-300 bg-white/10 text-white group-hover:bg-white/20 text-center">
                   Try Now →
                 </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* The Justice Infrastructure Stack */}
+      <section className="relative container mx-auto px-4 py-12">
+        <div className="text-center mb-10">
+          <p className="text-green-400 font-semibold tracking-widest text-sm uppercase mb-2">The justice infrastructure stack</p>
+          <h2 className="text-4xl font-bold text-white">Four layers. One mission.</h2>
+          <p className="text-gray-400 mt-2 max-w-2xl mx-auto">Each layer reduces the distance between a dispute and a just outcome.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl mx-auto">
+          {JUSTICE_STACK.map((layer) => (
+            <Link key={layer.id} href={`/tools#${layer.id}`}
+              className="group bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/30 transition-all">
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${layer.gradient} flex items-center justify-center text-white font-bold`}>
+                  {layer.number}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">{layer.title}</h3>
+                  <p className="text-gray-500 text-xs">{layer.tagline}</p>
+                </div>
+              </div>
+              <p className="text-gray-400 text-sm mb-3">{layer.description}</p>
+              <div className="flex flex-wrap gap-2">
+                {layer.tools.slice(0, 4).map((t) => (
+                  <span key={t.name} className="bg-white/10 text-gray-300 px-2 py-1 rounded-full text-xs">{t.name}</span>
+                ))}
               </div>
             </Link>
           ))}

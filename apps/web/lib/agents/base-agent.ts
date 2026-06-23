@@ -39,9 +39,9 @@ export async function callLLM(
   messages: { role: string; content: string }[],
   temperature = 0.7
 ): Promise<string> {
-  const apiKey = process.env.XAI_API_KEY || process.env.OPENAI_API_KEY
-  if (!apiKey) throw new Error('No API key. Set XAI_API_KEY or OPENAI_API_KEY.')
-  const isXai = !!process.env.XAI_API_KEY
+  const apiKey = process.env.XAI_API_KEY || process.env.GROK_API_KEY || process.env.OPENAI_API_KEY
+  if (!apiKey) throw new Error('No API key. Set XAI_API_KEY, GROK_API_KEY or OPENAI_API_KEY.')
+  const isXai = !!(process.env.XAI_API_KEY || process.env.GROK_API_KEY)
   const baseUrl = isXai ? 'https://api.x.ai/v1' : 'https://api.openai.com/v1'
   const model = isXai ? 'grok-4' : 'gpt-4-turbo-preview'
   const res = await fetch(`${baseUrl}/chat/completions`, {
