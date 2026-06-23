@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import SubscriptionGuard from '@/components/SubscriptionGuard'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface Document {
   document_name: string
@@ -43,6 +44,7 @@ export default function KnowledgePage() {
 }
 
 function KnowledgePageContent() {
+  const { user } = useAuth()
   const [firmId, setFirmId] = useState('')
   const [documents, setDocuments] = useState<Document[]>([])
   const [messages, setMessages] = useState<Message[]>([])
@@ -103,7 +105,7 @@ function KnowledgePageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           firmId,
-          userId: localStorage.getItem('casewin_user_id') || '',
+          userId: user?.id || '',
           documentName: file.name,
           documentText: text,
           documentType: selectedCategory,

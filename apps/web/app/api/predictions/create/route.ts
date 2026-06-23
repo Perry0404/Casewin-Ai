@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { PREDICTIONS_ENABLED } from '@/lib/features'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -29,6 +30,9 @@ const VALID_CATEGORIES = [
 
 // POST /api/predictions/create - Users create their own markets
 export async function POST(request: NextRequest) {
+  if (!PREDICTIONS_ENABLED) {
+    return NextResponse.json({ error: 'Prediction market is currently disabled' }, { status: 503 })
+  }
   try {
     const authUser = await getAuthUser(request)
     if (!authUser?.email) {

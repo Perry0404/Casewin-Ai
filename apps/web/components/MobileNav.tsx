@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { PREDICTIONS_ENABLED } from '@/lib/features'
 
 interface MobileNavProps {
   currentPath?: string
@@ -11,7 +12,7 @@ interface MobileNavProps {
 const NAV_LINKS = [
   { href: '/', label: 'AI Tools', icon: '🤖' },
   { href: '/marketplace', label: 'Hire Lawyers', icon: '👨‍⚖️' },
-  { href: '/predictions', label: 'Predictions', icon: '📊' },
+  ...(PREDICTIONS_ENABLED ? [{ href: '/predictions', label: 'Predictions', icon: '📊' }] : []),
   { href: '/dashboard', label: 'Dashboard', icon: '📋' },
 ]
 

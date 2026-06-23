@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClient, getSupabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: Request) {
   try {
@@ -80,6 +80,21 @@ export async function POST(request: Request) {
         })
       }
       return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    // Record the user as a (pending) lawyer regardless of which registration
+    // path they used. Without this, users who register via /marketplace/register
+    // keep user_type 'client' and appear as normal users. Admin verification
+    // later promotes them to 'lawyer' (see /api/admin/lawyers/verify).
+    // Uses the service-role client because profiles is RLS-protected.
+    if (user_id) {
+      const { error: profileError } = await getSupabaseAdmin()
+        .from('profiles')
+        .update({ user_type: 'lawyer_pending' })
+        .eq('id', user_id)
+        .neq('user_type', 'lawyer')
+        .neq('user_type', 'law_firm')
+      if (profileError) console.error('Failed to sync profiles.user_type on lawyer registration:', profileError)
     }
 
     return NextResponse.json({

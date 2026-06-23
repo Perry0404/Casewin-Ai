@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import MobileNav from '@/components/MobileNav'
+import { PREDICTIONS_ENABLED } from '@/lib/features'
 
 export default function Home() {
   const features = [
@@ -106,9 +107,11 @@ export default function Home() {
               <Link href="/marketplace" className="text-gray-300 hover:text-white transition-colors font-semibold">
                 Hire Lawyers
               </Link>
-              <Link href="/predictions" className="text-gray-300 hover:text-white transition-colors font-semibold">
-                Predictions
-              </Link>
+              {PREDICTIONS_ENABLED && (
+                <Link href="/predictions" className="text-gray-300 hover:text-white transition-colors font-semibold">
+                  Predictions
+                </Link>
+              )}
               <Link href="/pricing" className="text-gray-300 hover:text-white transition-colors font-semibold">
                 Pricing
               </Link>
@@ -184,6 +187,7 @@ export default function Home() {
       </section>
 
       {/* Prediction Market Promo */}
+      {PREDICTIONS_ENABLED && (
       <section className="relative container mx-auto px-4 py-12">
         <div className="bg-gradient-to-r from-green-600/20 via-emerald-600/20 to-green-600/20 backdrop-blur-xl rounded-3xl border border-white/20 p-12 hover:border-green-500/50 transition-all">
           <div className="grid md:grid-cols-2 gap-8 items-center">
@@ -241,6 +245,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Marketplace Promo */}
       <section className="relative container mx-auto px-4 py-12">
@@ -324,7 +329,9 @@ export default function Home() {
               <h4 className="text-white font-semibold mb-4">Platform</h4>
               <ul className="space-y-2 text-gray-400 text-sm">
                 <li><Link href="/marketplace" className="hover:text-white transition">Lawyer Marketplace</Link></li>
-                <li><Link href="/predictions" className="hover:text-white transition">Prediction Markets</Link></li>
+                {PREDICTIONS_ENABLED && (
+                  <li><Link href="/predictions" className="hover:text-white transition">Prediction Markets</Link></li>
+                )}
                 <li><Link href="/dashboard" className="hover:text-white transition">Dashboard</Link></li>
                 <li><Link href="/auth/signup" className="hover:text-white transition">Sign Up</Link></li>
               </ul>

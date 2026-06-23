@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import MobileNav from '@/components/MobileNav';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/components/Notifications';
+import { PREDICTIONS_ENABLED } from '@/lib/features';
 
 interface Booking {
   id: string;
@@ -199,7 +200,7 @@ export default function DashboardPage() {
                   { label: 'Analyze Contract', href: '/tools/analyze', icon: '🔍', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Predict Case', href: '/tools/predict', icon: '🎯', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Invoices', href: '/invoices', icon: '🧾', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
-                  { label: 'Predictions', href: '/predictions', icon: '📊', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
+                  ...(PREDICTIONS_ENABLED ? [{ label: 'Predictions', href: '/predictions', icon: '📊', color: 'bg-green-50 hover:bg-green-100 text-green-700' }] : []),
                 ].map((action) => (
                   <Link
                     key={action.label}

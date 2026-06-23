@@ -44,10 +44,123 @@ export async function POST(request: NextRequest) {
     if (eventType === 'payment.confirmed' || eventType === 'PaymentConfirmed') {
       const metadata = paymentData.metadata || {}
       const reference = metadata.reference
-      const userEmail = metadata.user_email
+      const paymentType = metadata.payment_type || metadata.type || ''
       // Use the original Naira amount from metadata (we convert NGN->USD for ZendFi)
-      const amount = metadata.naira_amount || paymentData.amount || metadata.amount
+      const nairaAmount = Math.round(
+        Number(metadata.naira_amount || paymentData.amount_ngn || paymentData.amount || metadata.amount || 0)
+      )
 
+      // ---- Invoice payment (agent commerce) ----
+      // The payer is the lawyer's client, not a CaseWin wallet holder, so we do
+      // NOT credit a deposit wallet here. Mark the invoice paid, credit the
+      // lawyer's internal wallet 85%, and record CaseWin's 15% platform fee.
+      if (metadata.invoice_number && metadata.lawyer_id) {
+        const lawyerEmail = metadata.lawyer_email || null
+
+        const { data: invoice } = await supabase
+          .from('invoices')
+          .update({ status: 'paid', paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('invoice_number', metadata.invoice_number)
+          .eq('lawyer_id', metadata.lawyer_id)
+          .select()
+          .single()
+
+        const invoiceTotal = nairaAmount || Math.round(Number(invoice?.total || 0))
+        const lawyerShare = Math.round(invoiceTotal * 0.85)
+        const platformFee = invoiceTotal - lawyerShare
+
+        // Credit the lawyer's internal wallet (85% share)
+        const { data: lawyerWallet } = await supabase
+          .from('user_wallets')
+          .select('*')
+          .eq('user_id', metadata.lawyer_id)
+          .single()
+        const lawyerNewBalance = (lawyerWallet?.naira_balance || 0) + lawyerShare
+        if (!lawyerWallet) {
+          await supabase.from('user_wallets').insert({
+            user_id: metadata.lawyer_id,
+            user_email: lawyerEmail,
+            naira_balance: lawyerShare,
+            total_deposits: lawyerShare,
+          })
+        } else {
+          await supabase.from('user_wallets').update({
+            naira_balance: lawyerNewBalance,
+            total_deposits: (lawyerWallet.total_deposits || 0) + lawyerShare,
+            updated_at: new Date().toISOString(),
+          }).eq('user_id', metadata.lawyer_id)
+        }
+
+        // Ledger entry for the lawyer payout
+        if (lawyerEmail) {
+          await supabase.from('wallet_transactions').insert({
+            user_email: lawyerEmail,
+            amount: lawyerShare,
+            transaction_type: 'invoice_payout',
+            related_id: metadata.invoice_number,
+            balance_after: lawyerNewBalance,
+            notes: `Invoice ${metadata.invoice_number} paid — 85% lawyer share`,
+          })
+        }
+
+        // Record CaseWin's 15% platform fee
+        if (platformFee > 0) {
+          await supabase.from('platform_fees').insert({
+            user_email: lawyerEmail || 'platform@casewin',
+            amount: platformFee,
+            fee_type: 'invoice',
+            related_id: metadata.invoice_number,
+            notes: `15% platform fee on invoice ${metadata.invoice_number} (NGN ${invoiceTotal.toLocaleString()})`,
+          })
+        }
+
+        // Notify the lawyer
+        if (lawyerEmail) {
+          await supabase.from('notifications').insert({
+            user_email: lawyerEmail,
+            type: 'invoice_paid',
+            title: 'Invoice Paid!',
+            message: `${metadata.client_name || 'Your client'} paid invoice ${metadata.invoice_number}. NGN ${lawyerShare.toLocaleString()} credited to your wallet.`,
+            read: false,
+          })
+        }
+
+        console.log(`ZendFi: Invoice ${metadata.invoice_number} paid — credited NGN ${lawyerShare} to lawyer ${metadata.lawyer_id}`)
+        return NextResponse.json({ received: true })
+      }
+
+      // ---- Subscription payment ----
+      // Activate the plan only; subscription payments are not wallet deposits.
+      if (paymentType === 'subscription' && metadata.user_id && metadata.plan) {
+        const subExpiresAt = new Date()
+        subExpiresAt.setMonth(subExpiresAt.getMonth() + 1)
+        await supabase
+          .from('subscriptions')
+          .update({
+            status: 'active',
+            activated_at: new Date().toISOString(),
+            expires_at: subExpiresAt.toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', metadata.user_id)
+          .eq('plan', metadata.plan)
+          .eq('status', 'pending')
+        if (metadata.user_email) {
+          await supabase.from('notifications').insert({
+            user_email: metadata.user_email,
+            type: 'subscription',
+            title: 'Subscription Activated!',
+            message: `Your ${metadata.plan} plan is now active. Enjoy premium tools.`,
+            read: false,
+          })
+        }
+        console.log(`ZendFi: Activated ${metadata.plan} subscription for ${metadata.user_email}`)
+        return NextResponse.json({ received: true })
+      }
+
+      // ---- Wallet deposit / lawyer booking ----
+      const userEmail = metadata.user_email
+      const amount = nairaAmount
       if (!userEmail || !amount) {
         console.error('ZendFi webhook: missing user_email or amount in metadata')
         return NextResponse.json({ received: true })
@@ -135,55 +248,8 @@ export async function POST(request: NextRequest) {
           .eq('id', metadata.related_id)
       }
 
-      // Handle subscription payment - activate the subscription
-      if (metadata.type === 'subscription' && metadata.user_id && metadata.plan) {
-        const expiresAt = new Date()
-        expiresAt.setMonth(expiresAt.getMonth() + 1)
-        await supabase
-          .from('subscriptions')
-          .update({
-            status: 'active',
-            expires_at: expiresAt.toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', metadata.user_id)
-          .eq('plan', metadata.plan)
-          .eq('status', 'pending')
-        await supabase.from('notifications').insert({
-          user_email: userEmail,
-          type: 'subscription',
-          title: 'Subscription Activated!',
-          message: `Your ${metadata.plan} plan is now active. Enjoy premium tools.`,
-          read: false,
-        })
-        console.log(`ZendFi: Activated ${metadata.plan} subscription for ${userEmail}`)
-      }
-
-      // Handle invoice payment - mark invoice paid and credit lawyer wallet
-      if (metadata.invoice_number && metadata.lawyer_id) {
-        await supabase
-          .from('invoices')
-          .update({ status: 'paid', paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-          .eq('invoice_number', metadata.invoice_number)
-          .eq('lawyer_id', metadata.lawyer_id)
-        // Credit lawyer wallet (lawyer keeps 85%, CaseWin takes 15%)
-        const lawyerShare = Math.round(depositAmount * 0.85)
-        const { data: lawyerWallet } = await supabase
-          .from('user_wallets')
-          .select('*')
-          .eq('user_id', metadata.lawyer_id)
-          .single()
-        if (!lawyerWallet) {
-          await supabase.from('user_wallets').insert({ user_id: metadata.lawyer_id, naira_balance: lawyerShare, total_deposits: lawyerShare })
-        } else {
-          await supabase.from('user_wallets').update({
-            naira_balance: (lawyerWallet.naira_balance || 0) + lawyerShare,
-            total_deposits: (lawyerWallet.total_deposits || 0) + lawyerShare,
-            updated_at: new Date().toISOString(),
-          }).eq('user_id', metadata.lawyer_id)
-        }
-        console.log(`ZendFi: Invoice ${metadata.invoice_number} paid — credited NGN ${lawyerShare} to lawyer ${metadata.lawyer_id}`)
-      }
+      // Invoice and subscription payments are handled in their own
+      // early-return branches above; this path is wallet deposits + bookings.
 
       console.log(`ZendFi: Credited NGN ${depositAmount} to ${userEmail}`)
     }

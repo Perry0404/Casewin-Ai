@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface Plan {
   id: string
@@ -14,6 +16,8 @@ interface Plan {
 }
 
 export default function PricingPage() {
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [plans, setPlans] = useState<Plan[]>([])
   const [currentPlan, setCurrentPlan] = useState<string>('free')
   const [isLoading, setIsLoading] = useState(true)
@@ -21,13 +25,16 @@ export default function PricingPage() {
   const [showNGN, setShowNGN] = useState(true)
 
   useEffect(() => {
+    if (authLoading) return
     fetchPlans()
-  }, [])
+  }, [authLoading, user])
 
   const fetchPlans = async () => {
     try {
-      const userId = localStorage.getItem('casewin_user_id') || ''
-      const res = await fetch(`/api/subscription?userId=${userId}`)
+      // Key off the real authenticated user so subscription status matches
+      // what SubscriptionGuard checks (auth.uid()), not a throwaway id.
+      const qs = user ? `?userId=${user.id}&email=${encodeURIComponent(user.email || '')}` : ''
+      const res = await fetch(`/api/subscription${qs}`)
       const data = await res.json()
       if (data.plans) setPlans(data.plans)
       if (data.subscription?.plan) setCurrentPlan(data.subscription.plan)
@@ -39,17 +46,19 @@ export default function PricingPage() {
   }
 
   const handleSubscribe = async (planId: string) => {
+    // Subscriptions must be tied to the real account, otherwise payment never
+    // unlocks premium tools for the user. Require sign-in first.
+    if (!user) {
+      router.push('/auth/login?redirect=/pricing')
+      return
+    }
+
     setSubscribing(planId)
     try {
-      const userId = localStorage.getItem('casewin_user_id') || `user_${Date.now()}`
-      const userEmail = localStorage.getItem('casewin_user_email') || ''
-
-      localStorage.setItem('casewin_user_id', userId)
-
       const res = await fetch('/api/subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, userEmail, plan: planId }),
+        body: JSON.stringify({ userId: user.id, userEmail: user.email, plan: planId }),
       })
 
       const data = await res.json()

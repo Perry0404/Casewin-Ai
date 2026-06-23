@@ -32,7 +32,7 @@ export default function SubscriptionGuard({ tool, children }: SubscriptionGuardP
 
     const checkSubscription = async () => {
       try {
-        const res = await fetch(`/api/subscription?userId=${user.id}`)
+        const res = await fetch(`/api/subscription?userId=${user.id}&email=${encodeURIComponent(user.email || '')}`)
         const data = await res.json()
 
         if (data.subscription && data.subscription.status === 'active') {

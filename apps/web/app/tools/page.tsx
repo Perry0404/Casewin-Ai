@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { PREDICTIONS_ENABLED } from '@/lib/features'
 
 const tools = [
   {
@@ -88,7 +89,9 @@ export default function ToolsPage() {
               <span className="text-xl font-bold text-white">CaseWin AI</span>
             </Link>
             <div className="flex items-center space-x-3 sm:space-x-4 text-sm">
-              <Link href="/predictions" className="text-gray-300 hover:text-white transition">Predictions</Link>
+              {PREDICTIONS_ENABLED && (
+                <Link href="/predictions" className="text-gray-300 hover:text-white transition">Predictions</Link>
+              )}
               <Link href="/marketplace" className="text-gray-300 hover:text-white transition">Marketplace</Link>
               <Link href="/auth/login" className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition text-sm">Sign In</Link>
             </div>

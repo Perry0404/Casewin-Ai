@@ -13,6 +13,14 @@ import { getSupabaseClient } from '@/lib/supabase'
 
 const PREMIUM_TOOLS = ['intelligence', 'knowledge']
 
+// Comp / free-trial access. Emails listed here (or in the COMP_ACCESS_EMAILS
+// env var, comma-separated) get full firm-tier premium access without paying —
+// used to grant testers access to the Knowledge Agent + Daily Brief.
+const COMP_ACCESS_EMAILS = (process.env.COMP_ACCESS_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean)
+
 const PLANS = {
   individual: {
     id: 'individual',
@@ -68,9 +76,19 @@ const PLANS = {
 export async function GET(req: NextRequest) {
   try {
     const userId = req.headers.get('x-user-id') || req.nextUrl.searchParams.get('userId')
+    const email = (req.nextUrl.searchParams.get('email') || req.headers.get('x-user-email') || '').toLowerCase()
 
     // Always return plans
     const plans = Object.values(PLANS)
+
+    // Comp / free-trial testers get firm-tier access without payment.
+    if (email && COMP_ACCESS_EMAILS.includes(email)) {
+      return NextResponse.json({
+        plans,
+        subscription: { plan: 'firm', status: 'active', expires_at: '2099-12-31T00:00:00.000Z', comp: true },
+        premiumTools: PREMIUM_TOOLS,
+      })
+    }
 
     if (!userId) {
       return NextResponse.json({ plans, subscription: null })
@@ -183,7 +201,19 @@ export async function POST(req: NextRequest) {
     }
 
     const paymentData = await paymentRes.json()
-    const paymentUrl = paymentData.data?.url || paymentData.url || paymentData.data?.payment_link
+    // ZendFi returns the link under different keys depending on endpoint version.
+    // Check all known shapes (payment_url is the most common) so we never hand
+    // the client an empty URL — which previously silently broke subscriptions.
+    const paymentUrl =
+      paymentData.payment_url || paymentData.data?.payment_url ||
+      paymentData.url || paymentData.data?.url ||
+      paymentData.checkout_url || paymentData.data?.checkout_url ||
+      paymentData.payment_link || paymentData.data?.payment_link
+
+    if (!paymentUrl) {
+      console.error('ZendFi: no payment URL in response:', JSON.stringify(paymentData))
+      return NextResponse.json({ success: false, error: 'Payment link could not be created' }, { status: 502 })
+    }
 
     // Record pending subscription
     const expiresAt = new Date()

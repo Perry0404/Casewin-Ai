@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { PREDICTIONS_ENABLED } from '@/lib/features';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +97,9 @@ function calculateSellReturn(
 }
 
 export async function POST(request: NextRequest) {
+  if (!PREDICTIONS_ENABLED) {
+    return NextResponse.json({ error: 'Prediction market is currently disabled' }, { status: 503 });
+  }
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
