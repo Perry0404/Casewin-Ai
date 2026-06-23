@@ -195,6 +195,7 @@ export default function DashboardPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
+                  { label: 'Resolve Dispute', href: '/matter', icon: '🤝', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Hire Lawyer', href: '/marketplace', icon: '👨‍⚖️', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Draft Document', href: '/tools/draft', icon: '📝', color: 'bg-green-50 hover:bg-green-100 text-green-700' },
                   { label: 'Analyze Contract', href: '/tools/analyze', icon: '🔍', color: 'bg-green-50 hover:bg-green-100 text-green-700' },

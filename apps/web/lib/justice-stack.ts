@@ -80,9 +80,9 @@ export const JUSTICE_STACK: JusticeLayer[] = [
     gradient: 'from-emerald-500 to-green-500',
     border: 'border-emerald-500/30',
     tools: [
-      { name: 'Case Intake', href: '/marketplace/case-intake', desc: 'Describe a dispute; AI structures the narrative', icon: '\u{1F4E5}', status: 'live' },
+      { name: 'Resolve a Dispute', href: '/matter', desc: 'Open a matter; carry it from intake to a just outcome', icon: '\u{1F91D}', status: 'live' },
       { name: 'Settlement Engine', href: '/dispute/settlement', desc: 'Settlement range, timeline & litigation risk', icon: '\u{1F4CA}', status: 'live' },
-      { name: 'Dispute Resolution', href: '/dispute', desc: 'Intake → analysis → settlement → court only if needed', icon: '\u{1F91D}', status: 'live' },
+      { name: 'How it works', href: '/dispute', desc: 'Intake → analysis → settlement → court only if needed', icon: '\u{1F4D6}', status: 'live' },
       { name: 'Legal Transactions', href: '/invoices', desc: 'Agreement → invoice → payment → matter closed', icon: '\u{1F9FE}', status: 'live' },
     ],
   },

@@ -21,6 +21,9 @@ export default function DisputePage() {
             The current system: dispute → lawyer → court → years. CaseWin’s path resolves the dispute
             first — and goes to court <span className="text-white font-semibold">only if necessary</span>.
           </p>
+          <Link href="/matter" className="inline-block mt-6 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold transition-colors">
+            Open a matter →
+          </Link>
         </div>
       </div>
 
