@@ -100,7 +100,7 @@ export const JUSTICE_STACK: JusticeLayer[] = [
       { name: 'Case Classification', href: '/court/classify', desc: 'Auto-route cases: commercial, family, criminal, civil', icon: '\u{1F5C2}\u{FE0F}', status: 'live' },
       { name: 'Scheduling Optimizer', href: '/court/scheduling', desc: 'Airline logic for hearing dates — no wasted adjournments', icon: '\u{1F4C5}', status: 'live' },
       { name: 'Evidence Verification', href: '/court/evidence', desc: 'Hash + timestamp proof that evidence was never altered', icon: '\u{1F512}', status: 'live' },
-      { name: 'Justice Analytics', href: '/court/analytics', desc: 'Backlogs, durations, where judges are needed', icon: '\u{1F4C8}', status: 'soon' },
+      { name: 'Justice Analytics', href: '/court/analytics', desc: 'Backlogs, durations, where judges are needed', icon: '\u{1F4C8}', status: 'live' },
     ],
   },
 ]

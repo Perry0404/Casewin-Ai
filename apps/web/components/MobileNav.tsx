@@ -10,7 +10,8 @@ interface MobileNavProps {
 }
 
 const NAV_LINKS = [
-  { href: '/', label: 'AI Tools', icon: '🤖' },
+  { href: '/tools', label: 'AI Tools', icon: '🤖' },
+  { href: '/dispute', label: 'Resolve Dispute', icon: '🤝' },
   { href: '/marketplace', label: 'Hire Lawyers', icon: '👨‍⚖️' },
   ...(PREDICTIONS_ENABLED ? [{ href: '/predictions', label: 'Predictions', icon: '📊' }] : []),
   { href: '/dashboard', label: 'Dashboard', icon: '📋' },
