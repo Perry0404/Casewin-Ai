@@ -26,32 +26,44 @@ export async function POST(request: NextRequest) {
     // Always create a fresh client with service role key — bypasses RLS
     const supabase = createClient(supabaseUrl, serviceKey)
 
+    // Only update is_verified here. We deliberately do NOT include
+    // verification_date in this update: on databases where that column was
+    // never added (it lives only in schema.sql, not in the migrations), writing
+    // it would error and silently abort the whole verification — leaving the
+    // lawyer off the marketplace and without tool access.
     const { data: lawyerData, error } = await supabase
       .from('lawyer_profiles')
-      .update({
-        is_verified,
-        verification_date: is_verified ? new Date().toISOString() : null
-      })
+      .update({ is_verified })
       .eq('id', lawyer_id)
-      .select('user_id')
+      .select('user_id, email')
       .single()
 
     if (error) {
-      console.error('getSupabaseClient() error:', error)
+      console.error('Lawyer verify update error:', error)
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    // Sync profiles.user_type so LawyerGuard grants/revokes access immediately
-    if (lawyerData?.user_id) {
+    // Best-effort timestamp — ignored if the column doesn't exist.
+    try {
       await supabase
-        .from('profiles')
-        .update({ user_type: is_verified ? 'lawyer' : 'lawyer_pending' })
-        .eq('id', lawyerData.user_id)
+        .from('lawyer_profiles')
+        .update({ verification_date: is_verified ? new Date().toISOString() : null })
+        .eq('id', lawyer_id)
+    } catch { /* column may not exist; non-critical */ }
+
+    // Sync profiles.user_type so LawyerGuard grants/revokes tool access. Match
+    // by user_id when present, otherwise fall back to the lawyer's email (some
+    // rows were registered without a user_id).
+    const newType = is_verified ? 'lawyer' : 'lawyer_pending'
+    if (lawyerData?.user_id) {
+      await supabase.from('profiles').update({ user_type: newType }).eq('id', lawyerData.user_id)
+    } else if (lawyerData?.email) {
+      await supabase.from('profiles').update({ user_type: newType }).eq('email', lawyerData.email)
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: is_verified ? 'Lawyer verified and granted tool access' : 'Verification removed' 
+    return NextResponse.json({
+      success: true,
+      message: is_verified ? 'Lawyer verified and granted tool access' : 'Verification removed',
     })
   } catch (error) {
     console.error('Error:', error)

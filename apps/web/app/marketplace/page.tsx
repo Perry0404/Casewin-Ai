@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 interface Lawyer {
   id: string;
   full_name: string;
-  specialization: string;
+  specializations: string[];
   location: string;
   hourly_rate: number;
   years_of_experience: number;
@@ -193,11 +193,13 @@ export default function MarketplacePage() {
         }
       }
 
-      // Fetch from API
+      // Fetch from API. The endpoint returns { lawyers } (no `success` flag),
+      // so render whenever we get the array — checking data.success here meant
+      // verified lawyers never rendered.
       const response = await fetch('/api/marketplace/lawyers');
       const data = await response.json();
-      
-      if (data.success) {
+
+      if (Array.isArray(data.lawyers)) {
         setLawyers(data.lawyers);
         setFilteredLawyers(data.lawyers);
         // Cache for offline use
@@ -222,7 +224,9 @@ export default function MarketplacePage() {
     let filtered = [...lawyers];
 
     if (selectedSpecialization !== 'all') {
-      filtered = filtered.filter(l => l.specialization === selectedSpecialization);
+      filtered = filtered.filter(l =>
+        (l.specializations || []).some(s => s.toLowerCase().includes(selectedSpecialization.toLowerCase()))
+      );
     }
 
     if (selectedLocation !== 'all') {
@@ -238,8 +242,8 @@ export default function MarketplacePage() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(l =>
         l.full_name.toLowerCase().includes(query) ||
-        l.bio.toLowerCase().includes(query) ||
-        l.specialization.toLowerCase().includes(query)
+        (l.bio || '').toLowerCase().includes(query) ||
+        (l.specializations || []).join(' ').toLowerCase().includes(query)
       );
     }
 
@@ -465,7 +469,7 @@ export default function MarketplacePage() {
                           {lawyer.full_name}
                         </h3>
                         <p className="text-green-600 text-sm font-medium mb-2">
-                          {lawyer.specialization}
+                          {(lawyer.specializations || []).slice(0, 3).join(', ') || 'Legal Practitioner'}
                         </p>
                         
                         <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">

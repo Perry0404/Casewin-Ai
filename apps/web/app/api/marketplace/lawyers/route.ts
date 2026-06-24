@@ -56,7 +56,7 @@ export async function GET(request: Request) {
       )
     }
 
-    return NextResponse.json({ lawyers })
+    return NextResponse.json({ success: true, lawyers })
   } catch (error) {
     console.error('Error:', error)
     return NextResponse.json({ lawyers: [], error: 'Failed to fetch lawyers' })
