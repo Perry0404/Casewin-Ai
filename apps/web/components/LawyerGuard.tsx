@@ -16,14 +16,37 @@ interface Profile {
 export default function LawyerGuard({ children }: LawyerGuardProps) {
   const { user, loading } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [hasVerifiedProfile, setHasVerifiedProfile] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
 
   useEffect(() => {
     if (!user) { setProfileLoading(false); return }
     const supabase = createClient()
-    supabase.from('profiles').select('user_type').eq('id', user.id).single()
-      .then(({ data }) => { if (data) setProfile(data); setProfileLoading(false) })
+    ;(async () => {
+      // Source of truth for "verified lawyer" is lawyer_profiles.is_verified —
+      // the same thing the marketplace uses. We grant tool access from that
+      // directly, so a missed profiles.user_type sync can't lock a verified
+      // lawyer out. Match by user_id, or by email as a fallback.
+      let lpQuery = supabase.from('lawyer_profiles').select('id').eq('is_verified', true)
+      lpQuery = user.email
+        ? lpQuery.or(`user_id.eq.${user.id},email.eq.${user.email}`)
+        : lpQuery.eq('user_id', user.id)
+
+      const [{ data: profileData }, { data: lpData }] = await Promise.all([
+        supabase.from('profiles').select('user_type').eq('id', user.id).single(),
+        lpQuery.limit(1),
+      ])
+
+      if (profileData) setProfile(profileData)
+      setHasVerifiedProfile(Array.isArray(lpData) && lpData.length > 0)
+      setProfileLoading(false)
+    })()
   }, [user])
+
+  const userType = profile?.user_type
+  const isLawyerType = userType === 'lawyer' || userType === 'law_firm'
+  const hasAccess = isLawyerType || hasVerifiedProfile
+  const isPending = !hasAccess && userType === 'lawyer_pending'
 
   // Still loading auth state
   if (loading || profileLoading) {
@@ -65,9 +88,8 @@ export default function LawyerGuard({ children }: LawyerGuardProps) {
     )
   }
 
-  // Logged in but not a lawyer/law_firm
-  if (profile && (profile.user_type === 'client' || profile.user_type === 'lawyer_pending')) {
-    const isPending = profile.user_type === 'lawyer_pending'
+  // Logged in but not a verified lawyer/law_firm
+  if (!hasAccess) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">

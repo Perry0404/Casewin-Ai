@@ -7,17 +7,17 @@ import Link from 'next/link';
 interface Lawyer {
   id: string;
   full_name: string;
-  specialization: string;
+  specializations: string[];
   location: string;
   hourly_rate: number;
   years_of_experience: number;
   rating: number;
   total_reviews: number;
   bio: string;
-  bar_enrollment_number: string;
-  education: string;
-  languages: string[];
-  courts_of_practice: string[];
+  bar_enrollment_number?: string;
+  education?: string;
+  languages?: string[];
+  courts_of_practice?: string[];
 }
 
 interface Review {
@@ -70,8 +70,10 @@ export default function LawyerProfilePage() {
       const response = await fetch(`/api/marketplace/lawyers?id=${lawyerId}`);
       const data = await response.json();
       
-      if (data.success && data.lawyers.length > 0) {
-        setLawyer(data.lawyers[0]);
+      if (data.lawyers && data.lawyers.length > 0) {
+        // Prefer the exact match; fall back to the first returned row.
+        const match = data.lawyers.find((l: Lawyer) => l.id === lawyerId) || data.lawyers[0];
+        setLawyer(match);
         // Reviews will be loaded from Supabase when available
         setReviews([]);
       }
@@ -193,14 +195,14 @@ export default function LawyerProfilePage() {
 
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{lawyer.full_name}</h1>
-                  <p className="text-xl text-green-600 font-medium mb-3">{lawyer.specialization}</p>
-                  
+                  <p className="text-xl text-green-600 font-medium mb-3">{(lawyer.specializations || []).join(', ') || 'Legal Practitioner'}</p>
+
                   <div className="flex items-center gap-6 text-gray-600 mb-4">
                     <span className="flex items-center gap-1">
                       📍 {lawyer.location}
                     </span>
                     <span className="flex items-center gap-1">
-                      ⭐ {lawyer.rating.toFixed(1)} ({lawyer.total_reviews} reviews)
+                      ⭐ {(lawyer.rating ?? 0).toFixed(1)} ({lawyer.total_reviews ?? 0} reviews)
                     </span>
                     <span className="flex items-center gap-1">
                       💼 {lawyer.years_of_experience} years
@@ -208,7 +210,7 @@ export default function LawyerProfilePage() {
                   </div>
 
                   <div className="text-2xl font-bold text-gray-900">
-                    ₦{lawyer.hourly_rate.toLocaleString()}/hour
+                    ₦{(lawyer.hourly_rate ?? 0).toLocaleString()}/hour
                   </div>
                 </div>
               </div>
@@ -227,18 +229,20 @@ export default function LawyerProfilePage() {
               <div className="space-y-4">
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Bar Enrollment</h3>
-                  <p className="text-gray-700">{lawyer.bar_enrollment_number}</p>
+                  <p className="text-gray-700">{lawyer.bar_enrollment_number || 'Not provided'}</p>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">Education</h3>
-                  <p className="text-gray-700">{lawyer.education}</p>
-                </div>
+                {lawyer.education && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Education</h3>
+                    <p className="text-gray-700">{lawyer.education}</p>
+                  </div>
+                )}
 
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Languages</h3>
                   <div className="flex flex-wrap gap-2">
-                    {lawyer.languages.map(lang => (
+                    {(lawyer.languages && lawyer.languages.length > 0 ? lawyer.languages : ['English']).map(lang => (
                       <span key={lang} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
                         {lang}
                       </span>
@@ -246,14 +250,16 @@ export default function LawyerProfilePage() {
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">Courts of Practice</h3>
-                  <ul className="list-disc list-inside text-gray-700 space-y-1">
-                    {lawyer.courts_of_practice.map(court => (
-                      <li key={court}>{court}</li>
-                    ))}
-                  </ul>
-                </div>
+                {lawyer.courts_of_practice && lawyer.courts_of_practice.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Courts of Practice</h3>
+                    <ul className="list-disc list-inside text-gray-700 space-y-1">
+                      {lawyer.courts_of_practice.map(court => (
+                        <li key={court}>{court}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 

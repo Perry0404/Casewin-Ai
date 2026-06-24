@@ -27,6 +27,7 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 export default function MarketplacePage() {
   const { user } = useAuth();
   const [userType, setUserType] = useState<string | null>(null);
+  const [isVerifiedLawyer, setIsVerifiedLawyer] = useState(false);
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [filteredLawyers, setFilteredLawyers] = useState<Lawyer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,11 +114,18 @@ export default function MarketplacePage() {
 
   // Check online status
   useEffect(() => {
-    if (user) {
-      const supabase = createClient();
-      supabase.from('profiles').select('user_type').eq('id', user.id).single()
-        .then(({ data }) => { if (data) setUserType(data.user_type) });
-    }
+    if (!user) return;
+    const supabase = createClient();
+    supabase.from('profiles').select('user_type').eq('id', user.id).single()
+      .then(({ data }) => { if (data) setUserType(data.user_type) });
+    // Verified-lawyer fallback: a verified lawyer_profiles row grants tool access
+    // even if profiles.user_type was never synced (the same source of truth the
+    // marketplace listing uses). Match by user_id, or email as a fallback.
+    let lpQuery = supabase.from('lawyer_profiles').select('id').eq('is_verified', true);
+    lpQuery = user.email
+      ? lpQuery.or(`user_id.eq.${user.id},email.eq.${user.email}`)
+      : lpQuery.eq('user_id', user.id);
+    lpQuery.limit(1).then(({ data }) => setIsVerifiedLawyer(Array.isArray(data) && data.length > 0));
   }, [user]);
 
   useEffect(() => {
@@ -514,7 +522,7 @@ export default function MarketplacePage() {
             <p className="text-gray-600">Professional tools exclusively for registered lawyers and law firms</p>
           </div>
 
-          {userType === 'lawyer' || userType === 'law_firm' ? (
+          {userType === 'lawyer' || userType === 'law_firm' || isVerifiedLawyer ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Link href="/marketplace/case-intake" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📋</div>

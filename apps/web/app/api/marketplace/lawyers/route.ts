@@ -8,20 +8,22 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const specialty = searchParams.get('specialty')
     const location = searchParams.get('location')
+    const id = searchParams.get('id')
 
-    // Get all lawyer profiles - use direct columns (no FK join to profiles needed)
-    const { data: lawyerProfiles, error: lawyerError } = await getSupabaseClient()
-      .from('lawyer_profiles')
-      .select('*')
-      .eq('is_verified', true)
-      .order('rating', { ascending: false })
+    // A single profile is fetched by id (for the lawyer detail page) and is
+    // returned regardless of verification; the public list shows verified only.
+    let query = getSupabaseClient().from('lawyer_profiles').select('*')
+    query = id ? query.eq('id', id) : query.eq('is_verified', true).order('rating', { ascending: false })
+
+    const { data: lawyerProfiles, error: lawyerError } = await query
 
     if (lawyerError) {
       console.error('getSupabaseClient() error:', lawyerError)
-      return NextResponse.json({ lawyers: [], error: lawyerError.message })
+      return NextResponse.json({ success: false, lawyers: [], error: lawyerError.message })
     }
 
-    // Transform and filter data - use lawyer_profiles own columns
+    // Transform and filter data - use lawyer_profiles own columns. Columns that
+    // may not exist (education, courts_of_practice) fall back safely.
     let lawyers = (lawyerProfiles || []).map(lp => ({
       id: lp.id,
       user_id: lp.user_id,
@@ -29,8 +31,13 @@ export async function GET(request: Request) {
       email: lp.email || '',
       bio: lp.bio || '',
       location: lp.location || 'Nigeria',
+      state: lp.state || '',
       avatar_url: lp.avatar_url || '',
       bar_number: lp.bar_number || '',
+      bar_enrollment_number: lp.bar_number || '',
+      education: lp.education || '',
+      languages: lp.languages || [],
+      courts_of_practice: lp.courts_of_practice || [],
       years_of_experience: lp.years_of_experience || 0,
       specializations: lp.specializations || [],
       hourly_rate: lp.hourly_rate || 10000,
