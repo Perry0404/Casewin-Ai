@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import MobileNav from './MobileNav'
-import { COURT_URL, OPENLEGAL_URL } from '@/lib/justice-stack'
+import { COURT_URL, LEGAL_AID_URL, OPENLEGAL_URL } from '@/lib/justice-stack'
 
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
@@ -72,7 +72,7 @@ export function SiteHeader({ current }: { current?: string }) {
 export function SiteFooter() {
   const cols: [string, [string, string][]][] = [
     ['Product', [['AI tools', '/tools'], ['Resolve a dispute', '/matter'], ['Hire a lawyer', '/marketplace'], ['Pricing', '/pricing']]],
-    ['Justice stack', [['CaseWin Court', COURT_URL], ['OpenLegal Nigeria', OPENLEGAL_URL], ['OpenLegal API & MCP', `${OPENLEGAL_URL}/developers`]]],
+    ['Justice stack', [['CaseWin Court', COURT_URL], ['OpenLegal Nigeria', OPENLEGAL_URL], ['OpenLegal API & MCP', `${OPENLEGAL_URL}/developers`], ['Legal Aid', LEGAL_AID_URL]]],
     ['Company', [['For lawyers', '/for-lawyers'], ['Terms', '/terms'], ['Privacy', '/privacy']]],
   ]
   return (
