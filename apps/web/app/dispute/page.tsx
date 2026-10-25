@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { COURT_URL } from '@/lib/justice-stack'
 
 const STEPS = [
   { n: 1, title: 'AI intake', desc: 'Describe the dispute in plain language. AI structures who, what, when and against whom.', href: '/marketplace/case-intake', cta: 'Start intake' },
@@ -53,7 +54,7 @@ export default function DisputePage() {
         <div className="mt-8 bg-gray-900 rounded-xl p-5 border border-gray-800 text-center">
           <p className="text-gray-400 text-sm">
             If settlement fails, the structured case file and evidence carry straight into
-            <Link href="/tools/filing" className="text-emerald-400 hover:underline"> court filing</Link> —
+            <a href={`${COURT_URL}/file`} className="text-emerald-400 hover:underline"> court e-filing</a> —
             nothing is re-done.
           </p>
         </div>

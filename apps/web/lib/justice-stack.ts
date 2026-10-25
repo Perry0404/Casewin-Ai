@@ -10,6 +10,10 @@
 
 export type ToolStatus = 'live' | 'soon'
 
+// Sister products in the stack, each on its own subdomain.
+export const COURT_URL = process.env.NEXT_PUBLIC_COURT_URL || 'https://court.casewinai.com'
+export const OPENLEGAL_URL = process.env.NEXT_PUBLIC_OPENLEGAL_URL || 'https://openlegal.casewinai.com'
+
 export interface StackTool {
   name: string
   href: string
@@ -17,6 +21,8 @@ export interface StackTool {
   icon: string
   status: ToolStatus
   premium?: boolean
+  /** Lives on another CaseWin product (opens that site). */
+  external?: boolean
 }
 
 export interface JusticeLayer {
@@ -45,7 +51,8 @@ export const JUSTICE_STACK: JusticeLayer[] = [
     tools: [
       { name: 'Knowledge Agent', href: '/tools/knowledge', desc: 'Upload firm documents and query them by meaning', icon: '\u{1F9E0}', status: 'live', premium: true },
       { name: 'Daily Intelligence Brief', href: '/tools/intelligence', desc: 'AI-curated legal updates tailored to your practice', icon: '\u{1F4F0}', status: 'live', premium: true },
-      { name: 'Legal Research', href: '/tools/research', desc: 'Search 10,000+ Nigerian judgments and statutes', icon: '\u{1F50D}', status: 'live' },
+      { name: 'OpenLegal Nigeria', href: OPENLEGAL_URL, desc: 'Free, court-published judgments and statutes — with an MCP server for AI tools', icon: '\u{1F4D6}', status: 'live', external: true },
+      { name: 'Legal Research', href: '/tools/research', desc: 'AI-assisted research across Nigerian judgments and statutes', icon: '\u{1F50D}', status: 'live' },
       { name: 'Case Search', href: '/tools/cases', desc: 'Find and track relevant cases', icon: '\u{1F4DA}', status: 'live' },
       { name: 'Citations', href: '/tools/citations', desc: 'Verify and format legal citations', icon: '\u{1F517}', status: 'live' },
     ],
@@ -96,11 +103,11 @@ export const JUSTICE_STACK: JusticeLayer[] = [
     gradient: 'from-orange-500 to-amber-500',
     border: 'border-orange-500/30',
     tools: [
-      { name: 'E-Filing Assistant', href: '/tools/filing', desc: 'Court-ready filing checklists & formatting', icon: '\u{1F4C1}', status: 'live' },
-      { name: 'Case Classification', href: '/court/classify', desc: 'Auto-route cases: commercial, family, criminal, civil', icon: '\u{1F5C2}\u{FE0F}', status: 'live' },
-      { name: 'Scheduling Optimizer', href: '/court/scheduling', desc: 'Airline logic for hearing dates — no wasted adjournments', icon: '\u{1F4C5}', status: 'live' },
-      { name: 'Evidence Verification', href: '/court/evidence', desc: 'Hash + timestamp proof that evidence was never altered', icon: '\u{1F512}', status: 'live' },
-      { name: 'Justice Analytics', href: '/court/analytics', desc: 'Backlogs, durations, where judges are needed', icon: '\u{1F4C8}', status: 'live' },
+      { name: 'CaseWin Court', href: COURT_URL, desc: 'The digital registry: e-filing, suit numbers, cause lists and hearings', icon: '\u{1F3DB}\u{FE0F}', status: 'live', external: true },
+      { name: 'E-File a Case', href: `${COURT_URL}/file`, desc: 'File online; fees assessed and suit number issued by the registry', icon: '\u{1F4C1}', status: 'live', external: true },
+      { name: 'Public Cause Lists', href: `${COURT_URL}/cause-list`, desc: 'Which matters are in court today, updated live', icon: '\u{1F4C5}', status: 'live', external: true },
+      { name: 'Judicial Analytics', href: `${COURT_URL}/#analytics`, desc: 'Clearance rate, backlog age, adjournment causes, docket per judge', icon: '\u{1F4C8}', status: 'live', external: true },
+      { name: 'Document Verification', href: `${COURT_URL}/verify`, desc: 'Prove a filed document was never altered (SHA-256)', icon: '\u{1F512}', status: 'live', external: true },
     ],
   },
 ]

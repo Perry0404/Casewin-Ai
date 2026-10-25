@@ -1,398 +1,350 @@
-'use client'
-
 import Link from 'next/link'
-import MobileNav from '@/components/MobileNav'
-import { PREDICTIONS_ENABLED } from '@/lib/features'
-import { JUSTICE_STACK } from '@/lib/justice-stack'
+import { SiteFooter, SiteHeader } from '@/components/brand'
+import { COURT_URL, JUSTICE_STACK, OPENLEGAL_URL } from '@/lib/justice-stack'
 
 export default function Home() {
-  const features = [
-    {
-      id: 'draft',
-      title: 'Document Drafting',
-      icon: '📝',
-      description: 'Generate contracts, letters, and pleadings',
-      color: 'from-blue-500 to-cyan-500',
-      href: '/tools/draft'
-    },
-    {
-      id: 'predict',
-      title: 'Case Prediction',
-      icon: '🔮',
-      description: 'Predict outcomes based on Nigerian case law',
-      color: 'from-purple-500 to-pink-500',
-      href: '/tools/predict'
-    },
-    {
-      id: 'research',
-      title: 'Legal Research',
-      icon: '🔍',
-      description: 'Search 30,000+ Nigerian judgments',
-      color: 'from-green-500 to-emerald-500',
-      href: '/tools/research'
-    },
-    {
-      id: 'analyze',
-      title: 'Contract Analysis',
-      icon: '📄',
-      description: 'Identify risks and unfair terms',
-      color: 'from-orange-500 to-red-500',
-      href: '/tools/analyze'
-    },
-    {
-      id: 'summarize',
-      title: 'Judgment Summarization',
-      icon: '📋',
-      description: 'Summarize lengthy court judgments',
-      color: 'from-indigo-500 to-blue-500',
-      href: '/tools/summarize'
-    },
-    {
-      id: 'translate',
-      title: 'Translation',
-      icon: '🌍',
-      description: 'Translate to Yoruba, Igbo, Hausa',
-      color: 'from-teal-500 to-green-500',
-      href: '/tools/translate'
-    },
-    {
-      id: 'arguments',
-      title: 'Argument Generation',
-      icon: '⚖️',
-      description: 'Generate persuasive legal arguments',
-      color: 'from-yellow-500 to-orange-500',
-      href: '/tools/arguments'
-    },
-    {
-      id: 'compliance',
-      title: 'Compliance Check',
-      icon: '✅',
-      description: 'Check against Nigerian regulations',
-      color: 'from-pink-500 to-rose-500',
-      href: '/tools/compliance'
-    },
-    {
-      id: 'intelligence',
-      title: 'Daily Intelligence',
-      icon: '📰',
-      description: 'Personalized legal news & regulatory alerts',
-      color: 'from-indigo-500 to-purple-500',
-      href: '/tools/intelligence'
-    }
-  ]
-
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900">
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-green-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+    <main className="min-h-screen overflow-x-hidden bg-night-950 text-white">
+      <SiteHeader current="/" />
+      <Hero />
+      <Products />
+      <Pipeline />
+      <Stack />
+      <Tools />
+      <Mission />
+      <SiteFooter />
+    </main>
+  )
+}
+
+/* ─────────────────────────── Hero ─────────────────────────── */
+
+function Hero() {
+  return (
+    <section className="relative isolate">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-[-18rem] h-[42rem] w-[72rem] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(30,192,126,0.22),transparent)]" />
+        <div className="absolute right-[-12rem] top-[18rem] h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(closest-side,rgba(224,180,81,0.10),transparent)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)]" />
       </div>
 
-      {/* Header with Navigation */}
-      <header className="relative bg-black/30 backdrop-blur-xl border-b border-white/10">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="text-4xl">⚖️</div>
-              <div>
-                <h1 className="text-3xl font-bold text-white">CaseWin AI</h1>
-                <p className="text-sm text-green-300">Nigerian Legal AI Platform</p>
-              </div>
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/tools" className="text-white hover:text-green-300 transition-colors font-semibold">
-                AI Tools
-              </Link>
-              <Link href="/marketplace" className="text-gray-300 hover:text-white transition-colors font-semibold">
-                Hire Lawyers
-              </Link>
-              {PREDICTIONS_ENABLED && (
-                <Link href="/predictions" className="text-gray-300 hover:text-white transition-colors font-semibold">
-                  Predictions
-                </Link>
-              )}
-              <Link href="/pricing" className="text-gray-300 hover:text-white transition-colors font-semibold">
-                Pricing
-              </Link>
-              <Link href="/auth/login" className="text-gray-300 hover:text-white transition-colors">
-                Sign In
-              </Link>
-              <Link href="/auth/signup" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition">
-                Get Started Free
-              </Link>
-            </nav>
-            <div className="md:hidden">
-              <MobileNav currentPath="/" />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="relative container mx-auto px-4 py-16">
-        <div className="text-center mb-16">
-          <div className="inline-block mb-6">
-            <span className="bg-gradient-to-r from-green-400 to-emerald-400 text-white px-6 py-2 rounded-full text-sm font-bold">
-              🌍 AFRICA&apos;S AI JUSTICE INFRASTRUCTURE
+      <div className="mx-auto grid max-w-7xl items-center gap-16 px-4 pb-24 pt-16 sm:px-6 sm:pt-24 lg:grid-cols-[1.05fr_1fr] lg:pb-32">
+        <div>
+          <p className="animate-rise inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-xs font-medium text-white/70">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint-400 opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-mint-400" />
             </span>
-          </div>
-          <h2 className="text-5xl md:text-7xl font-bold text-white mb-6">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400">
-              From dispute to just outcome
-            </span>
-          </h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-            CaseWin isn&apos;t just AI for lawyers — it&apos;s the infrastructure that reduces the distance between a dispute and a just outcome. Knowledge, lawyer tools, dispute resolution, and court infrastructure, in one stack.
+            AI justice infrastructure · built in Nigeria
           </p>
-          <div className="flex justify-center gap-4 flex-wrap">
-            <Link href="/auth/signup" className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-green-500/50 hover:scale-105 transition">
-              🎉 Start Free Trial
+          <h1 className="animate-rise mt-7 font-display text-[48px] font-semibold leading-[0.98] tracking-[-0.035em] [animation-delay:60ms] sm:text-7xl lg:text-[84px]">
+            From dispute
+            <br />
+            to <span className="font-serif text-[1.08em] font-normal italic tracking-normal text-mint-300">just</span> outcome.
+          </h1>
+          <p className="animate-rise mt-7 max-w-xl text-lg leading-relaxed text-white/65 [animation-delay:120ms]">
+            One stack for the whole journey: AI that helps people and lawyers understand a problem, resolve it fairly, and — only when needed —
+            carry it into a court that runs on modern rails, with every judgment open to all.
+          </p>
+          <div className="animate-rise mt-9 flex flex-wrap gap-3 [animation-delay:180ms]">
+            <Link href="/matter" className="group inline-flex items-center gap-2 rounded-xl bg-mint-400 px-5 py-3.5 text-sm font-semibold text-night-950 shadow-[0_0_40px_-8px_rgba(79,217,155,0.6)] transition hover:bg-mint-300">
+              Resolve a dispute
+              <Arrow />
             </Link>
-            <Link href="/tools" className="bg-white/10 backdrop-blur-lg text-white px-8 py-4 rounded-xl font-semibold border border-white/20 hover:bg-white/20 transition">
-              Explore Tools →
+            <Link href="/tools" className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.03] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
+              Explore AI tools
             </Link>
           </div>
+          <p className="animate-rise mt-6 text-sm text-white/40 [animation-delay:240ms]">Free to start · Built for Nigerian law · Works on any phone</p>
         </div>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature) => (
-            <Link
-              key={feature.id}
-              href={feature.href}
-              className="group relative bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/30 transition-all duration-300 cursor-pointer overflow-hidden hover:shadow-2xl hover:shadow-green-500/20 hover:scale-105"
-            >
-              {/* Gradient Background on Hover */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
-              
-              {/* Content */}
-              <div className="relative z-10">
-                <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-400 text-sm mb-4">
-                  {feature.description}
-                </p>
-                <span className="inline-block w-full py-2 px-4 rounded-lg font-semibold transition-all duration-300 bg-white/10 text-white group-hover:bg-white/20 text-center">
-                  Try Now →
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+        <StackVisual />
+      </div>
+    </section>
+  )
+}
 
-      {/* The Justice Infrastructure Stack */}
-      <section className="relative container mx-auto px-4 py-12">
-        <div className="text-center mb-10">
-          <p className="text-green-400 font-semibold tracking-widest text-sm uppercase mb-2">The justice infrastructure stack</p>
-          <h2 className="text-4xl font-bold text-white">Four layers. One mission.</h2>
-          <p className="text-gray-400 mt-2 max-w-2xl mx-auto">Each layer reduces the distance between a dispute and a just outcome.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl mx-auto">
-          {JUSTICE_STACK.map((layer) => (
-            <Link key={layer.id} href={`/tools#${layer.id}`}
-              className="group bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/30 transition-all">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${layer.gradient} flex items-center justify-center text-white font-bold`}>
-                  {layer.number}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">{layer.title}</h3>
-                  <p className="text-gray-500 text-xs">{layer.tagline}</p>
-                </div>
+/** The four layers as floating glass plates, with the journey running through them. */
+function StackVisual() {
+  const plates = [
+    { n: 4, title: 'Court', meta: 'Suit HOW/142/2026 · listed Thursday', tone: 'from-gold-400/25 to-gold-400/5', ring: 'ring-gold-300/30', dot: 'bg-gold-300' },
+    { n: 3, title: 'Dispute resolution', meta: 'Settlement range ₦2.1m – ₦2.8m', tone: 'from-mint-400/20 to-mint-400/5', ring: 'ring-mint-300/25', dot: 'bg-mint-300' },
+    { n: 2, title: 'AI for lawyers', meta: 'Statement of claim · draft ready', tone: 'from-white/10 to-white/[0.02]', ring: 'ring-white/15', dot: 'bg-white/70' },
+    { n: 1, title: 'Knowledge', meta: '“declaration of title” · 12 authorities', tone: 'from-white/[0.07] to-white/[0.02]', ring: 'ring-white/10', dot: 'bg-white/50' },
+  ]
+  return (
+    <div className="relative mx-auto w-full max-w-lg [perspective:1600px]" aria-label="Illustration of the four layers of the CaseWin justice stack">
+      <div className="space-y-4 [transform:rotateX(14deg)_rotateZ(-4deg)] [transform-style:preserve-3d]">
+        {plates.map((p, i) => (
+          <div
+            key={p.n}
+            className={`animate-float rounded-2xl bg-gradient-to-br ${p.tone} p-5 ring-1 ${p.ring} backdrop-blur-xl`}
+            style={{ animationDelay: `${i * 0.4}s`, marginLeft: `${i * 18}px`, marginRight: `${(3 - i) * 18}px` }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-night-950/60 font-display text-sm font-semibold text-white/90 ring-1 ring-white/10">{p.n}</span>
+                <span className="font-display text-lg font-semibold tracking-tight">{p.title}</span>
               </div>
-              <p className="text-gray-400 text-sm mb-3">{layer.description}</p>
-              <div className="flex flex-wrap gap-2">
-                {layer.tools.slice(0, 4).map((t) => (
-                  <span key={t.name} className="bg-white/10 text-gray-300 px-2 py-1 rounded-full text-xs">{t.name}</span>
-                ))}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+              <span className={`h-2 w-2 rounded-full ${p.dot}`} />
+            </div>
+            <p className="mt-3 rounded-lg bg-night-950/50 px-3 py-2 font-mono text-[12px] text-white/70">{p.meta}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-8 text-center text-[11px] text-white/30">Illustration</p>
+    </div>
+  )
+}
 
-      {/* Prediction Market Promo */}
-      {PREDICTIONS_ENABLED && (
-      <section className="relative container mx-auto px-4 py-12">
-        <div className="bg-gradient-to-r from-green-600/20 via-emerald-600/20 to-green-600/20 backdrop-blur-xl rounded-3xl border border-white/20 p-12 hover:border-green-500/50 transition-all">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <div className="inline-block mb-4">
-                <span className="bg-gradient-to-r from-green-400 to-emerald-400 text-white px-4 py-2 rounded-full text-sm font-bold">
-                  🔥 NEW FEATURE
-                </span>
+/* ─────────────────────────── Product family ─────────────────────────── */
+
+function Products() {
+  return (
+    <section id="products" className="relative border-t border-white/[0.06] py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <SectionHead eyebrow="Three products, one record" title="Built for everyone a dispute touches." sub="People and lawyers, the courts that decide, and the public that lives under the law." />
+        <div className="mt-16 grid gap-5 lg:grid-cols-3">
+          <ProductCard
+            href="/tools"
+            name="CaseWin AI"
+            who="For people & lawyers"
+            body="Understand a problem, draft the documents, find the authorities, and settle fairly — with a verified lawyer when you need one."
+            cta="Open CaseWin AI"
+            accent="mint"
+          >
+            <div className="space-y-2">
+              {['Draft a statement of claim', 'Predict likely outcome', 'Find a verified lawyer'].map((t, i) => (
+                <div key={t} className="flex items-center gap-2.5 rounded-lg bg-white/[0.04] px-3 py-2 text-[13px] text-white/75 ring-1 ring-white/[0.06]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-mint-400" style={{ opacity: 1 - i * 0.25 }} />
+                  {t}
+                </div>
+              ))}
+            </div>
+          </ProductCard>
+
+          <ProductCard
+            href={COURT_URL}
+            name="CaseWin Court"
+            who="For courts"
+            body="The digital registry: e-filing, fee assessment, suit numbers, judge allocation, live cause lists and judicial analytics."
+            cta="Visit court.casewinai.com"
+            accent="gold"
+          >
+            <div className="rounded-lg bg-[#F7F4ED] p-3 text-[#0F1729]">
+              <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.14em] text-[#956B24]">
+                <span>Registry</span>
+                <span className="rounded-full bg-[#EAF6EF] px-2 py-0.5 normal-case tracking-normal text-[#0F5A3A]">● Accepted</span>
               </div>
-              <h2 className="text-4xl font-bold text-white mb-4">
-                Legal Prediction Markets
-              </h2>
-              <p className="text-gray-300 mb-6 text-lg">
-                Predict outcomes of major Nigerian legal cases and legislative changes. Trade on your legal knowledge and earn real Naira rewards.
+              <p className="mt-2 font-mono text-[11px] text-[#4B5D7E]">HOW/142/2026</p>
+              <p className="font-serif text-[17px] leading-tight">Chukwu v. Okeke &amp; Anor.</p>
+            </div>
+          </ProductCard>
+
+          <ProductCard
+            href={OPENLEGAL_URL}
+            name="OpenLegal Nigeria"
+            who="For everyone"
+            body="Judgments published by the courts that delivered them, and the statutes they apply — free to read, and open to AI through MCP."
+            cta="Visit openlegal.casewinai.com"
+            accent="paper"
+          >
+            <div className="rounded-lg bg-[#FBFAF6] p-3 text-[#15171A]">
+              <div className="flex items-center gap-2 rounded-md border border-[#E3E1D9] bg-white px-2.5 py-1.5 text-[12px] text-[#6B7079]">
+                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <circle cx="9" cy="9" r="5.5" />
+                  <path d="m13.5 13.5 3 3" strokeLinecap="round" />
+                </svg>
+                section 36 fair hearing
+              </div>
+              <p className="mt-2 font-serif text-[15px] leading-snug">
+                <mark className="rounded bg-[#FFEFA8] px-0.5">fair hearing</mark> within a reasonable time…
               </p>
-              <div className="flex gap-6 mb-6">
-                <div>
-                  <div className="text-3xl font-bold text-green-400">₦2.2M</div>
-                  <div className="text-sm text-gray-400">Trading Volume</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-emerald-400">1,247</div>
-                  <div className="text-sm text-gray-400">Active Traders</div>
-                </div>
-              </div>
-              <Link
-                href="/predictions"
-                className="inline-block bg-gradient-to-r from-green-500 to-emerald-500 text-white px-8 py-4 rounded-xl font-bold hover:shadow-2xl hover:shadow-green-500/50 transition-all hover:scale-105"
+            </div>
+          </ProductCard>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ProductCard({ href, name, who, body, cta, accent, children }: { href: string; name: string; who: string; body: string; cta: string; accent: 'mint' | 'gold' | 'paper'; children: React.ReactNode }) {
+  const color = accent === 'mint' ? 'text-mint-300' : accent === 'gold' ? 'text-gold-300' : 'text-white'
+  const glow = accent === 'mint' ? 'group-hover:shadow-[0_0_60px_-20px_rgba(79,217,155,0.5)]' : accent === 'gold' ? 'group-hover:shadow-[0_0_60px_-20px_rgba(224,180,81,0.5)]' : 'group-hover:shadow-[0_0_60px_-20px_rgba(255,255,255,0.35)]'
+  return (
+    <a href={href} className={`group relative flex flex-col rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-white/[0.01] p-7 transition duration-300 hover:-translate-y-1 hover:border-white/15 ${glow}`}>
+      <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${color}`}>{who}</p>
+      <h3 className="mt-3 font-display text-3xl font-semibold tracking-tight">{name}</h3>
+      <p className="mt-3 leading-relaxed text-white/60">{body}</p>
+      <div className="mt-7 flex-1">{children}</div>
+      <span className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-white/85 group-hover:text-white">
+        {cta} <Arrow />
+      </span>
+    </a>
+  )
+}
+
+/* ─────────────────────────── The journey ─────────────────────────── */
+
+function Pipeline() {
+  const steps = [
+    ['Intake', 'Describe the problem in plain words, or upload WhatsApp chats, receipts and contracts.'],
+    ['Analysis', 'AI builds one clear story: who, what, when, and which laws apply.'],
+    ['Settlement', 'A fair settlement range, grounded in how Nigerian courts have decided similar cases.'],
+    ['Agreement', 'Terms, invoice and payment — closed without a courtroom.'],
+    ['Court', 'If settlement fails, the case file carries straight into e-filing. Nothing is re-done.'],
+  ]
+  return (
+    <section className="relative border-t border-white/[0.06] bg-night-900 py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <SectionHead eyebrow="One matter, start to finish" title="Most disputes should never reach court." sub="Every step reads and writes the same matter, so nothing is ever typed twice." />
+        <ol className="relative mt-16 grid gap-6 md:grid-cols-5 md:gap-4">
+          <span className="absolute left-0 right-0 top-[22px] hidden h-px bg-gradient-to-r from-mint-400/0 via-mint-400/40 to-gold-300/50 md:block" aria-hidden />
+          {steps.map(([t, d], i) => (
+            <li key={t} className="relative">
+              <span
+                className={`relative flex h-11 w-11 items-center justify-center rounded-full font-display text-sm font-semibold ring-1 ${
+                  i === steps.length - 1 ? 'bg-gold-300/10 text-gold-200 ring-gold-300/40' : 'bg-mint-400/10 text-mint-300 ring-mint-400/30'
+                }`}
               >
-                Start Trading →
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-                <div className="text-green-400 text-2xl font-bold mb-2">73%</div>
-                <div className="text-white font-semibold text-sm mb-1">Supreme Court Electoral Reform</div>
-                <div className="text-gray-400 text-xs">5 days left</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-                <div className="text-red-400 text-2xl font-bold mb-2">45%</div>
-                <div className="text-white font-semibold text-sm mb-1">Land Use Act Amendment</div>
-                <div className="text-gray-400 text-xs">180 days left</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-                <div className="text-blue-400 text-2xl font-bold mb-2">82%</div>
-                <div className="text-white font-semibold text-sm mb-1">CBN Crypto Regulations</div>
-                <div className="text-gray-400 text-xs">80 days left</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-                <div className="text-yellow-400 text-2xl font-bold mb-2">67%</div>
-                <div className="text-white font-semibold text-sm mb-1">EFCC Appeal Case</div>
-                <div className="text-gray-400 text-xs">115 days left</div>
-              </div>
-            </div>
-          </div>
+                {i + 1}
+              </span>
+              <h3 className="mt-5 font-display text-xl font-semibold tracking-tight">{t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/55">{d}</p>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-14">
+          <Link href="/matter" className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold transition hover:bg-white/[0.06]">
+            Open a matter <Arrow />
+          </Link>
         </div>
-      </section>
-      )}
+      </div>
+    </section>
+  )
+}
 
-      {/* Marketplace Promo */}
-      <section className="relative container mx-auto px-4 py-12">
-        <div className="bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-rose-600/20 backdrop-blur-xl rounded-3xl border border-white/20 p-12">
-          <div className="text-center">
-            <h2 className="text-4xl font-bold text-white mb-4">
-              🏛️ Legal Marketplace
-            </h2>
-            <p className="text-gray-300 mb-8 text-lg max-w-2xl mx-auto">
-              Connect with verified Nigerian lawyers for consultations, case reviews, and legal representation. Pay securely in Naira via bank transfer.
-            </p>
-            <div className="flex justify-center gap-8 mb-8">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-purple-400">500+</div>
-                <div className="text-sm text-gray-400">Verified Lawyers</div>
+/* ─────────────────────────── The stack ─────────────────────────── */
+
+function Stack() {
+  const accents = ['text-white/80', 'text-white/80', 'text-mint-300', 'text-gold-300']
+  return (
+    <section className="border-t border-white/[0.06] py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <SectionHead eyebrow="The justice stack" title="Four layers. One mission." sub="Each layer reduces the distance between a dispute and a just outcome." />
+        <div className="mt-16 grid gap-px overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.06] md:grid-cols-2">
+          {JUSTICE_STACK.map((layer, i) => (
+            <div key={layer.id} className="bg-night-950 p-8 sm:p-10">
+              <div className="flex items-baseline gap-4">
+                <span className={`font-display text-5xl font-semibold tracking-tighter ${accents[i]}`}>0{layer.number}</span>
+                <div>
+                  <h3 className="font-display text-2xl font-semibold tracking-tight">{layer.title}</h3>
+                  <p className="text-sm text-white/45">{layer.tagline}</p>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-pink-400">4.8★</div>
-                <div className="text-sm text-gray-400">Average Rating</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-rose-400">₦15K</div>
-                <div className="text-sm text-gray-400">Avg. Consultation</div>
-              </div>
+              <p className="mt-5 leading-relaxed text-white/60">{layer.description}</p>
+              <ul className="mt-6 flex flex-wrap gap-2">
+                {layer.tools.map((t) => (
+                  <li key={t.name}>
+                    <a href={t.href} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[13px] text-white/75 transition hover:border-white/25 hover:text-white">
+                      {t.name}
+                      {t.external && <span className="text-white/35">↗</span>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <Link
-              href="/marketplace"
-              className="inline-block bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-4 rounded-xl font-bold hover:shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-105"
-            >
-              Find a Lawyer →
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ─────────────────────────── AI tools ─────────────────────────── */
+
+const TOOLS: { name: string; href: string; body: string; icon: string }[] = [
+  { name: 'Document drafting', href: '/tools/draft', body: 'Contracts, letters, affidavits and pleadings in Nigerian form.', icon: 'M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h4' },
+  { name: 'Legal research', href: '/tools/research', body: 'Authorities on point, with the reasoning that matters.', icon: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm9 16-4-4' },
+  { name: 'Outcome prediction', href: '/tools/predict', body: 'Likely outcome and risk, grounded in similar decided cases.', icon: 'M4 19 9 13l4 3 7-9M15 7h5v5' },
+  { name: 'Contract analysis', href: '/tools/analyze', body: 'Risky clauses, unfair terms and compliance gaps, flagged.', icon: 'M5 4h14v16H5zM9 9l2 2 4-4M9 15h6' },
+  { name: 'Judgment summaries', href: '/tools/summarize', body: 'Facts, issues and ratio from a long judgment in seconds.', icon: 'M5 5h14M5 10h14M5 15h9M5 20h6' },
+  { name: 'Arguments', href: '/tools/arguments', body: 'Persuasive submissions with authorities attached.', icon: 'M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0Zm10 0-3 7a3 3 0 0 0 6 0Z' },
+  { name: 'Compliance check', href: '/tools/compliance', body: 'CAMA, NDPA, CBN and tax rules against your documents.', icon: 'M12 3 5 6v5c0 4.4 3 8.4 7 10 4-1.6 7-5.6 7-10V6Zm-3 9 2 2 4-4' },
+  { name: 'Translation', href: '/tools/translate', body: 'Yoruba, Igbo, Hausa and Pidgin — law people can read.', icon: 'M4 5h8M8 3v2m-3 9c3-2 5-5 6-9M7 9c1 2 3 4 5 5m2 6 4-9 4 9m-7-3h6' },
+]
+
+function Tools() {
+  return (
+    <section className="border-t border-white/[0.06] bg-night-900 py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <SectionHead eyebrow="AI for lawyers" title="Turn chaos into one case narrative." sub="Built for the lawyer, not instead of them." />
+          <Link href="/tools" className="shrink-0 text-sm font-semibold text-mint-300 hover:text-mint-200">
+            All tools →
+          </Link>
+        </div>
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {TOOLS.map((t) => (
+            <Link key={t.name} href={t.href} className="group rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 transition hover:border-mint-400/30 hover:bg-white/[0.04]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-mint-400/10 text-mint-300 ring-1 ring-mint-400/20 transition group-hover:bg-mint-400/20">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d={t.icon} />
+                </svg>
+              </span>
+              <h3 className="mt-5 font-display text-lg font-semibold tracking-tight">{t.name}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-white/55">{t.body}</p>
             </Link>
-          </div>
+          ))}
         </div>
-      </section>
+      </div>
+    </section>
+  )
+}
 
-      {/* Stats Section */}
-      <section className="relative container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-4 gap-6 text-center">
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-            <div className="text-5xl font-bold text-green-400 mb-2">30,000+</div>
-            <div className="text-gray-400">Nigerian Cases</div>
-          </div>
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-            <div className="text-5xl font-bold text-blue-400 mb-2">8</div>
-            <div className="text-gray-400">AI Tools</div>
-          </div>
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-            <div className="text-5xl font-bold text-purple-400 mb-2">1,500+</div>
-            <div className="text-gray-400">Active Users</div>
-          </div>
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
-            <div className="text-5xl font-bold text-pink-400 mb-2">99.2%</div>
-            <div className="text-gray-400">Accuracy Rate</div>
-          </div>
-        </div>
-      </section>
+/* ─────────────────────────── Mission ─────────────────────────── */
 
-      {/* Footer */}
-      <footer className="relative bg-black/30 backdrop-blur-xl border-t border-white/10 py-12 mt-20">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="text-3xl">⚖️</div>
-                <h3 className="text-2xl font-bold text-white">CaseWin AI</h3>
-              </div>
-              <p className="text-gray-400 text-sm">
-                AI-powered legal platform built for Nigerian lawyers and law students.
-              </p>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">AI Tools</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><Link href="/tools/draft" className="hover:text-white transition">Document Drafting</Link></li>
-                <li><Link href="/tools/predict" className="hover:text-white transition">Case Prediction</Link></li>
-                <li><Link href="/tools/research" className="hover:text-white transition">Legal Research</Link></li>
-                <li><Link href="/tools/analyze" className="hover:text-white transition">Contract Analysis</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Platform</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><Link href="/marketplace" className="hover:text-white transition">Lawyer Marketplace</Link></li>
-                {PREDICTIONS_ENABLED && (
-                  <li><Link href="/predictions" className="hover:text-white transition">Prediction Markets</Link></li>
-                )}
-                <li><Link href="/dashboard" className="hover:text-white transition">Dashboard</Link></li>
-                <li><Link href="/auth/signup" className="hover:text-white transition">Sign Up</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li><Link href="/terms" className="hover:text-white transition">Terms of Service</Link></li>
-                <li><Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="text-center pt-8 border-t border-white/10">
-            <p className="text-gray-400 text-sm">
-              © 2024 CaseWin AI. Built with 🇳🇬 for Nigerian legal professionals.
-            </p>
-            <div className="flex justify-center my-6">
-              <a href="https://orynth.dev/projects/casewinai" target="_blank" rel="noopener noreferrer">
-                <img src="https://orynth.dev/api/badge/casewinai?theme=light&style=default" alt="Featured on Orynth" width={260} height={80} className="hover:opacity-90 transition-opacity" />
-              </a>
-            </div>
-            <div className="flex justify-center gap-8 text-sm text-gray-500 mt-4">
-              <span>Payments by ZendFi</span>
-              <span>•</span>
-              <span>Database by Supabase</span>
-            </div>
-          </div>
+function Mission() {
+  return (
+    <section className="relative isolate overflow-hidden border-t border-white/[0.06] py-28 sm:py-36">
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(50rem_30rem_at_50%_120%,rgba(30,192,126,0.18),transparent)]" />
+      <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
+        <p className="font-serif text-4xl italic leading-tight text-white/90 sm:text-6xl">
+          “Justice delayed is justice denied.”
+        </p>
+        <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-white/60">
+          CaseWin is building the rails that make justice faster, fairer and open — for the person with a dispute, the lawyer who takes it on,
+          the court that decides it, and every citizen who should be able to read the law.
+        </p>
+        <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <Link href="/auth/signup" className="inline-flex items-center gap-2 rounded-xl bg-mint-400 px-6 py-3.5 text-sm font-semibold text-night-950 transition hover:bg-mint-300">
+            Start free <Arrow />
+          </Link>
+          <Link href="/marketplace" className="inline-flex items-center rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold transition hover:bg-white/[0.06]">
+            Find a verified lawyer
+          </Link>
         </div>
-      </footer>
-    </main>
+      </div>
+    </section>
+  )
+}
+
+/* ─────────────────────────── bits ─────────────────────────── */
+
+function SectionHead({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
+  return (
+    <div className="max-w-2xl">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-mint-400">{eyebrow}</p>
+      <h2 className="mt-3 font-display text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">{title}</h2>
+      {sub && <p className="mt-4 text-lg leading-relaxed text-white/55">{sub}</p>}
+    </div>
+  )
+}
+
+function Arrow() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <path d="M3 8h10m-4-4 4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }

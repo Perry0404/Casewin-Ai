@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { PREDICTIONS_ENABLED } from '@/lib/features'
+import { COURT_URL, OPENLEGAL_URL } from '@/lib/justice-stack'
 
 interface MobileNavProps {
   currentPath?: string
@@ -15,6 +16,8 @@ const NAV_LINKS = [
   { href: '/marketplace', label: 'Hire Lawyers', icon: '👨‍⚖️' },
   ...(PREDICTIONS_ENABLED ? [{ href: '/predictions', label: 'Predictions', icon: '📊' }] : []),
   { href: '/dashboard', label: 'Dashboard', icon: '📋' },
+  { href: COURT_URL, label: 'CaseWin Court', icon: '🏛️' },
+  { href: OPENLEGAL_URL, label: 'OpenLegal Nigeria', icon: '📖' },
 ]
 
 export default function MobileNav({ currentPath = '/' }: MobileNavProps) {
@@ -31,7 +34,7 @@ export default function MobileNav({ currentPath = '/' }: MobileNavProps) {
             href={link.href}
             className={`transition-colors font-semibold ${
               currentPath === link.href
-                ? 'text-white border-b-2 border-purple-400'
+                ? 'text-white border-b-2 border-mint-400'
                 : 'text-gray-300 hover:text-white'
             }`}
           >
@@ -69,12 +72,12 @@ export default function MobileNav({ currentPath = '/' }: MobileNavProps) {
           />
 
           {/* Drawer */}
-          <div className="absolute right-0 top-0 h-full w-72 bg-gray-900 border-l border-white/10 shadow-2xl animate-slide-in-right">
+          <div className="absolute right-0 top-0 h-full w-72 bg-night-900 border-l border-white/10 shadow-2xl animate-slide-in-right">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">⚖️</span>
-                <span className="text-white font-bold">CaseWin-NG</span>
+                <span className="text-white font-bold">CaseWin</span>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -103,7 +106,7 @@ export default function MobileNav({ currentPath = '/' }: MobileNavProps) {
                   onClick={() => setIsOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                     currentPath === link.href
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      ? 'bg-mint-400/10 text-mint-300 border border-mint-400/30'
                       : 'text-gray-300 hover:bg-white/5 hover:text-white'
                   }`}
                 >

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { COURT_URL } from '@/lib/justice-stack';
 import MobileNav from '@/components/MobileNav';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -552,12 +553,12 @@ export default function MarketplacePage() {
                 <span className="text-green-600 text-sm font-medium">Calculate →</span>
               </Link>
 
-              <Link href="/tools/filing" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
+              <a href={`${COURT_URL}/file`} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">📝</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Court Filing Prep</h3>
-                <p className="text-sm text-gray-600 mb-3">Get filing checklists, formatting rules, fee schedules, and procedural requirements for all Nigerian courts.</p>
-                <span className="text-green-600 text-sm font-medium">Prepare Filing →</span>
-              </Link>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">E-File a Case</h3>
+                <p className="text-sm text-gray-600 mb-3">File originating processes online with CaseWin Court — fees assessed, suit number issued, tracked end to end.</p>
+                <span className="text-green-600 text-sm font-medium">File online →</span>
+              </a>
 
               <Link href="/tools/hearing-prep" className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-300 hover:shadow-md transition-all group">
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">🎯</div>

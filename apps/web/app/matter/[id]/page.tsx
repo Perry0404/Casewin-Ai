@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { COURT_URL } from '@/lib/justice-stack'
 
 interface Settlement {
   settlementProbability?: number
@@ -246,7 +247,7 @@ export default function MatterWorkspace() {
             <p className="text-gray-500 text-sm mb-3">Escalate to court. The structured case file and evidence carry straight into filing — nothing is re-done.</p>
             <div className="flex gap-2">
               <button onClick={() => patch({ resolution: 'filed' })} className="bg-orange-700 hover:bg-orange-600 text-white text-sm px-4 py-2 rounded-lg font-semibold">Escalate to court filing</button>
-              <Link href="/tools/filing" className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg font-semibold">Open E-Filing →</Link>
+              <a href={`${COURT_URL}/file`} className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg font-semibold">E-file at CaseWin Court →</a>
             </div>
           </section>
         )}

@@ -1,104 +1,80 @@
-'use client'
-
 import Link from 'next/link'
-import { PREDICTIONS_ENABLED } from '@/lib/features'
+import { SiteFooter, SiteHeader } from '@/components/brand'
 import { JUSTICE_STACK } from '@/lib/justice-stack'
+
+const ACCENT = ['text-white/80', 'text-white/80', 'text-mint-300', 'text-gold-300']
 
 export default function ToolsPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-gray-900">
-      <nav className="bg-black/30 backdrop-blur-md border-b border-green-500/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center space-x-2">
-              <span className="text-2xl">⚖️</span>
-              <span className="text-xl font-bold text-white">CaseWin AI</span>
-            </Link>
-            <div className="flex items-center space-x-3 sm:space-x-4 text-sm">
-              {PREDICTIONS_ENABLED && (
-                <Link href="/predictions" className="text-gray-300 hover:text-white transition">Predictions</Link>
-              )}
-              <Link href="/marketplace" className="text-gray-300 hover:text-white transition">Marketplace</Link>
-              <Link href="/auth/login" className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition text-sm">Sign In</Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-night-950 text-white">
+      <SiteHeader current="/tools" />
 
-      <div className="bg-gradient-to-r from-green-800/50 to-emerald-800/50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-green-300 font-semibold tracking-widest text-sm uppercase mb-3">The justice infrastructure stack</p>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Four layers. One mission.</h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Reducing the distance between a dispute and a just outcome — from knowledge to court.
-          </p>
+      <header className="relative isolate border-b border-white/[0.06]">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(50rem_24rem_at_50%_-20%,rgba(30,192,126,0.18),transparent)]" />
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-mint-400">The justice stack</p>
+          <h1 className="mt-3 max-w-3xl font-display text-5xl font-semibold tracking-[-0.03em] sm:text-6xl">Every tool, from knowledge to court.</h1>
+          <p className="mt-5 max-w-2xl text-lg text-white/55">Reducing the distance between a dispute and a just outcome — one layer at a time.</p>
+          <nav className="mt-8 flex flex-wrap gap-2">
+            {JUSTICE_STACK.map((l, i) => (
+              <a key={l.id} href={`#${l.id}`} className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-white/70 transition hover:border-white/25 hover:text-white">
+                <span className={`mr-2 font-display font-semibold ${ACCENT[i]}`}>0{l.number}</span>
+                {l.title}
+              </a>
+            ))}
+          </nav>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
-        {JUSTICE_STACK.map((layer) => (
-          <section key={layer.id} id={layer.id} className="scroll-mt-20">
-            <div className="flex items-start gap-4 mb-6">
-              <div className={`shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${layer.gradient} flex items-center justify-center text-white font-bold text-lg`}>
-                {layer.number}
+      <div className="mx-auto max-w-7xl space-y-20 px-4 py-16 sm:px-6">
+        {JUSTICE_STACK.map((layer, i) => (
+          <section key={layer.id} id={layer.id} className="scroll-mt-24">
+            <div className="flex flex-col gap-2 border-b border-white/[0.06] pb-6 md:flex-row md:items-end md:justify-between">
+              <div className="flex items-baseline gap-4">
+                <span className={`font-display text-5xl font-semibold tracking-tighter ${ACCENT[i]}`}>0{layer.number}</span>
+                <div>
+                  <h2 className="font-display text-3xl font-semibold tracking-tight">{layer.title}</h2>
+                  <p className="text-white/45">{layer.tagline}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">{layer.title}</h2>
-                <p className="text-gray-400 text-sm">{layer.tagline}</p>
-              </div>
+              <p className="max-w-md text-sm leading-relaxed text-white/50 md:text-right">{layer.description}</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {layer.tools.map((tool) => {
-                const card = (
-                  <div className={`h-full bg-gray-800/50 backdrop-blur-sm rounded-xl p-5 border ${layer.border} ${tool.status === 'live' ? 'hover:border-green-500/60 hover:scale-[1.02]' : 'opacity-70'} transition-all duration-300`}>
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="text-3xl">{tool.icon}</span>
-                      <div className="flex gap-1">
-                        {tool.premium && (
-                          <span className="bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">PREMIUM</span>
-                        )}
-                        {tool.status === 'soon' && (
-                          <span className="bg-gray-600/40 text-gray-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">SOON</span>
-                        )}
-                      </div>
+                const body = (
+                  <>
+                    <div className="flex items-start justify-between">
+                      <span className="text-2xl" aria-hidden>
+                        {tool.icon}
+                      </span>
+                      <span className="flex gap-1.5">
+                        {tool.premium && <span className="rounded-full bg-gold-300/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold-200 ring-1 ring-gold-300/30">Premium</span>}
+                        {tool.external && <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50 ring-1 ring-white/10">Opens ↗</span>}
+                        {tool.status === 'soon' && <span className="rounded-full bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">Soon</span>}
+                      </span>
                     </div>
-                    <h3 className="text-base font-bold text-white mb-1">{tool.name}</h3>
-                    <p className="text-gray-400 text-sm">{tool.desc}</p>
-                    {tool.status === 'live' && (
-                      <div className="flex items-center text-green-400 text-sm font-medium mt-3">
-                        <span>Open</span>
-                        <span className="ml-1">{'->'}</span>
-                      </div>
-                    )}
-                  </div>
+                    <h3 className="mt-5 font-display text-lg font-semibold tracking-tight">{tool.name}</h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-white/55">{tool.desc}</p>
+                  </>
                 )
-
-                return tool.status === 'live' ? (
-                  <Link key={tool.name} href={tool.href} className="group">{card}</Link>
+                const cls = 'group block h-full rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 transition hover:-translate-y-0.5 hover:border-mint-400/30 hover:bg-white/[0.04]'
+                if (tool.status !== 'live') return <div key={tool.name} className={cls + ' opacity-60'}>{body}</div>
+                return tool.external ? (
+                  <a key={tool.name} href={tool.href} className={cls}>
+                    {body}
+                  </a>
                 ) : (
-                  <div key={tool.name} title="Coming soon">{card}</div>
+                  <Link key={tool.name} href={tool.href} className={cls}>
+                    {body}
+                  </Link>
                 )
               })}
             </div>
           </section>
         ))}
-
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-8 border border-green-500/20 max-w-2xl mx-auto text-center">
-          <div className="text-4xl mb-3">⚖️</div>
-          <h2 className="text-2xl font-bold text-white mb-3">Building infrastructure that scales trust</h2>
-          <p className="text-gray-400 mb-6">
-            CaseWin isn’t building AI for lawyers. It’s building the rails that reduce the distance
-            between a dispute and a just outcome — for everyone.
-          </p>
-          <Link
-            href="/marketplace"
-            className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition"
-          >
-            Explore the Lawyer Marketplace
-          </Link>
-        </div>
       </div>
+      <SiteFooter />
     </div>
   )
 }

@@ -1,16 +1,18 @@
 import './globals.css'
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Inter_Tight, Instrument_Serif } from 'next/font/google'
 import { AuthProvider } from '@/contexts/AuthContext'
 import AuthGuard from '@/components/AuthGuard'
 import { NotificationProvider } from '@/components/Notifications'
 import Script from 'next/script'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+const display = Inter_Tight({ subsets: ['latin'], variable: '--font-display' })
+const serif = Instrument_Serif({ subsets: ['latin'], weight: '400', style: ['normal', 'italic'], variable: '--font-serif', adjustFontFallback: false })
 
 export const metadata: Metadata = {
-  title: 'CaseWin AI | AI-Powered Legal Platform for Nigerian Lawyers',
-  description: 'Find and hire verified Nigerian lawyers across all 36 states. AI legal assistant with document drafting, case prediction, research, and more. Works offline!',
+  title: 'CaseWin — AI justice infrastructure for Nigeria',
+  description: 'From dispute to just outcome: AI legal tools, verified lawyers, dispute resolution, digital courts and open Nigerian law — one justice stack.',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -42,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${display.variable} ${serif.variable}`}>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
