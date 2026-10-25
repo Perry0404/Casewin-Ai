@@ -13,7 +13,7 @@ export default async function CourtsPage() {
   return (
     <Shell query="">
       <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">Publishing courts</p>
+        <p className="text-[13px] text-ink-3">Publishing courts</p>
         <h1 className="mt-2 font-serif text-5xl font-medium tracking-tight text-ink">The courts behind the law</h1>
         <p className="mt-4 max-w-2xl text-lg text-ink-2">Every judgment here was published by the registry of the court that delivered it.</p>
         <div className="mt-10 grid gap-4 sm:grid-cols-2">

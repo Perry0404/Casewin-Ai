@@ -1,141 +1,159 @@
 import Link from 'next/link'
 import { SiteFooter, SiteHeader } from '@/components/site'
-import { btn } from '@/components/ui'
+import { KINDS, OPENLEGAL_URL } from '@/lib/constants'
 import { publicStats } from '@/lib/stats'
 
 export const revalidate = 300
 
-const STEPS = [
-  ['Tell us', 'Two minutes, on any phone. Who is detained or what happened, where, and since when. You get a reference number and a PIN.'],
-  ['We check it', 'Our rules engine reads the dates against the Constitution and ACJA and puts the most urgent cases — children, people held without a court order — first.'],
-  ['A lawyer takes it', 'A volunteer lawyer we have verified on the Nigerian Bar roll takes the case and must act within 48 hours, or it goes back to the next lawyer.'],
-  ['You follow it', 'Every step — call, visit, bail application, court date, release — is recorded. You see the updates with your reference and PIN.'],
+const RIGHTS: [string, string, string][] = [
+  ['They must take you to court within 24 hours', 'if a court is within 40 km; otherwise within 48 hours.', 'Constitution s.35(5)'],
+  ['Police bail is free', 'Nobody may demand money to release you. Note their name and number.', 'ACJA 2015'],
+  ['You may stay silent until you have a lawyer', 'Don’t sign a statement you don’t understand.', 'Constitution s.35(2)'],
+  ['Nobody may be arrested in your place', 'The police may not hold a relative instead of you.', 'ACJA 2015 s.7'],
 ]
 
-const RIGHTS = [
-  ['24–48 hours', 'You must be taken to court within 24 hours if a court is within 40 km, otherwise 48 hours.', 'Constitution s.35(5)'],
-  ['Bail is free', 'Police bail is free. Nobody may demand money to release you.', 'ACJA 2015; Police Act 2020'],
-  ['Silence & a lawyer', 'You may stay silent until you have spoken with a lawyer of your choice.', 'Constitution s.35(2)'],
-  ['14 + 14 days', 'A remand order lasts at most 14 days, extendable once by 14 days on good cause.', 'ACJA 2015 s.296'],
+const STEPS: [string, string][] = [
+  ['Now', 'Tell us who is held, where and since when. It takes about two minutes. You get a reference number and a PIN.'],
+  ['Within 48 hours', 'A volunteer lawyer we have verified takes the case and calls or WhatsApps you. If they don’t act in 48 hours, it passes to the next lawyer.'],
+  ['Every step', 'Calls, visits, bail applications and court dates are recorded. You see the updates with your reference and PIN.'],
+  ['The outcome', 'Release, bail, charges struck out, or a settlement — recorded on the file, never published with your name.'],
 ]
 
 export default async function Home() {
   const s = await publicStats().catch(() => null)
   return (
-    <div className="bg-parchment">
-      <section className="relative overflow-hidden bg-ink-950 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(48rem_32rem_at_85%_-10%,rgba(209,166,70,0.22),transparent_60%)]" />
-        <div className="grain absolute inset-0" />
-        <SiteHeader dark />
-        <div className="relative mx-auto grid max-w-6xl gap-12 px-4 pb-20 pt-12 sm:px-6 lg:grid-cols-[1.25fr_1fr] lg:pb-28 lg:pt-20">
-          <div className="animate-rise">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brass-300">Free · Confidential · Nigeria-wide</p>
-            <h1 className="mt-5 font-display text-[44px] font-semibold leading-[1.02] tracking-tight sm:text-6xl lg:text-[68px]">
-              Someone held by the police?
-              <span className="block text-brass-300">Get a free lawyer.</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-lg text-ink-200">
-              Tell us what happened. A verified volunteer lawyer takes the case within 48 hours — and you can see every step they take.
-            </p>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/help" className={btn.brass + ' !px-7 !py-4 !text-base'}>
-                Report a case — free
-              </Link>
-              <Link href="/track" className="inline-flex items-center rounded-xl border border-white/20 px-6 py-4 text-base font-semibold text-white transition hover:bg-white/5">
-                Track a request
-              </Link>
-            </div>
-            <p className="mt-5 text-sm text-ink-300">Also for police extortion, domestic violence, eviction and unpaid wages.</p>
-          </div>
-          <div className="animate-rise self-end rounded-3xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur [animation-delay:120ms] sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-300">Live, from real cases</p>
-            <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-7">
-              <Num label="Requests received" v={s?.requests} />
-              <Num label="Taken by a lawyer" v={s?.assigned} />
-              <Num label="People released" v={s?.released} />
-              <Num label="Verified volunteers" v={s?.volunteers} />
-            </dl>
-            <p className="mt-6 border-t border-white/10 pt-4 text-xs leading-relaxed text-ink-300">
-              No estimates and no sample data: these count only real requests on this platform.{' '}
-              <Link href="/impact" className="text-brass-200 underline underline-offset-4">
-                See the full record
-              </Link>
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">How it works</p>
-        <h2 className="mt-2 max-w-2xl font-display text-4xl font-semibold tracking-tight text-ink-900">From a phone call for help to a lawyer at the station.</h2>
-        <ol className="mt-12 grid gap-5 md:grid-cols-4">
-          {STEPS.map(([t, d], i) => (
-            <li key={t} className="rounded-2xl border border-ink-100 bg-white p-6 shadow-card">
-              <span className="font-mono text-sm text-brass-600">0{i + 1}</span>
-              <h3 className="mt-3 font-display text-xl font-semibold text-ink-900">{t}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-ink-500">{d}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="border-y border-ink-100 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+    <div className="bg-white">
+      <SiteHeader />
+      <main>
+        <section className="border-b border-ink-200">
+          <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-14 pt-12 sm:px-6 sm:pt-16 lg:grid-cols-[1.35fr_1fr]">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">Know your rights</p>
-              <h2 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900">If you are arrested in Nigeria</h2>
+              <p className="text-[14px] text-ink-500">Free · confidential · anywhere in Nigeria</p>
+              <h1 className="mt-3 text-[38px] font-semibold leading-[1.08] tracking-[-0.025em] text-ink-950 sm:text-[52px]">
+                Get a free lawyer for someone held by the police.
+              </h1>
+              <p className="mt-5 max-w-xl text-[18px] leading-relaxed text-ink-600">
+                Also for police extortion, domestic violence, eviction and unpaid wages — for anyone who cannot afford a lawyer.
+              </p>
+
+              <h2 className="mt-10 text-[15px] font-semibold text-ink-950">What is happening?</h2>
+              <ul className="mt-3 border-t border-ink-200">
+                {Object.entries(KINDS).map(([k, v]) => (
+                  <li key={k} className="border-b border-ink-200">
+                    <Link href={`/help?kind=${k}`} className="group flex items-center justify-between gap-4 py-3.5">
+                      <span>
+                        <span className="text-[16px] font-semibold text-brass-500 group-hover:underline group-hover:underline-offset-4">{v.label}</span>
+                        <span className="block text-[13px] text-ink-500">{v.help}</span>
+                      </span>
+                      <span className="text-ink-400 transition-transform group-hover:translate-x-0.5 group-hover:text-ink-950" aria-hidden>
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-[14px] text-ink-600">
+                Already asked?{' '}
+                <Link href="/track" className="prose-link">
+                  Track your request
+                </Link>
+              </p>
             </div>
-            <Link href="/rights" className={btn.secondary}>
-              All your rights, with the law →
+
+            <aside className="self-start border-t-4 border-ink-950 bg-parchment p-6">
+              <h2 className="text-[17px] font-semibold text-ink-950">If someone is arrested right now</h2>
+              <ol className="mt-4 space-y-4">
+                {RIGHTS.map(([t, d, ref], i) => (
+                  <li key={t} className="grid grid-cols-[1.5rem_1fr] gap-2">
+                    <span className="font-mono text-[13px] text-ink-400">{i + 1}.</span>
+                    <span>
+                      <span className="block text-[15px] font-medium leading-snug text-ink-950">{t}</span>
+                      <span className="block text-[14px] leading-snug text-ink-600">{d}</span>
+                      <a href={`${OPENLEGAL_URL}/search?q=${encodeURIComponent(ref)}`} className="mt-1 inline-block font-mono text-[12px] text-ink-500 underline decoration-ink-300 underline-offset-2 hover:text-ink-950">
+                        {ref}
+                      </a>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <Link href="/rights" className="prose-link mt-5 inline-block text-[14px]">
+                All your rights, with the law
+              </Link>
+            </aside>
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_2fr]">
+          <div>
+            <h2 className="text-[22px] font-semibold tracking-[-0.01em] text-ink-950">What happens after you ask</h2>
+            <p className="mt-2 text-[14px] leading-relaxed text-ink-600">
+              Nobody from CaseWin will ever ask you for money.{' '}
+              <Link href="/how-it-works" className="prose-link">
+                How we check volunteers and reports
+              </Link>
+            </p>
+          </div>
+          <ol className="border-t border-ink-950">
+            {STEPS.map(([when, what]) => (
+              <li key={when} className="grid gap-1 border-b border-ink-200 py-4 sm:grid-cols-[10rem_1fr] sm:gap-6">
+                <span className="text-[15px] font-semibold text-ink-950">{when}</span>
+                <span className="text-[14px] leading-relaxed text-ink-600">{what}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="border-y border-ink-200 bg-parchment">
+          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 className="text-[22px] font-semibold tracking-[-0.01em] text-ink-950">The record so far</h2>
+              <Link href="/impact" className="prose-link text-[14px]">
+                Full record
+              </Link>
+            </div>
+            <dl className="mt-6 grid grid-cols-2 border-t border-ink-950 sm:grid-cols-4">
+              {(
+                [
+                  ['Requests received', s?.requests],
+                  ['Taken by a volunteer', s?.assigned],
+                  ['People released', s?.released],
+                  ['Verified volunteers', s?.volunteers],
+                ] as const
+              ).map(([k, v]) => (
+                <div key={k} className="border-b border-ink-200 py-4 pr-4 sm:border-b-0">
+                  <dt className="text-[13px] text-ink-500">{k}</dt>
+                  <dd className="mt-1 text-[32px] font-semibold leading-none tracking-[-0.02em] text-ink-950 tabular-nums">{v == null ? '—' : v.toLocaleString()}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-4 text-[13px] text-ink-500">Counted from real requests on this service only — no estimates, no sample data.</p>
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-2">
+          <div className="border-t border-ink-950 pt-5">
+            <h2 className="text-[20px] font-semibold text-ink-950">Lawyers, paralegals and law students</h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-600">
+              Take cases in your state from a board ranked by the custody rules. Bail and fundamental-rights drafts are prepared from the file, and your pro bono
+              record builds itself. Every volunteer is verified before seeing a file.
+            </p>
+            <Link href="/volunteer" className="prose-link mt-4 inline-block">
+              Volunteer
             </Link>
           </div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {RIGHTS.map(([t, d, ref]) => (
-              <div key={t} className="rounded-2xl bg-parchment p-6">
-                <p className="font-display text-3xl font-semibold text-ink-900">{t}</p>
-                <p className="mt-3 text-sm leading-relaxed text-ink-600">{d}</p>
-                <p className="mt-4 font-mono text-[11px] text-ink-400">{ref}</p>
-              </div>
-            ))}
+          <div className="border-t border-ink-950 pt-5">
+            <h2 className="text-[20px] font-semibold text-ink-950">Legal aid organisations</h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-600">
+              Legal Aid Council offices, NGOs, law clinics and NBA pro bono committees: take cases as a team, record prison and police-station visits, and report
+              outcomes from real records.
+            </p>
+            <Link href="/organisations" className="prose-link mt-4 inline-block">
+              Register an organisation
+            </Link>
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto grid max-w-6xl gap-6 px-4 py-20 sm:px-6 md:grid-cols-2">
-        <div className="rounded-3xl bg-ink-950 p-8 text-white sm:p-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-300">For lawyers, paralegals & law students</p>
-          <h3 className="mt-3 font-display text-3xl font-semibold">Take one case a month.</h3>
-          <p className="mt-3 text-ink-200">
-            Pick cases in your state from a board sorted by urgency. Drafts of bail and fundamental-rights applications are generated from the file. Your
-            pro bono record builds itself.
-          </p>
-          <Link href="/volunteer" className={btn.brass + ' mt-7'}>
-            Volunteer
-          </Link>
-        </div>
-        <div className="rounded-3xl border border-ink-100 bg-white p-8 shadow-card sm:p-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">For legal aid organisations</p>
-          <h3 className="mt-3 font-display text-3xl font-semibold text-ink-900">Run your caseload here.</h3>
-          <p className="mt-3 text-ink-500">
-            Legal Aid Council offices, NGOs, law clinics and NBA pro bono committees: bring your team, take cases as an organisation, record prison and
-            police-station visits, and report outcomes from real data.
-          </p>
-          <Link href="/organisations" className={btn.primary + ' mt-7'}>
-            Register an organisation
-          </Link>
-        </div>
-      </section>
+        </section>
+      </main>
       <SiteFooter />
-    </div>
-  )
-}
-
-function Num({ label, v }: { label: string; v: number | undefined }) {
-  return (
-    <div>
-      <dt className="text-[13px] text-ink-300">{label}</dt>
-      <dd className="mt-1 font-display text-4xl font-semibold tabular-nums">{v == null ? '—' : v.toLocaleString()}</dd>
     </div>
   )
 }

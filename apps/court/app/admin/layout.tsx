@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { getStaff, requirePlatformAdmin } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
-import { Logo } from '@/components/ui'
-import SignOutButton from '@/components/SignOutButton'
+import AppBar from '@/components/AppBar'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,36 +26,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ['/admin/laws', 'Statutes', statutes],
   ]
   return (
-    <div className="min-h-screen bg-parchment">
-      <header className="bg-ink-950 text-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-4">
-            <Link href="/admin">
-              <Logo dark />
+    <div className="min-h-screen bg-white">
+      <AppBar
+        area="Justice admin"
+        tabs={tabs}
+        user={user.email ?? ''}
+        extra={
+          staff ? (
+            <Link href="/registry" className="rounded-md px-2.5 py-1.5 text-ink-600 hover:bg-ink-100 hover:text-ink-950">
+              My registry
             </Link>
-            <span className="hidden rounded-full border border-brass-300/40 bg-brass-300/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-brass-200 sm:inline">
-              Justice admin
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-sm">
-            {staff && (
-              <Link href="/registry" className="rounded-lg px-3 py-2 text-brass-200 hover:bg-white/5 hover:text-white">
-                My registry →
-              </Link>
-            )}
-            <span className="ml-2 hidden text-xs text-ink-400 md:inline">{user.email}</span>
-            <SignOutButton />
-          </div>
-        </div>
-        <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-3 text-sm sm:px-6">
-          {tabs.map(([href, label, count]) => (
-            <Link key={href} href={href} className="whitespace-nowrap rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
-              {label}
-              {count ? <span className="ml-1.5 rounded-full bg-brass-400 px-1.5 py-0.5 text-[11px] font-bold text-ink-950">{count}</span> : null}
-            </Link>
-          ))}
-        </nav>
-      </header>
+          ) : null
+        }
+      />
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">{children}</main>
     </div>
   )

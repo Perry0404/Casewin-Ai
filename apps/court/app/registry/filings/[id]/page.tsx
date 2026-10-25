@@ -111,12 +111,12 @@ export default async function FilingDetail({ params, searchParams }: { params: {
             </dl>
             <div className="mt-6 space-y-4 border-t border-ink-100 pt-5">
               <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-400">Reliefs claimed</h3>
+                <h3 className="text-[13px] font-semibold text-ink-500">Reliefs claimed</h3>
                 <p className="mt-2 whitespace-pre-line leading-relaxed text-ink-800">{f.reliefs}</p>
               </div>
               {f.summary && (
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-400">Summary of facts</h3>
+                  <h3 className="text-[13px] font-semibold text-ink-500">Summary of facts</h3>
                   <p className="mt-2 whitespace-pre-line leading-relaxed text-ink-700">{f.summary}</p>
                 </div>
               )}

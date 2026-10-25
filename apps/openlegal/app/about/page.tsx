@@ -8,7 +8,7 @@ export default function About() {
   return (
     <Shell query="">
       <article className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">About</p>
+        <p className="text-[13px] text-ink-3">About</p>
         <h1 className="mt-2 font-serif text-5xl font-medium tracking-tight text-ink">Law belongs to the people it governs.</h1>
         <div className="prose-judgment mt-8 space-y-5">
           <p>

@@ -1,83 +1,120 @@
 import Link from 'next/link'
-import { Logo, btn } from './ui'
-import { CASEWIN_URL, OPENLEGAL_URL } from '@/lib/constants'
+import { Logo, btn, cx } from './ui'
+import { CASEWIN_URL, LEGALAID_URL, OPENLEGAL_URL } from '@/lib/constants'
 
-export function SiteNav({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
-  const dark = tone === 'dark'
-  const link = dark ? 'text-ink-200 hover:text-white' : 'text-ink-600 hover:text-ink-900'
+/** The thin strip that ties the CaseWin justice services together. */
+export function JusticeBar({ current }: { current: 'court' | 'openlegal' | 'legalaid' }) {
+  const items: [string, string, string][] = [
+    ['court', 'Court', 'https://court.casewinai.com'],
+    ['openlegal', 'OpenLegal', OPENLEGAL_URL],
+    ['legalaid', 'Legal Aid', LEGALAID_URL],
+  ]
   return (
-    <header className={dark ? 'relative z-20' : 'relative z-20 border-b border-ink-100 bg-white/80 backdrop-blur'}>
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-5 sm:px-6">
-        <Link href="/" aria-label="CaseWin Court home">
-          <Logo dark={dark} />
-        </Link>
-        <nav className="hidden items-center gap-7 text-sm font-medium lg:flex">
-          <Link href="/e-filing" className={link}>How e-filing works</Link>
-          <Link href="/#analytics" className={link}>Judicial analytics</Link>
-          <Link href="/cause-list" className={link}>Cause lists</Link>
-          <Link href="/track" className={link}>Track a filing</Link>
+    <div className="bg-ink-950 text-[12.5px] text-ink-300">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2 sm:px-6">
+        <a href={CASEWIN_URL} className="hidden hover:text-white sm:inline">
+          A CaseWin justice service
+        </a>
+        <nav className="flex gap-5" aria-label="CaseWin justice services">
+          {items.map(([k, label, href]) => (
+            <a key={k} href={href} aria-current={k === current ? 'page' : undefined} className={cx('hover:text-white', k === current && 'font-medium text-white')}>
+              {label}
+            </a>
+          ))}
         </nav>
-        <div className="flex items-center gap-2">
-          <Link href="/login" className={`hidden rounded-xl px-3.5 py-2 text-sm font-semibold sm:inline-flex ${dark ? 'text-white hover:bg-white/10' : 'text-ink-800 hover:bg-ink-50'}`}>
+      </div>
+    </div>
+  )
+}
+
+const NAV: [string, string][] = [
+  ['/e-filing', 'E-filing guide'],
+  ['/cause-list', 'Cause lists'],
+  ['/track', 'Track a filing'],
+  ['/verify', 'Verify a document'],
+]
+
+export function SiteNav(_: { tone?: 'dark' | 'light' } = {}) {
+  return (
+    <>
+      <JusticeBar current="court" />
+      <header className="border-b border-ink-200 bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-4 sm:px-6">
+          <Link href="/" aria-label="CaseWin Court home">
+            <Logo />
+          </Link>
+          <nav className="hidden items-center gap-6 text-[14px] lg:flex">
+            {NAV.map(([h, l]) => (
+              <Link key={h} href={h} className="text-ink-700 hover:text-ink-950 hover:underline hover:underline-offset-4">
+                {l}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex items-center gap-1">
+            <Link href="/login" className="hidden px-3 py-2 text-[14px] text-ink-700 hover:text-ink-950 sm:inline-flex">
+              Sign in
+            </Link>
+            <Link href="/file" className={btn.primary + ' !py-2'}>
+              File a case
+            </Link>
+          </div>
+        </div>
+        <nav className="flex gap-5 overflow-x-auto whitespace-nowrap px-4 pb-3 text-[14px] text-ink-700 sm:px-6 lg:hidden">
+          {NAV.map(([h, l]) => (
+            <Link key={h} href={h}>
+              {l}
+            </Link>
+          ))}
+          <Link href="/login" className="sm:hidden">
             Sign in
           </Link>
-          <Link href="/file" className={dark ? btn.brass + ' !py-2.5' : btn.primary}>
-            File a case
-          </Link>
-        </div>
-      </div>
-      <nav className="-mt-2 flex gap-5 overflow-x-auto whitespace-nowrap px-4 pb-3 text-sm font-medium sm:px-6 lg:hidden">
-        <Link href="/cause-list" className={link}>Cause lists</Link>
-        <Link href="/track" className={link}>Track a filing</Link>
-        <Link href="/verify" className={link}>Verify a document</Link>
-        <Link href="/login" className={link + ' sm:hidden'}>Sign in</Link>
-        <Link href="/register" className={link}>Register</Link>
-      </nav>
-    </header>
+        </nav>
+      </header>
+    </>
   )
 }
 
 export function SiteFooter() {
   return (
-    <footer className="bg-ink-950 text-ink-300">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <footer className="mt-24 border-t border-ink-200 bg-parchment">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div>
-          <Logo dark />
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-400">
-            The digital registry for Nigerian courts. Part of the CaseWin justice stack.
+          <Logo />
+          <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-ink-600">
+            Registry software for Nigerian courts: e-filing, suit numbers, cause lists, hearings, judgments and judicial analytics.
           </p>
         </div>
         <FooterCol
-          title="For the public"
+          title="Public services"
           links={[
             ['File a case', '/file'],
-            ['How e-filing works', '/e-filing'],
+            ['E-filing guide', '/e-filing'],
             ['Track a filing', '/track'],
             ['Cause lists', '/cause-list'],
             ['Verify a document', '/verify'],
           ]}
         />
         <FooterCol
-          title="For courts"
+          title="Courts and staff"
           links={[
-            ['Bring your court online', '/onboard'],
+            ['Bring a court online', '/onboard'],
+            ['Register as filer or staff', '/register'],
             ['Sign in', '/login'],
-            ['Register (filers & staff)', '/register'],
-            ['Security & integrity', '/#integrity'],
           ]}
         />
         <FooterCol
-          title="Justice stack"
+          title="CaseWin"
           links={[
-            ['CaseWin AI', CASEWIN_URL],
             ['OpenLegal Nigeria', OPENLEGAL_URL],
+            ['Legal Aid', LEGALAID_URL],
+            ['CaseWin', CASEWIN_URL],
           ]}
         />
       </div>
-      <div className="border-t border-white/5">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-2 px-4 py-6 text-xs text-ink-500 sm:flex-row sm:px-6">
+      <div className="border-t border-ink-200">
+        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-2 px-4 py-5 text-[12px] text-ink-500 sm:flex-row sm:px-6">
           <span>© {new Date().getFullYear()} CaseWin. Court records remain the property of the issuing court.</span>
-          <span>Made in Nigeria 🇳🇬</span>
+          <span>Built in Nigeria</span>
         </div>
       </div>
     </footer>
@@ -87,13 +124,13 @@ export function SiteFooter() {
 function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-300">{title}</h3>
-      <ul className="mt-4 space-y-2.5 text-sm">
+      <h3 className="text-[13px] font-semibold text-ink-950">{title}</h3>
+      <ul className="mt-3 space-y-2 text-[13px]">
         {links.map(([label, href]) => (
           <li key={href}>
-            <Link href={href} className="transition hover:text-white">
+            <a href={href} className="text-ink-600 hover:text-ink-950 hover:underline hover:underline-offset-4">
               {label}
-            </Link>
+            </a>
           </li>
         ))}
       </ul>
@@ -101,11 +138,11 @@ function FooterCol({ title, links }: { title: string; links: [string, string][] 
   )
 }
 
-/** Light page shell for public utility pages (file, track, cause list). */
+/** Page shell for public utility pages (file, track, cause list). */
 export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteNav tone="light" />
+      <SiteNav />
       <main className="flex-1">{children}</main>
       <SiteFooter />
     </div>

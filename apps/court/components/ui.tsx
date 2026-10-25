@@ -6,48 +6,47 @@ export function cx(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(' ')
 }
 
+/** CaseWin family mark: a solid block with the product's accent tab. */
+export function Mark({ dark = false, className = '' }: { dark?: boolean; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={cx('h-6 w-6 shrink-0', className)} aria-hidden>
+      <rect width="24" height="24" className={dark ? 'fill-white' : 'fill-ink-950'} />
+      <rect x="5" y="5" width="3" height="14" className={dark ? 'fill-ink-950' : 'fill-white'} />
+      <rect x="11" y="13" width="8" height="6" className="fill-brass-400" />
+    </svg>
+  )
+}
+
 export function Logo({ dark = false, className = '' }: { dark?: boolean; className?: string }) {
   return (
     <span className={cx('inline-flex items-center gap-2.5', className)}>
-      <svg viewBox="0 0 32 32" className="h-8 w-8 shrink-0" aria-hidden>
-        <rect width="32" height="32" rx="8" className={dark ? 'fill-brass-400' : 'fill-ink-900'} />
-        <path
-          d="M16 6.5 7 11v1.6h18V11L16 6.5Zm-6.2 8v7.6m4.1-7.6v7.6m4.2-7.6v7.6m4.1-7.6v7.6M7 24.2h18"
-          className={dark ? 'stroke-ink-950' : 'stroke-brass-300'}
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          fill="none"
-        />
-      </svg>
-      <span className="leading-none">
-        <span className={cx('block font-display text-[17px] font-semibold tracking-tight', dark ? 'text-white' : 'text-ink-900')}>CaseWin Court</span>
-        <span className={cx('mt-0.5 block text-[10px] font-medium uppercase tracking-[0.18em]', dark ? 'text-brass-300' : 'text-brass-600')}>
-          Digital registry
-        </span>
+      <Mark dark={dark} />
+      <span className={cx('text-[16px] font-semibold leading-none tracking-[-0.01em]', dark ? 'text-white' : 'text-ink-950')}>
+        CaseWin <span className={dark ? 'font-normal text-ink-300' : 'font-normal text-ink-500'}>Court</span>
       </span>
     </span>
   )
 }
 
 const TONES: Record<Tone, string> = {
-  good: 'bg-verdict-50 text-verdict-700 ring-verdict-500/20',
-  warn: 'bg-amberline-50 text-amberline-600 ring-amberline-500/25',
-  bad: 'bg-seal-50 text-seal-600 ring-seal-500/20',
-  info: 'bg-ink-50 text-ink-700 ring-ink-500/15',
-  neutral: 'bg-stone-100 text-stone-600 ring-stone-400/20',
+  good: 'bg-verdict-50 text-verdict-700',
+  warn: 'bg-amberline-50 text-amberline-600',
+  bad: 'bg-seal-50 text-seal-600',
+  info: 'bg-ink-100 text-ink-700',
+  neutral: 'bg-ink-50 text-ink-500',
 }
 const DOTS: Record<Tone, string> = {
   good: 'bg-verdict-500',
   warn: 'bg-amberline-500',
   bad: 'bg-seal-500',
   info: 'bg-ink-500',
-  neutral: 'bg-stone-400',
+  neutral: 'bg-ink-300',
 }
 
-/** Status pill — always dot + text, never colour alone. */
+/** Status label — always dot + text, never colour alone. */
 export function Badge({ tone = 'neutral', children }: { tone?: Tone; children: ReactNode }) {
   return (
-    <span className={cx('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset', TONES[tone])}>
+    <span className={cx('inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-1.5 py-0.5 text-[12px] font-medium leading-tight', TONES[tone])}>
       <span className={cx('h-1.5 w-1.5 rounded-full', DOTS[tone])} aria-hidden />
       {children}
     </span>
@@ -56,22 +55,22 @@ export function Badge({ tone = 'neutral', children }: { tone?: Tone; children: R
 
 export function SampleTag() {
   return (
-    <span title="Demonstration data — remove under Settings" className="rounded border border-dashed border-ink-300 px-1.5 py-px text-[10px] font-medium uppercase tracking-wider text-ink-400">
-      Sample
+    <span title="Demonstration data — remove under Settings" className="rounded-sm border border-dashed border-ink-300 px-1 text-[11px] font-medium text-ink-400">
+      sample
     </span>
   )
 }
 
 export function Card({ children, className = '', pad = true }: { children: ReactNode; className?: string; pad?: boolean }) {
-  return <div className={cx('rounded-2xl border border-ink-100 bg-white shadow-card', pad && 'p-5 sm:p-6', className)}>{children}</div>
+  return <div className={cx('rounded-md border border-ink-200 bg-white', pad && 'p-5 sm:p-6', className)}>{children}</div>
 }
 
 export function CardTitle({ children, action, sub }: { children: ReactNode; action?: ReactNode; sub?: ReactNode }) {
   return (
     <div className="mb-4 flex items-start justify-between gap-4">
       <div>
-        <h2 className="text-[15px] font-semibold text-ink-900">{children}</h2>
-        {sub && <p className="mt-0.5 text-sm text-ink-400">{sub}</p>}
+        <h2 className="text-[15px] font-semibold text-ink-950">{children}</h2>
+        {sub && <p className="mt-0.5 text-[13px] leading-snug text-ink-500">{sub}</p>}
       </div>
       {action}
     </div>
@@ -80,81 +79,76 @@ export function CardTitle({ children, action, sub }: { children: ReactNode; acti
 
 export function PageHeader({ eyebrow, title, sub, actions }: { eyebrow?: string; title: ReactNode; sub?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-8 flex flex-col gap-4 border-b border-ink-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        {eyebrow && <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">{eyebrow}</p>}
-        <h1 className="font-display text-[28px] font-semibold leading-tight tracking-tight text-ink-900 sm:text-[32px]">{title}</h1>
-        {sub && <p className="mt-1.5 max-w-2xl text-[15px] text-ink-500">{sub}</p>}
+        {eyebrow && <p className="mb-1 text-[13px] text-ink-500">{eyebrow}</p>}
+        <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.015em] text-ink-950 sm:text-[30px]">{title}</h1>
+        {sub && <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-ink-600">{sub}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
     </div>
   )
 }
 
-export function Empty({ title, children, icon = '§' }: { title: string; children?: ReactNode; icon?: string }) {
+export function Empty({ title, children }: { title: string; children?: ReactNode; icon?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-ink-200 bg-parchment/60 px-6 py-14 text-center">
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-white font-display text-xl text-brass-600 shadow-card">{icon}</div>
+    <div className="rounded-md border border-dashed border-ink-300 px-6 py-10 text-center">
       <p className="font-medium text-ink-800">{title}</p>
-      {children && <div className="mt-1 max-w-sm text-sm text-ink-400">{children}</div>}
+      {children && <div className="mx-auto mt-1 max-w-sm text-[13px] text-ink-500">{children}</div>}
     </div>
   )
 }
 
 export function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: Tone }) {
   return (
-    <Card className="relative overflow-hidden">
-      <p className="text-[13px] font-medium text-ink-500">{label}</p>
-      <p className="mt-2 font-display text-[34px] font-semibold leading-none tracking-tight text-ink-900">{value}</p>
+    <div className="border-l-2 border-ink-200 py-1 pl-4">
+      <p className="text-[13px] text-ink-500">{label}</p>
+      <p className="mt-1 text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink-950 tabular-nums">{value}</p>
       {hint && (
-        <p className={cx('mt-2 text-[13px]', tone === 'bad' ? 'text-seal-600' : tone === 'good' ? 'text-verdict-600' : tone === 'warn' ? 'text-amberline-600' : 'text-ink-400')}>
-          {hint}
-        </p>
+        <p className={cx('mt-1.5 text-[13px]', tone === 'bad' ? 'text-seal-600' : tone === 'good' ? 'text-verdict-600' : tone === 'warn' ? 'text-amberline-600' : 'text-ink-500')}>{hint}</p>
       )}
-    </Card>
+    </div>
   )
 }
 
+const base = 'inline-flex items-center justify-center gap-2 rounded-md text-[14px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50'
 export const btn = {
-  primary:
-    'inline-flex items-center justify-center gap-2 rounded-xl bg-ink-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-400 disabled:cursor-not-allowed disabled:opacity-50',
-  brass:
-    'inline-flex items-center justify-center gap-2 rounded-xl bg-brass-400 px-5 py-3 text-sm font-semibold text-ink-950 shadow-sm transition hover:bg-brass-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-50',
-  secondary:
-    'inline-flex items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-sm font-semibold text-ink-800 transition hover:border-ink-300 hover:bg-ink-50 disabled:opacity-50',
-  danger:
-    'inline-flex items-center justify-center gap-2 rounded-xl border border-seal-500/30 bg-white px-4 py-2.5 text-sm font-semibold text-seal-600 transition hover:bg-seal-50 disabled:opacity-50',
-  ghost: 'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-ink-600 transition hover:bg-ink-50 hover:text-ink-900',
+  primary: `${base} bg-ink-950 px-4 py-2.5 text-white hover:bg-ink-800`,
+  brass: `${base} bg-brass-500 px-4 py-2.5 text-white hover:bg-brass-600`,
+  secondary: `${base} border border-ink-300 bg-white px-4 py-2.5 text-ink-900 hover:border-ink-400 hover:bg-ink-50`,
+  danger: `${base} border border-seal-500/40 bg-white px-4 py-2.5 text-seal-600 hover:bg-seal-50`,
+  ghost: `${base} px-2.5 py-1.5 text-ink-600 hover:bg-ink-100 hover:text-ink-950`,
 }
 
 export const input =
-  'block w-full rounded-xl border border-ink-200 bg-white px-3.5 py-2.5 text-[15px] text-ink-900 shadow-sm placeholder:text-ink-300 transition focus:border-ink-500 focus:outline-none focus:ring-4 focus:ring-ink-100'
+  'block w-full rounded-md border border-ink-300 bg-white px-3 py-2.5 text-[15px] text-ink-950 placeholder:text-ink-400 transition-colors focus:border-ink-950 focus:outline-none focus:ring-2 focus:ring-brass-500/20'
 
 export function Field({ label, hint, children, required }: { label: string; hint?: ReactNode; children: ReactNode; required?: boolean }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-ink-700">
+      <span className="mb-1.5 block text-[14px] font-medium text-ink-900">
         {label}
         {required && <span className="ml-0.5 text-seal-500">*</span>}
       </span>
       {children}
-      {hint && <span className="mt-1.5 block text-xs text-ink-400">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-[13px] text-ink-500">{hint}</span>}
     </label>
   )
 }
 
 export function Notice({ tone = 'info', children }: { tone?: Tone; children: ReactNode }) {
-  return <div className={cx('rounded-xl px-4 py-3 text-sm ring-1 ring-inset', TONES[tone])}>{children}</div>
+  const bar: Record<Tone, string> = { good: 'border-verdict-500', warn: 'border-amberline-500', bad: 'border-seal-500', info: 'border-ink-900', neutral: 'border-ink-300' }
+  return <div className={cx('border-l-4 bg-ink-50 px-4 py-3 text-[14px] text-ink-800', bar[tone])}>{children}</div>
 }
 
 export function TextLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="font-medium text-ink-800 underline decoration-brass-300 decoration-2 underline-offset-4 transition hover:decoration-brass-500">
+    <Link href={href} className="prose-link">
       {children}
     </Link>
   )
 }
 
 export function Mono({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <span className={cx('font-mono text-[13px] tracking-tight', className)}>{children}</span>
+  return <span className={cx('font-mono text-[13px]', className)}>{children}</span>
 }

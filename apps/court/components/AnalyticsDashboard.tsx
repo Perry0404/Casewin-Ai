@@ -109,7 +109,7 @@ export default function AnalyticsDashboard({ a }: { a: Analytics }) {
       <details className="rounded-2xl border border-ink-100 bg-white p-5 text-sm shadow-card">
         <summary className="cursor-pointer font-medium text-ink-700">Data table &amp; definitions</summary>
         <table className="mt-4 w-full text-left">
-          <thead className="text-xs uppercase tracking-wider text-ink-400">
+          <thead className="text-[12px] font-medium text-ink-500">
             <tr>
               <th className="py-2 font-medium">Month</th>
               <th className="py-2 text-right font-medium">Filed</th>

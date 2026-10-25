@@ -26,13 +26,13 @@ export default async function VolunteerPage({ searchParams }: { searchParams: { 
     <PublicPage wide>
       <div className="grid gap-12 lg:grid-cols-[1fr_1.1fr]">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">Volunteer</p>
-          <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900 sm:text-5xl">One case can get someone home.</h1>
+          <p className="text-[13px] text-ink-500">Volunteer</p>
+          <h1 className="mt-2 text-[32px] font-semibold leading-tight tracking-[-0.02em] text-ink-950 sm:text-[40px]">One case can get someone home.</h1>
           <p className="mt-4 text-lg text-ink-500">Lawyers, paralegals and law students. We verify every volunteer before they see a single file.</p>
           <ul className="mt-10 space-y-6">
             {WHAT.map(([t, d]) => (
               <li key={t} className="flex gap-4">
-                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brass-400" />
+                <span className="mt-3 h-px w-3 shrink-0 bg-ink-950" />
                 <div>
                   <p className="font-semibold text-ink-900">{t}</p>
                   <p className="mt-0.5 text-sm text-ink-500">{d}</p>

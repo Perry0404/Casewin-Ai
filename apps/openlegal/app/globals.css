@@ -9,19 +9,20 @@
 html {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: #fbfaf6;
-  color: #15171a;
+  background: #fff;
+  color: #161615;
 }
 
 ::selection {
-  background: #cdebdb;
+  background: #d6e2f5;
 }
 
 mark {
-  background: #ffefa8;
+  background: #fff1b8;
   color: inherit;
   padding: 0 0.1em;
   border-radius: 2px;
@@ -32,7 +33,7 @@ mark {
   font-family: var(--font-serif), Georgia, serif;
   font-size: 1.125rem;
   line-height: 1.8;
-  color: #23262b;
+  color: #262624;
   hyphens: auto;
 }
 .prose-judgment p + p {
@@ -40,7 +41,16 @@ mark {
 }
 
 .paper-lines {
-  background-image: repeating-linear-gradient(0deg, transparent 0 31px, rgba(21, 23, 26, 0.045) 31px 32px);
+  display: none;
+}
+
+:focus-visible {
+  outline: 2px solid #1d4fae;
+  outline-offset: 2px;
+}
+
+.prose-link {
+  @apply font-medium text-naija-600 underline decoration-1 underline-offset-[3px] hover:text-naija-700 hover:decoration-2;
 }
 
 @media print {

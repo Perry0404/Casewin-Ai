@@ -86,7 +86,7 @@ export default async function TrackPage({ searchParams }: { searchParams: { ref?
   return (
     <PublicShell>
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">Track a filing</p>
+        <p className="text-[13px] text-ink-500">Track a filing</p>
         <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900">Where is my filing?</h1>
 
         <form className="mt-8 grid gap-3 rounded-2xl border border-ink-100 bg-white p-4 shadow-card sm:grid-cols-[1fr_1.4fr_auto]">

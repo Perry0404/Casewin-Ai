@@ -12,8 +12,8 @@ export default async function Impact() {
   const max = Math.max(1, ...s.states.map(([, n]) => n))
   return (
     <PublicPage wide>
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">The record</p>
-      <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900 sm:text-5xl">What has actually happened</h1>
+      <p className="text-[13px] text-ink-500">The record</p>
+      <h1 className="mt-2 text-[32px] font-semibold leading-tight tracking-[-0.02em] text-ink-950 sm:text-[40px]">What has actually happened</h1>
       <p className="mt-4 max-w-2xl text-lg text-ink-500">
         Counted live from real cases. Reports marked as not genuine are excluded; outcomes count only after a volunteer verified the facts.{' '}
         <Link href="/how-it-works" className="underline">How we verify</Link>.

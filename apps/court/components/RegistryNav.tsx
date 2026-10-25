@@ -44,26 +44,21 @@ export default function RegistryNav({ court, name, role, queue, admin }: { court
 
   return (
     <>
-      <div className="no-print flex items-center justify-between border-b border-ink-800 bg-ink-950 px-4 py-3 lg:hidden">
-        <Logo dark />
-        <button onClick={() => setOpen(!open)} className="rounded-lg px-3 py-1.5 text-sm font-medium text-white ring-1 ring-white/15" aria-expanded={open}>
+      <div className="no-print flex items-center justify-between border-b border-ink-200 bg-white px-4 py-3 lg:hidden">
+        <Logo />
+        <button onClick={() => setOpen(!open)} className="rounded-md border border-ink-300 px-3 py-1.5 text-[13px] font-medium text-ink-900" aria-expanded={open}>
           Menu
         </button>
       </div>
-      <aside
-        className={cx(
-          'no-print flex-col bg-ink-950 text-ink-200 lg:sticky lg:top-0 lg:flex lg:h-screen',
-          open ? 'flex' : 'hidden',
-        )}
-      >
-        <div className="hidden px-6 pb-2 pt-7 lg:block">
-          <Logo dark />
+      <aside className={cx('no-print flex-col border-r border-ink-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen', open ? 'flex' : 'hidden')}>
+        <div className="hidden px-5 pb-1 pt-6 lg:block">
+          <Logo />
         </div>
-        <div className="mx-4 mt-4 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-brass-300">Court</p>
-          <p className="mt-0.5 truncate text-sm font-semibold text-white">{court}</p>
+        <div className="mx-5 mt-5 border-y border-ink-200 py-3">
+          <p className="text-[12px] text-ink-500">Registry</p>
+          <p className="truncate text-[14px] font-semibold text-ink-950">{court}</p>
         </div>
-        <nav className="mt-5 flex-1 space-y-0.5 overflow-y-auto px-3">
+        <nav className="mt-3 flex-1 space-y-px overflow-y-auto px-3">
           {items.map(([key, label, href]) => {
             const active = href === '/registry' ? path === href : path.startsWith(href)
             return (
@@ -72,24 +67,23 @@ export default function RegistryNav({ court, name, role, queue, admin }: { court
                 href={href}
                 onClick={() => setOpen(false)}
                 className={cx(
-                  'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition',
-                  active ? 'bg-white/10 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white',
+                  'group relative flex items-center gap-3 rounded-md px-2.5 py-2 text-[14px] transition-colors',
+                  active ? 'bg-ink-100 font-medium text-ink-950' : 'text-ink-600 hover:bg-ink-50 hover:text-ink-950',
                 )}
               >
-                <svg viewBox="0 0 20 20" className={cx('h-[18px] w-[18px] shrink-0', active ? 'text-brass-300' : 'text-ink-400 group-hover:text-ink-200')} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                {active && <span className="absolute -left-3 top-1.5 bottom-1.5 w-0.5 bg-brass-500" aria-hidden />}
+                <svg viewBox="0 0 20 20" className={cx('h-[17px] w-[17px] shrink-0', active ? 'text-ink-950' : 'text-ink-400 group-hover:text-ink-700')} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d={ICONS[key]} />
                 </svg>
                 <span className="flex-1">{label}</span>
-                {key === 'filings' && queue > 0 && (
-                  <span className="rounded-full bg-brass-400 px-2 py-0.5 text-[11px] font-bold text-ink-950">{queue}</span>
-                )}
+                {key === 'filings' && queue > 0 && <span className="rounded-sm bg-brass-500 px-1.5 py-px text-[11px] font-semibold text-white tabular-nums">{queue}</span>}
               </Link>
             )
           })}
         </nav>
-        <div className="border-t border-white/10 p-4">
-          <Link href="/registry/account" className="flex items-center gap-3 rounded-lg p-2 transition hover:bg-white/5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brass-400 text-sm font-bold text-ink-950">
+        <div className="border-t border-ink-200 p-3">
+          <Link href="/registry/account" className="flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-ink-50">
+            <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-ink-950 text-[12px] font-semibold text-white">
               {name
                 .split(/\s+/)
                 .map((p) => p[0])
@@ -97,11 +91,11 @@ export default function RegistryNav({ court, name, role, queue, admin }: { court
                 .join('')}
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium text-white">{name}</span>
-              <span className="block truncate text-xs text-ink-400">{role}</span>
+              <span className="block truncate text-[13px] font-medium text-ink-950">{name}</span>
+              <span className="block truncate text-[12px] text-ink-500">{role}</span>
             </span>
           </Link>
-          <button onClick={signOut} className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm text-ink-400 transition hover:bg-white/5 hover:text-white">
+          <button onClick={signOut} className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-[13px] text-ink-500 transition-colors hover:bg-ink-50 hover:text-ink-950">
             Sign out
           </button>
         </div>

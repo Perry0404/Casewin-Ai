@@ -1,84 +1,102 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { CASEWIN_URL, COURT_URL, caseTypeLabel, longDate } from '@/lib/constants'
+import { CASEWIN_URL, COURT_URL, LEGALAID_URL, caseTypeLabel, longDate } from '@/lib/constants'
 
 export function cx(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(' ')
 }
 
-export function Logo({ size = 'md' }: { size?: 'md' | 'lg' }) {
+/** CaseWin family mark: a solid block with the product's accent tab. */
+export function Logo(_: { size?: 'md' | 'lg' } = {}) {
   return (
     <span className="inline-flex items-center gap-2.5">
-      <svg viewBox="0 0 32 32" className={size === 'lg' ? 'h-10 w-10' : 'h-8 w-8'} aria-hidden>
-        <rect width="32" height="32" rx="8" className="fill-naija-500" />
-        <path d="M9 8.5h5.2c1 0 1.8.8 1.8 1.8v13.2c0-1-.8-1.8-1.8-1.8H9V8.5Zm14 0h-5.2c-1 0-1.8.8-1.8 1.8v13.2c0-1 .8-1.8 1.8-1.8H23V8.5Z" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" aria-hidden>
+        <rect width="24" height="24" className="fill-ink" />
+        <rect x="5" y="5" width="3" height="14" fill="#fff" />
+        <rect x="11" y="13" width="8" height="6" className="fill-naija-400" />
       </svg>
-      <span className="leading-none">
-        <span className="block font-serif text-[19px] font-semibold tracking-tight text-ink">
-          OpenLegal<span className="text-naija-500"> Nigeria</span>
-        </span>
+      <span className="text-[16px] font-semibold leading-none tracking-[-0.01em] text-ink">
+        OpenLegal <span className="font-normal text-ink-3">Nigeria</span>
       </span>
     </span>
   )
 }
 
-export function Nav({ query }: { query?: string }) {
+/** The thin strip that ties the CaseWin justice services together. */
+export function JusticeBar() {
+  const items: [string, string, boolean][] = [
+    ['Court', COURT_URL, false],
+    ['OpenLegal', '/', true],
+    ['Legal Aid', LEGALAID_URL, false],
+  ]
   return (
-    <header className="sticky top-0 z-30 border-b border-ink-line bg-paper/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3.5 sm:px-6">
-        <Link href="/" className="shrink-0" aria-label="OpenLegal Nigeria home">
-          <Logo />
-        </Link>
-        {query !== undefined && (
-          <div className="hidden flex-1 md:block">
-            <SearchBar defaultValue={query} compact />
-          </div>
-        )}
-        <nav className="ml-auto flex items-center gap-1 text-sm font-medium text-ink-2">
-          <Link href="/search" className="hidden rounded-lg px-3 py-2 hover:bg-paper-2 hover:text-ink sm:block">
-            Judgments
-          </Link>
-          <Link href="/laws" className="rounded-lg px-3 py-2 hover:bg-paper-2 hover:text-ink">
-            Laws
-          </Link>
-          <Link href="/courts" className="hidden rounded-lg px-3 py-2 hover:bg-paper-2 hover:text-ink sm:block">
-            Courts
-          </Link>
-          <Link href="/contribute" className="hidden rounded-lg px-3 py-2 text-naija-700 hover:bg-naija-50 md:block">
-            Contribute
-          </Link>
-          <Link href="/developers" className="rounded-lg bg-ink px-3.5 py-2 text-white transition hover:bg-ink-2">
-            API &amp; MCP
-          </Link>
+    <div className="bg-ink text-[12.5px] text-[#BDBDB8]">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2 sm:px-6">
+        <a href={CASEWIN_URL} className="hidden hover:text-white sm:inline">
+          A CaseWin justice service
+        </a>
+        <nav className="flex gap-5" aria-label="CaseWin justice services">
+          {items.map(([label, href, current]) => (
+            <a key={label} href={href} aria-current={current ? 'page' : undefined} className={cx('hover:text-white', current && 'font-medium text-white')}>
+              {label}
+            </a>
+          ))}
         </nav>
       </div>
-    </header>
+    </div>
+  )
+}
+
+const NAV: [string, string][] = [
+  ['/search', 'Judgments'],
+  ['/laws', 'Laws'],
+  ['/courts', 'Courts'],
+  ['/contribute', 'Contribute'],
+  ['/developers', 'API & MCP'],
+]
+
+export function Nav({ query }: { query?: string }) {
+  return (
+    <>
+      <JusticeBar />
+      <header className="border-b border-ink-line bg-white">
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-4 sm:px-6">
+          <Link href="/" className="shrink-0" aria-label="OpenLegal Nigeria home">
+            <Logo />
+          </Link>
+          {query !== undefined && (
+            <div className="hidden max-w-md flex-1 md:block">
+              <SearchBar defaultValue={query} compact />
+            </div>
+          )}
+          <nav className="ml-auto flex items-center gap-5 overflow-x-auto whitespace-nowrap text-[14px] text-ink-2">
+            {NAV.map(([h, l], i) => (
+              <Link key={h} href={h} className={cx('hover:text-ink hover:underline hover:underline-offset-4', i > 1 && 'hidden sm:inline')}>
+                {l}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </header>
+    </>
   )
 }
 
 export function SearchBar({ defaultValue = '', compact = false, autoFocus = false }: { defaultValue?: string; compact?: boolean; autoFocus?: boolean }) {
   return (
-    <form action="/search" role="search" className="relative">
-      <svg viewBox="0 0 20 20" className={cx('pointer-events-none absolute top-1/2 -translate-y-1/2 text-ink-4', compact ? 'left-3.5 h-4 w-4' : 'left-5 h-5 w-5')} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-        <circle cx="9" cy="9" r="5.5" />
-        <path d="m13.5 13.5 3 3" strokeLinecap="round" />
-      </svg>
+    <form action="/search" role="search" className="flex">
       <input
         name="q"
         defaultValue={defaultValue}
         autoFocus={autoFocus}
         aria-label="Search judgments and laws"
-        placeholder={compact ? 'Search judgments, suit numbers, laws…' : 'Try “declaration of title customary land” or “section 36 fair hearing”'}
+        placeholder={compact ? 'Search judgments, suit numbers, laws' : 'Words, a suit number, a party, or a section of law'}
         className={cx(
-          'w-full border border-ink-line bg-white text-ink shadow-card transition placeholder:text-ink-4 focus:border-naija-500 focus:outline-none focus:ring-4 focus:ring-naija-100',
-          compact ? 'rounded-xl py-2.5 pl-10 pr-4 text-sm' : 'rounded-2xl py-5 pl-14 pr-36 text-lg',
+          'min-w-0 flex-1 rounded-l-md border border-r-0 border-ink-3 bg-white text-ink placeholder:text-ink-4 focus:border-ink focus:outline-none focus:ring-2 focus:ring-naija-100',
+          compact ? 'px-3 py-2 text-[14px]' : 'px-4 py-3.5 text-[17px]',
         )}
       />
-      {!compact && (
-        <button className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-xl bg-naija-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-naija-600">
-          Search
-        </button>
-      )}
+      <button className={cx('rounded-r-md bg-ink font-medium text-white transition-colors hover:bg-ink-2', compact ? 'px-3.5 text-[14px]' : 'px-6 text-[15px]')}>Search</button>
     </form>
   )
 }
@@ -86,19 +104,19 @@ export function SearchBar({ defaultValue = '', compact = false, autoFocus = fals
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-ink-line bg-paper-2">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div>
           <Logo />
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-3">
-            Free access to Nigerian law. Judgments are published by the courts that delivered them, through CaseWin Court.
+          <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-ink-2">
+            Free access to Nigerian law: judgments published by the courts that delivered them, and the statutes they apply.
           </p>
         </div>
-        <FooterCol title="Read & contribute" links={[['Judgments', '/search'], ['Laws', '/laws'], ['Courts', '/courts'], ['Contribute a judgment', '/contribute'], ['Leaderboard', '/leaderboard']]} />
+        <FooterCol title="Read and contribute" links={[['Judgments', '/search'], ['Laws', '/laws'], ['Courts', '/courts'], ['Contribute a judgment', '/contribute'], ['Leaderboard', '/leaderboard']]} />
         <FooterCol title="Build" links={[['REST API', '/developers#api'], ['MCP server', '/developers#mcp'], ['About the data', '/about']]} />
-        <FooterCol title="Justice stack" links={[['CaseWin Court', COURT_URL], ['CaseWin AI', CASEWIN_URL]]} />
+        <FooterCol title="CaseWin" links={[['CaseWin Court', COURT_URL], ['Legal Aid', LEGALAID_URL], ['CaseWin', CASEWIN_URL]]} />
       </div>
       <div className="border-t border-ink-line">
-        <p className="mx-auto max-w-7xl px-4 py-6 text-xs text-ink-3 sm:px-6">
+        <p className="mx-auto max-w-6xl px-4 py-5 text-[12px] text-ink-3 sm:px-6">
           OpenLegal Nigeria is an information service, not legal advice. Always confirm against the certified true copy from the court.
         </p>
       </div>
@@ -109,13 +127,13 @@ export function Footer() {
 function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
   return (
     <div>
-      <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">{title}</h3>
-      <ul className="mt-4 space-y-2 text-sm">
+      <h3 className="text-[13px] font-semibold text-ink">{title}</h3>
+      <ul className="mt-3 space-y-2 text-[13px]">
         {links.map(([l, h]) => (
           <li key={h}>
-            <Link href={h} className="text-ink-2 hover:text-naija-600">
+            <a href={h} className="text-ink-2 hover:text-ink hover:underline hover:underline-offset-4">
               {l}
-            </Link>
+            </a>
           </li>
         ))}
       </ul>
@@ -125,7 +143,7 @@ function FooterCol({ title, links }: { title: string; links: [string, string][] 
 
 export function Shell({ children, query }: { children: ReactNode; query?: string }) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-white">
       <Nav query={query} />
       <main className="flex-1">{children}</main>
       <Footer />
@@ -137,9 +155,9 @@ export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+        'inline-flex items-center rounded-sm px-1.5 py-0.5 text-[12px] font-medium leading-tight',
         tone === 'green' && 'bg-naija-50 text-naija-700',
-        tone === 'neutral' && 'bg-paper-2 text-ink-2 ring-1 ring-inset ring-ink-line',
+        tone === 'neutral' && 'bg-paper-2 text-ink-2',
         tone === 'sample' && 'border border-dashed border-ink-4 text-ink-3',
       )}
     >
@@ -148,6 +166,7 @@ export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?
   )
 }
 
+/** One judgment in a list: ruled row, title as the link. */
 export function JudgmentCard({
   j,
   snippet,
@@ -156,27 +175,27 @@ export function JudgmentCard({
   snippet?: string
 }) {
   return (
-    <article className="group relative rounded-2xl border border-ink-line bg-white p-6 shadow-card transition hover:-translate-y-0.5 hover:border-naija-100 hover:shadow-lift">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
-        <span className="font-medium text-ink-2">{j.court_name}</span>
-        {j.division && <span>· {j.division.replace(/ Judicial Division$/, '')}</span>}
-        <span>· {longDate(j.delivered_on)}</span>
-      </div>
-      <h3 className="mt-2 font-serif text-[22px] font-semibold leading-snug tracking-tight text-ink">
-        <Link href={`/judgments/${j.slug}`} className="after:absolute after:inset-0 group-hover:text-naija-700">
+    <article className="border-b border-ink-line py-5">
+      <h3 className="font-serif text-[20px] font-semibold leading-snug text-ink">
+        <Link href={`/judgments/${j.slug}`} className="hover:text-naija-600 hover:underline hover:decoration-1 hover:underline-offset-4">
           {j.title}
         </Link>
       </h3>
-      {j.suit_number && <p className="mt-0.5 font-mono text-xs text-ink-3">{j.suit_number}</p>}
+      <p className="mt-1 text-[13px] text-ink-3">
+        {j.suit_number && <span className="font-mono text-ink-2">{j.suit_number}</span>}
+        {j.suit_number && ' · '}
+        {j.court_name}
+        {j.division && `, ${j.division.replace(/ Judicial Division$/, '')}`} · {longDate(j.delivered_on)}
+      </p>
       {snippet ? (
-        <p className="mt-3 line-clamp-3 text-[15px] leading-relaxed text-ink-2" dangerouslySetInnerHTML={{ __html: snippet }} />
+        <p className="mt-2 line-clamp-3 text-[15px] leading-relaxed text-ink-2" dangerouslySetInnerHTML={{ __html: snippet }} />
       ) : (
-        j.holding && <p className="mt-3 line-clamp-3 font-serif text-[16px] leading-relaxed text-ink-2">{j.holding}</p>
+        j.holding && <p className="mt-2 line-clamp-3 font-serif text-[16px] leading-relaxed text-ink-2">{j.holding}</p>
       )}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {j.case_type && <Tag tone="green">{caseTypeLabel(j.case_type)}</Tag>}
         {j.judges?.[0] && <Tag>{j.judges[0]}</Tag>}
-        {j.source === 'community' && <Tag>Community-contributed · verified</Tag>}
+        {j.source === 'community' && <Tag>Community-contributed, verified</Tag>}
         {j.is_sample && <Tag tone="sample">Sample — not a real decision</Tag>}
       </div>
     </article>

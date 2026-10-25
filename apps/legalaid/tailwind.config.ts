@@ -1,54 +1,58 @@
 import type { Config } from 'tailwindcss'
 
-// Court design tokens: navy "ink", brass accents on warm parchment. Status
-// colours follow the registry's language: green = moving, amber = waiting on
-// someone, red = stopped.
+// CaseWin justice design system — Legal Aid.
+// Neutral ink on white paper, 1px rules, small radii, no shadows. One functional
+// accent per product (Legal Aid: signal red, for urgency). Token names are kept from the first
+// version so every page picks the system up: `ink` is the neutral scale,
+// `brass` is the product accent, `parchment` the quiet background.
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
   theme: {
+    borderRadius: { none: '0', sm: '2px', DEFAULT: '3px', md: '4px', lg: '4px', xl: '4px', '2xl': '6px', '3xl': '6px', full: '9999px' },
     extend: {
       colors: {
         ink: {
-          50: '#F3F5F9',
-          100: '#E3E8F1',
-          200: '#C5CEDE',
-          300: '#97A5BF',
-          400: '#6A7C9C',
-          500: '#4B5D7E',
-          600: '#364665',
-          700: '#26344F',
-          800: '#18233A',
-          900: '#0F1729',
-          950: '#080D1A',
+          50: '#F6F6F5',
+          100: '#ECECEA',
+          200: '#DCDCD9',
+          300: '#BDBDB8',
+          400: '#8F8F89',
+          500: '#6E6E69',
+          600: '#52524E',
+          700: '#3A3A37',
+          800: '#262624',
+          900: '#161615',
+          950: '#0C0C0B',
         },
         brass: {
-          50: '#FBF7EC',
-          100: '#F4EACB',
-          200: '#E9D49A',
-          300: '#DDBC69',
-          400: '#D1A646',
-          500: '#B8892E',
-          600: '#956B24',
-          700: '#714F1F',
+          50: '#FEF3F2',
+          100: '#FEE4E2',
+          200: '#FECDCA',
+          300: '#F97066',
+          400: '#D92D20',
+          500: '#B42318',
+          600: '#912018',
+          700: '#7A271A',
         },
-        parchment: '#F7F4ED',
-        verdict: { 50: '#EAF6EF', 500: '#1C8A55', 600: '#14714A', 700: '#0F5A3A' },
-        seal: { 50: '#FBEDEA', 500: '#B5432E', 600: '#963522' },
-        amberline: { 50: '#FDF4E3', 500: '#C27C0E', 600: '#9C6209' },
+        parchment: '#F6F6F5',
+        verdict: { 50: '#ECF6EF', 500: '#1E7B4B', 600: '#17663D', 700: '#11502F' },
+        seal: { 50: '#FCEEEC', 500: '#B42318', 600: '#912018' },
+        amberline: { 50: '#FDF5E6', 500: '#B54708', 600: '#93370D' },
       },
       fontFamily: {
-        display: ['var(--font-display)', 'Georgia', 'serif'],
+        display: ['var(--font-sans)', 'system-ui', 'sans-serif'],
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
         mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        card: '0 1px 2px rgba(15,23,41,0.04), 0 4px 16px -4px rgba(15,23,41,0.06)',
-        lift: '0 2px 4px rgba(15,23,41,0.05), 0 16px 40px -12px rgba(15,23,41,0.18)',
+        card: 'none',
+        lift: 'none',
       },
       keyframes: {
-        rise: { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'none' } },
+        rise: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
       },
-      animation: { rise: 'rise .5s cubic-bezier(.2,.7,.2,1) both' },
+      animation: { rise: 'rise .2s ease-out both' },
     },
   },
   plugins: [],

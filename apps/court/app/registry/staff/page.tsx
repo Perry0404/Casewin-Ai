@@ -65,7 +65,7 @@ export default async function StaffPage({ searchParams }: { searchParams: { crea
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-card">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-ink-100 bg-parchment/60 text-xs uppercase tracking-wider text-ink-400">
+            <thead className="border-b border-ink-100 bg-parchment/60 text-[12px] font-medium text-ink-500">
               <tr>
                 <th className="px-5 py-3 font-medium">Officer</th>
                 <th className="hidden px-5 py-3 font-medium md:table-cell">Role</th>

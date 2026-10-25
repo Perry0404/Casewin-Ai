@@ -34,7 +34,7 @@ export default async function Leaderboard() {
   return (
     <Shell query="">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">Contributor network</p>
+        <p className="text-[13px] text-ink-3">Contributor network</p>
         <h1 className="mt-2 font-serif text-5xl font-medium tracking-tight text-ink">Leaderboard</h1>
         <p className="mt-3 max-w-2xl text-lg text-ink-2">The people putting Nigerian law online. Points come only from judgments verified as new.</p>
 

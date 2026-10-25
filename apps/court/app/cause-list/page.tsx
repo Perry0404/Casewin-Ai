@@ -13,7 +13,7 @@ export default async function CauseListIndex() {
   return (
     <PublicShell>
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">Public cause lists</p>
+        <p className="text-[13px] text-ink-500">Public cause lists</p>
         <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900">Which cases are in court today?</h1>
         <p className="mt-3 text-lg text-ink-500">Updated live by each court’s registry.</p>
         <div className="mt-10 grid gap-4 sm:grid-cols-2">

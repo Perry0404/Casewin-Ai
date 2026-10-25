@@ -10,27 +10,35 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-feature-settings: 'ss02', 'tnum' 0;
 }
 
 body {
-  background: #f7f4ed;
-  color: #0f1729;
+  background: #fff;
+  color: #161615;
 }
 
 ::selection {
-  background: #e9d49a;
-  color: #080d1a;
+  background: #d5eadd;
+  color: #0c0c0b;
 }
 
-/* Fine grain on dark hero surfaces. */
+/* Retired decoration from the first design; kept as no-ops for any page still using the class. */
 .grain {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
-  opacity: 0.06;
-  mix-blend-mode: overlay;
+  display: none;
+}
+.rule-brass {
+  background: #dcdcd9;
 }
 
-.rule-brass {
-  background: linear-gradient(90deg, transparent, #d1a646 20%, #d1a646 80%, transparent);
+/* Links in running text. */
+.prose-link {
+  @apply font-medium text-brass-600 underline decoration-1 underline-offset-[3px] hover:text-brass-700 hover:decoration-2;
+}
+
+:focus-visible {
+  outline: 2px solid #0f6b45;
+  outline-offset: 2px;
 }
 
 @media print {

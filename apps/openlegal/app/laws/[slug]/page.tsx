@@ -50,7 +50,7 @@ export default async function LawPage({ params }: { params: { slug: string } }) 
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[240px_minmax(0,1fr)]">
           <nav className="hidden lg:sticky lg:top-24 lg:block lg:self-start" aria-label="Sections">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">Contents</p>
+            <p className="text-[13px] font-semibold text-ink-3">Contents</p>
             <ul className="mt-3 max-h-[70vh] space-y-1 overflow-y-auto text-sm">
               {law.law_sections.map((s) => (
                 <li key={s.id}>

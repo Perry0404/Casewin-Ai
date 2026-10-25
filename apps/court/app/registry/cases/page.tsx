@@ -99,7 +99,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
       {cases?.length ? (
         <div className="overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-card">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-ink-100 bg-parchment/60 text-xs uppercase tracking-wider text-ink-400">
+            <thead className="border-b border-ink-100 bg-parchment/60 text-[12px] font-medium text-ink-500">
               <tr>
                 <th className="px-5 py-3 font-medium">Suit</th>
                 <th className="hidden px-5 py-3 font-medium lg:table-cell">Judge</th>

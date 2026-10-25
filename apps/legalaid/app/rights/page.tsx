@@ -25,8 +25,8 @@ const RIGHTS: [string, string, string, string][] = [
 export default function Rights() {
   return (
     <PublicPage>
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">Know your rights</p>
-      <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900 sm:text-5xl">If you or someone you love is arrested</h1>
+      <p className="text-[13px] text-ink-500">Know your rights</p>
+      <h1 className="mt-2 text-[32px] font-semibold leading-tight tracking-[-0.02em] text-ink-950 sm:text-[40px]">If you or someone you love is arrested</h1>
       <p className="mt-4 text-lg text-ink-500">Stay calm. Don’t sign anything you don’t understand. Ask for a lawyer — and ask us for one if you can’t pay.</p>
       <ol className="mt-12 space-y-4">
         {RIGHTS.map(([t, d, ref, q], i) => (
@@ -42,10 +42,10 @@ export default function Rights() {
           </li>
         ))}
       </ol>
-      <div className="mt-12 rounded-3xl bg-ink-950 p-8 text-white">
-        <h2 className="font-display text-2xl font-semibold">Someone is held right now?</h2>
-        <p className="mt-2 text-ink-200">Tell us where and since when. A verified volunteer lawyer takes it within 48 hours.</p>
-        <Link href="/help" className={btn.brass + ' mt-6'}>
+      <div className="mt-12 border-t-4 border-brass-500 bg-parchment p-6">
+        <h2 className="text-[20px] font-semibold text-ink-950">Someone is held right now?</h2>
+        <p className="mt-1 text-ink-600">Tell us where and since when. A verified volunteer lawyer takes it within 48 hours.</p>
+        <Link href="/help" className={btn.brass + ' mt-5'}>
           Get a free lawyer
         </Link>
       </div>

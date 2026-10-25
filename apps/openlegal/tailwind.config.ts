@@ -1,28 +1,28 @@
 import type { Config } from 'tailwindcss'
 
-// OpenLegal: an editorial, paper-and-ink reading experience. Nigerian green is
-// the only accent, used for links, focus and the brand mark.
+// CaseWin justice design system — OpenLegal.
+// Neutral ink on white, 1px rules, small radii, no shadows. Ink blue is the
+// only accent (links, focus, the brand tab). Legal text is set in a serif;
+// everything else in IBM Plex Sans. Token names are kept from the first version.
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
   theme: {
+    borderRadius: { none: '0', sm: '2px', DEFAULT: '3px', md: '4px', lg: '4px', xl: '4px', '2xl': '6px', '3xl': '6px', full: '9999px' },
     extend: {
       colors: {
-        paper: { DEFAULT: '#FBFAF6', 2: '#F4F2EB', 3: '#EAE7DD' },
-        ink: { DEFAULT: '#15171A', 2: '#3D4148', 3: '#6B7079', 4: '#9A9EA6', line: '#E3E1D9' },
-        naija: { 50: '#E9F6EF', 100: '#CDEBDB', 400: '#1FA86A', 500: '#008751', 600: '#007043', 700: '#00593A', 900: '#073824' },
-        highlight: '#FFEFA8',
+        paper: { DEFAULT: '#FFFFFF', 2: '#F6F6F5', 3: '#ECECEA' },
+        ink: { DEFAULT: '#161615', 2: '#3A3A37', 3: '#6E6E69', 4: '#8F8F89', line: '#DCDCD9' },
+        naija: { 50: '#EEF3FB', 100: '#D6E2F5', 400: '#3B6FD0', 500: '#1D4FAE', 600: '#173F8C', 700: '#12326F', 900: '#0B1F45' },
+        highlight: '#FFF1B8',
       },
       fontFamily: {
         serif: ['var(--font-serif)', 'Georgia', 'serif'],
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
-      boxShadow: {
-        card: '0 1px 2px rgba(21,23,26,0.04), 0 2px 12px -4px rgba(21,23,26,0.06)',
-        lift: '0 2px 6px rgba(21,23,26,0.05), 0 24px 48px -16px rgba(21,23,26,0.18)',
-      },
-      keyframes: { rise: { '0%': { opacity: '0', transform: 'translateY(6px)' }, '100%': { opacity: '1', transform: 'none' } } },
-      animation: { rise: 'rise .5s cubic-bezier(.2,.7,.2,1) both' },
+      boxShadow: { card: 'none', lift: 'none' },
+      keyframes: { rise: { '0%': { opacity: '0' }, '100%': { opacity: '1' } } },
+      animation: { rise: 'rise .2s ease-out both' },
     },
   },
   plugins: [],

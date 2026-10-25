@@ -18,7 +18,7 @@ export default async function RegistryLayout({ children }: { children: React.Rea
     .in('status', ['submitted', 'under_review', 'paid'])
 
   return (
-    <div className="min-h-screen bg-parchment lg:grid lg:grid-cols-[264px_1fr]">
+    <div className="min-h-screen bg-white lg:grid lg:grid-cols-[248px_1fr]">
       <RegistryNav
         court={staff.court.short_name ?? staff.court.name}
         name={staff.full_name}

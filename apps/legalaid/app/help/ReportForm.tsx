@@ -17,10 +17,10 @@ function Submit() {
 
 function Section({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
-    <fieldset className="rounded-3xl border border-ink-100 bg-white p-5 shadow-card sm:p-7">
+    <fieldset className="border-t border-ink-950 pt-5">
       <legend className="sr-only">{title}</legend>
-      <p className="flex items-center gap-3 font-display text-xl font-semibold text-ink-900">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-ink-900 font-sans text-xs font-bold text-white">{n}</span>
+      <p className="flex items-baseline gap-3 text-[19px] font-semibold text-ink-950">
+        <span className="font-mono text-[13px] font-normal text-ink-400">{n}.</span>
         {title}
       </p>
       <div className="mt-5 space-y-4">{children}</div>
@@ -30,21 +30,21 @@ function Section({ n, title, children }: { n: number; title: string; children: R
 
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' })
 
-export default function ReportForm() {
+export default function ReportForm({ defaultKind = 'detention' }: { defaultKind?: string }) {
   const [state, action] = useFormState(submitReport, undefined)
-  const [kind, setKind] = useState('detention')
+  const [kind, setKind] = useState(KINDS[defaultKind] ? defaultKind : 'detention')
   const [self, setSelf] = useState(false)
   const [remanded, setRemanded] = useState(false)
   const custody = kind === 'detention'
 
   return (
-    <form action={action} className="space-y-5">
+    <form action={action} className="space-y-10">
       <input name="website" tabIndex={-1} autoComplete="off" className="absolute -left-[9999px] h-0 w-0" aria-hidden />
 
       <Section n={1} title="What is happening?">
         <div className="grid gap-2.5 sm:grid-cols-2">
           {Object.entries(KINDS).map(([k, v]) => (
-            <label key={k} className={cx('cursor-pointer rounded-2xl border p-4 transition', kind === k ? 'border-ink-900 bg-ink-50 ring-2 ring-ink-900' : 'border-ink-100 hover:border-ink-300')}>
+            <label key={k} className={cx('cursor-pointer rounded-md border p-4 transition-colors', kind === k ? 'border-ink-950 bg-ink-50 ring-1 ring-ink-950' : 'border-ink-200 hover:border-ink-400')}>
               <input type="radio" name="kind" value={k} checked={kind === k} onChange={() => setKind(k)} className="sr-only" />
               <span className="block font-semibold text-ink-900">{v.label}</span>
               <span className="mt-0.5 block text-[13px] text-ink-400">{v.help}</span>
@@ -54,7 +54,7 @@ export default function ReportForm() {
       </Section>
 
       <Section n={2} title={custody ? 'Who is detained?' : 'Who needs help?'}>
-        <label className="flex items-center gap-3 rounded-xl bg-parchment px-4 py-3 text-sm text-ink-700">
+        <label className="flex items-center gap-3 rounded-md bg-parchment px-4 py-3 text-sm text-ink-700">
           <input type="checkbox" checked={self} onChange={(e) => setSelf(e.target.checked)} className="h-4 w-4 accent-ink-900" />
           {custody ? 'I am the person detained (e.g. using a borrowed phone)' : 'This is about me'}
         </label>
@@ -188,9 +188,9 @@ export default function ReportForm() {
         </Field>
       </Section>
 
-      <div className="space-y-4 rounded-3xl bg-ink-950 p-5 text-white sm:p-7">
-        <label className="flex gap-3 text-sm leading-relaxed text-ink-100">
-          <input type="checkbox" name="consent" required className="mt-1 h-4 w-4 shrink-0 accent-brass-400" />
+      <div className="space-y-4 border-t border-ink-950 pt-6">
+        <label className="flex gap-3 text-[14px] leading-relaxed text-ink-700">
+          <input type="checkbox" name="consent" required className="mt-1 h-4 w-4 shrink-0 accent-ink-950" />
           <span>
             The information is true to the best of my knowledge, and I agree that CaseWin Legal Aid and the verified volunteer who takes this case may use it to
             give legal help. It is never published. False reports are removed.

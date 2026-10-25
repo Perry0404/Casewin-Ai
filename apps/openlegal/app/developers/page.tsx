@@ -55,7 +55,7 @@ export default function Developers() {
   return (
     <Shell query="">
       <div className="mx-auto max-w-4xl px-4 py-14 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">Developers</p>
+        <p className="text-[13px] text-ink-3">Developers</p>
         <h1 className="mt-2 font-serif text-5xl font-medium tracking-tight text-ink">Build on Nigerian law</h1>
         <p className="mt-4 text-lg leading-relaxed text-ink-2">
           Everything on OpenLegal is available to programs — free, read-only, no key required. Please cite the court and link back to the

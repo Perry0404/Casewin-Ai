@@ -49,7 +49,7 @@ export default async function CasePage({ params, searchParams }: { params: { id:
 
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="mb-1.5 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">
+          <p className="mb-1.5 flex flex-wrap items-center gap-2 text-[13px] text-ink-500">
             {KINDS[c.kind]?.short} · <Mono>{c.ref}</Mono>
           </p>
           <h1 className="font-display text-[32px] font-semibold leading-tight tracking-tight text-ink-900">

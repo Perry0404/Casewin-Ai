@@ -36,7 +36,7 @@ export default function VolunteerForm({ email, orgs }: { email: string; orgs: { 
 
   return (
     <form action={action} className="space-y-5 rounded-3xl border border-ink-100 bg-white p-6 shadow-lift sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brass-600">Step 2 of 2 · signed in as {email}</p>
+      <p className="text-[13px] text-ink-500">Step 2 of 2 · signed in as {email}</p>
       <h2 className="font-display text-2xl font-semibold text-ink-900">About you</h2>
       <div className="grid gap-2 sm:grid-cols-3">
         {(['lawyer', 'paralegal', 'law_student'] as const).map((r) => (

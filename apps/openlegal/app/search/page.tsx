@@ -99,7 +99,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
 
           {sections.length > 0 && (
             <div className="mt-6 rounded-2xl border border-naija-100 bg-naija-50/60 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-naija-700">Statutory provisions</p>
+              <p className="text-[13px] text-ink-3">Statutory provisions</p>
               <ul className="mt-3 space-y-3">
                 {sections.map((s) => (
                   <li key={s.id}>
@@ -117,7 +117,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
             </div>
           )}
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-4 border-t border-ink">
             {res.results.map((j) => (
               <JudgmentCard key={j.id} j={j} snippet={q ? safeSnippet(j.snippet) : undefined} />
             ))}
@@ -159,7 +159,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
 function Facet({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">{title}</h3>
+      <h3 className="mb-2 text-[13px] font-semibold text-ink-3">{title}</h3>
       <div className="space-y-0.5">{children}</div>
     </div>
   )

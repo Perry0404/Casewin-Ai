@@ -31,7 +31,7 @@ export default async function PublicCauseList({ params, searchParams }: { params
         </Link>
         <div className="mt-4 flex flex-col justify-between gap-6 border-b border-ink-200 pb-8 sm:flex-row sm:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">Cause list</p>
+            <p className="text-[13px] text-ink-500">Cause list</p>
             <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900">{court.name}</h1>
             <p className="mt-2 text-lg text-ink-500">
               {date(day + 'T12:00:00+01:00', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · {total} matter{total === 1 ? '' : 's'}

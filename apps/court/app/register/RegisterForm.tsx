@@ -10,7 +10,7 @@ export default function RegisterForm({ action, email, courts }: { action: (f: Fo
 
   return (
     <form action={action} className="rounded-3xl border border-ink-100 bg-white p-6 shadow-lift sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brass-600">Step 2 of 2</p>
+      <p className="text-[13px] text-ink-500">Step 2 of 2</p>
       <h2 className="mt-1 font-display text-2xl font-semibold text-ink-900">About you</h2>
       <p className="mt-1 text-sm text-ink-400">Signed in as {email}</p>
       <input type="hidden" name="kind" value={kind} />

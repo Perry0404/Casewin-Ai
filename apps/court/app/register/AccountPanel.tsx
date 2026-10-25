@@ -34,7 +34,7 @@ export default function AccountPanel() {
 
   return (
     <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-lift sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brass-600">Step 1 of 2</p>
+      <p className="text-[13px] text-ink-500">Step 1 of 2</p>
       <h2 className="mt-1 font-display text-2xl font-semibold text-ink-900">Your account</h2>
       <div className="mt-5 flex rounded-xl bg-parchment p-1">
         {(['signup', 'signin'] as const).map((m) => (

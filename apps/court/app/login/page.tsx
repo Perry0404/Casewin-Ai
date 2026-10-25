@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Logo } from '@/components/ui'
+import { SiteNav } from '@/components/site'
 import LoginForm from './LoginForm'
 
 export const metadata: Metadata = { title: 'Sign in' }
@@ -11,29 +11,39 @@ const ERRORS: Record<string, string> = {
 
 export default function LoginPage({ searchParams }: { searchParams: { next?: string; error?: string } }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden bg-ink-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute inset-0 bg-[radial-gradient(40rem_30rem_at_100%_0%,rgba(209,166,70,0.18),transparent_60%)]" />
-        <div className="grain absolute inset-0" />
-        <Link href="/" className="relative">
-          <Logo dark />
-        </Link>
-        <blockquote className="relative max-w-md">
-          <p className="font-display text-3xl font-medium leading-snug">“Justice delayed is justice denied.”</p>
-          <p className="mt-4 text-sm text-ink-300">The registry is where delay begins — or ends.</p>
-        </blockquote>
-        <p className="relative text-xs text-ink-400">Court staff and verified e-filers. All activity is recorded.</p>
-      </div>
-      <div className="flex items-center justify-center bg-parchment px-4 py-16">
-        <div className="w-full max-w-sm">
-          <Link href="/" className="lg:hidden">
-            <Logo />
-          </Link>
-          <h1 className="mt-10 font-display text-3xl font-semibold tracking-tight text-ink-900 lg:mt-0">Sign in</h1>
-          <p className="mt-2 text-ink-500">Court staff and approved e-filers. New here? <a href="/register" className="font-medium text-ink-800 underline decoration-brass-300 underline-offset-4">Register</a>.</p>
+    <div className="min-h-screen bg-white">
+      <SiteNav />
+      <main className="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:py-20">
+        <div>
+          <h1 className="text-[30px] font-semibold tracking-[-0.015em] text-ink-950">Sign in</h1>
+          <p className="mt-2 text-[15px] text-ink-600">Court staff, approved e-filers and administrators.</p>
           <LoginForm next={searchParams.next} initialError={searchParams.error ? ERRORS[searchParams.error] : undefined} />
+          <p className="mt-8 border-t border-ink-200 pt-5 text-[14px] text-ink-600">
+            No account yet?{' '}
+            <Link href="/register" className="prose-link">
+              Register to file or to work in a registry
+            </Link>
+          </p>
         </div>
-      </div>
+        <aside className="hidden self-start border-l border-ink-200 pl-12 text-[14px] leading-relaxed text-ink-600 lg:block">
+          <h2 className="text-[15px] font-semibold text-ink-950">After you sign in</h2>
+          <dl className="mt-4 space-y-4">
+            <div>
+              <dt className="font-medium text-ink-900">Lawyers and litigants</dt>
+              <dd>Your filer portal: every filing, its fees, suit number and hearing dates.</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink-900">Clerks, registrars and judges</dt>
+              <dd>Your court’s registry, showing what your role allows.</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink-900">Platform administrators</dt>
+              <dd>The Justice admin for Court, Legal Aid and OpenLegal.</dd>
+            </div>
+          </dl>
+          <p className="mt-6 text-[13px] text-ink-500">Every action is recorded against your name.</p>
+        </aside>
+      </main>
     </div>
   )
 }

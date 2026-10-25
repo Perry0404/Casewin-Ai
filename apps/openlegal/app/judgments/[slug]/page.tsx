@@ -72,7 +72,7 @@ export default async function JudgmentPage({ params }: { params: { slug: string 
               .filter(([, v]) => v)
               .map(([k, v]) => (
                 <div key={k}>
-                  <dt className="text-xs uppercase tracking-[0.12em] text-ink-4">{k}</dt>
+                  <dt className="text-[12px] text-ink-3">{k}</dt>
                   <dd className={k === 'Suit no.' ? 'mt-0.5 font-mono text-ink' : 'mt-0.5 text-ink'}>{v}</dd>
                 </div>
               ))}
@@ -92,19 +92,19 @@ export default async function JudgmentPage({ params }: { params: { slug: string 
           <div className="min-w-0">
             {j.holding && (
               <section className="rounded-2xl border-l-4 border-naija-500 bg-white p-6 shadow-card sm:p-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-naija-700">Held</p>
+                <p className="text-[13px] text-ink-3">Held</p>
                 <p className="mt-2 font-serif text-2xl leading-snug text-ink">{j.holding}</p>
               </section>
             )}
             {j.summary && (
               <section className="mt-8">
-                <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">Summary</h2>
+                <h2 className="text-[13px] font-semibold text-ink-3">Summary</h2>
                 <p className="mt-2 text-lg leading-relaxed text-ink-2">{j.summary}</p>
               </section>
             )}
             {j.issues.length > 0 && (
               <section className="mt-8">
-                <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">Issues for determination</h2>
+                <h2 className="text-[13px] font-semibold text-ink-3">Issues for determination</h2>
                 <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-ink-2 marker:text-naija-600">
                   {j.issues.map((i) => (
                     <li key={i}>{i}</li>
@@ -127,7 +127,7 @@ export default async function JudgmentPage({ params }: { params: { slug: string 
 
           <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-2xl border border-ink-line bg-white p-5 shadow-card">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">Cite as</h3>
+              <h3 className="text-[13px] font-semibold text-ink-3">Cite as</h3>
               <p className="mt-2 font-serif text-[15px] leading-snug text-ink">{citation}</p>
               <div className="mt-3 flex gap-2">
                 <CopyButton text={citation} label="Copy citation" />
@@ -136,7 +136,7 @@ export default async function JudgmentPage({ params }: { params: { slug: string 
             </div>
             {j.statutes_cited.length > 0 && (
               <div className="rounded-2xl border border-ink-line bg-white p-5 shadow-card">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">Statutes considered</h3>
+                <h3 className="text-[13px] font-semibold text-ink-3">Statutes considered</h3>
                 <ul className="mt-3 space-y-2 text-sm">
                   {j.statutes_cited.map((s) => (
                     <li key={s}>
@@ -150,7 +150,7 @@ export default async function JudgmentPage({ params }: { params: { slug: string 
             )}
             {j.cases_cited.length > 0 && (
               <div className="rounded-2xl border border-ink-line bg-white p-5 shadow-card">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">Cases cited</h3>
+                <h3 className="text-[13px] font-semibold text-ink-3">Cases cited</h3>
                 <ul className="mt-3 space-y-2 text-sm italic text-ink-2">
                   {j.cases_cited.map((s) => (
                     <li key={s}>{s}</li>
@@ -170,7 +170,7 @@ export default async function JudgmentPage({ params }: { params: { slug: string 
         {related.length > 0 && (
           <section className="mt-20 border-t border-ink-line pt-12">
             <h2 className="font-serif text-3xl font-medium text-ink">Related judgments</h2>
-            <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <div className="mt-2 grid gap-x-10 md:grid-cols-2">
               {related.map((r) => (
                 <JudgmentCard key={r.id} j={r} />
               ))}

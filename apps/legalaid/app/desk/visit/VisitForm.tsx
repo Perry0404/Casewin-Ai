@@ -75,7 +75,7 @@ export default function VisitForm({ defaultState }: { defaultState: string }) {
       </Card>
       {Array.from({ length: rows }, (_, i) => (
         <Card key={i}>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-400">Person {i + 1}</p>
+          <p className="mb-3 text-[13px] font-semibold text-ink-500">Person {i + 1}</p>
           <div className="grid gap-3 sm:grid-cols-4">
             <div className="sm:col-span-2">
               <Field label="Full name">

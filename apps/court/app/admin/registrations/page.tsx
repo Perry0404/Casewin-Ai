@@ -161,7 +161,7 @@ export default async function Registrations({ searchParams }: { searchParams: { 
         <Card pad={false}>
           {(filers ?? []).length ? (
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-ink-100 bg-parchment/60 text-xs uppercase tracking-wider text-ink-400">
+              <thead className="border-b border-ink-100 bg-parchment/60 text-[12px] font-medium text-ink-500">
                 <tr>
                   <th className="px-5 py-3 font-medium">Filer</th>
                   <th className="hidden px-5 py-3 font-medium md:table-cell">Type</th>

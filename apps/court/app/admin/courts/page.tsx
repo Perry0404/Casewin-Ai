@@ -54,7 +54,7 @@ export default async function AdminHome() {
           </div>
           {courts?.length ? (
             <table className="w-full text-left text-sm">
-              <thead className="border-y border-ink-100 bg-parchment/60 text-xs uppercase tracking-wider text-ink-400">
+              <thead className="border-y border-ink-100 bg-parchment/60 text-[12px] font-medium text-ink-500">
                 <tr>
                   <th className="px-6 py-3 font-medium">Court</th>
                   <th className="px-6 py-3 font-medium">Officers</th>

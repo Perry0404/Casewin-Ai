@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Footer, JudgmentCard, Logo, SearchBar } from '@/components/site'
+import { Footer, JudgmentCard, Nav, SearchBar } from '@/components/site'
 import { isConfigured } from '@/lib/db'
 import { recentJudgments, stats, type RecentJudgment } from '@/lib/queries'
 import { COURT_URL, SITE_URL } from '@/lib/constants'
@@ -8,13 +8,25 @@ export const revalidate = 300
 
 const SUGGESTIONS = ['declaration of title', 'unlawful detention', 'breach of contract', 'fair hearing', 'letters of administration', 'wrongful termination']
 
+// Statutes people look up most. Superseded texts (e.g. the 2004 Evidence Act) are deliberately not featured.
+const STATUTES: [string, string][] = [
+  ['constitution-1999', 'Constitution of the Federal Republic of Nigeria, 1999 (as amended)'],
+  ['electoral-act-2026', 'Electoral Act, 2026'],
+  ['economic-and-financial-crimes-commission-establishmentetc-act-lfn-2004', 'Economic and Financial Crimes Commission (Establishment, etc.) Act'],
+  ['labour-act-lfn-2004', 'Labour Act'],
+  ['legal-practitioners-act-lfn-2004', 'Legal Practitioners Act'],
+  ['legal-aid-act-lfn-2004', 'Legal Aid Act'],
+  ['marriage-act-lfn-2004', 'Marriage Act'],
+]
+
 async function load() {
-  if (!isConfigured()) return { s: { judgments: 0, laws: 0, sections: 0, courts: 0 }, recent: [] as RecentJudgment[] }
+  const empty = { s: { judgments: 0, laws: 0, sections: 0, courts: 0 }, recent: [] as RecentJudgment[] }
+  if (!isConfigured()) return empty
   try {
     const [s, recent] = await Promise.all([stats(), recentJudgments(6)])
     return { s, recent }
   } catch {
-    return { s: { judgments: 0, laws: 0, sections: 0, courts: 0 }, recent: [] as RecentJudgment[] }
+    return empty
   }
 }
 
@@ -22,194 +34,146 @@ export default async function Home() {
   const { s, recent } = await load()
 
   return (
-    <div className="overflow-x-hidden">
-      {/* Hero */}
-      <section className="relative isolate border-b border-ink-line">
-        <div className="paper-lines absolute inset-0 -z-10 opacity-60 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
-        <div className="absolute -right-40 -top-40 -z-10 h-[34rem] w-[34rem] rounded-full bg-naija-100/50 blur-3xl" />
-        <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6">
-          <Logo />
-          <nav className="flex items-center gap-1 text-sm font-medium text-ink-2">
-            <Link href="/laws" className="rounded-lg px-3 py-2 hover:bg-paper-2">
-              Laws
-            </Link>
-            <Link href="/courts" className="hidden rounded-lg px-3 py-2 hover:bg-paper-2 sm:block">
-              Courts
-            </Link>
-            <Link href="/about" className="hidden rounded-lg px-3 py-2 hover:bg-paper-2 sm:block">
-              About
-            </Link>
-            <Link href="/developers" className="rounded-lg bg-ink px-3.5 py-2 text-white transition hover:bg-ink-2">
-              API &amp; MCP
-            </Link>
-          </nav>
-        </header>
-
-        <div className="mx-auto max-w-4xl px-4 pb-24 pt-16 text-center sm:px-6 sm:pt-24">
-          <p className="animate-rise inline-flex items-center gap-2 rounded-full border border-naija-100 bg-white px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-naija-700 shadow-card">
-            <span className="h-1.5 w-1.5 rounded-full bg-naija-500" />
-            Free · Open · Machine-readable
-          </p>
-          <h1 className="animate-rise mt-8 font-serif text-[46px] font-medium leading-[1.04] tracking-[-0.02em] text-ink [animation-delay:60ms] sm:text-7xl">
-            The law of Nigeria,
-            <br />
-            <em className="text-naija-600">open to everyone.</em>
-          </h1>
-          <p className="animate-rise mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-2 [animation-delay:120ms]">
-            Judgments published by the courts that delivered them, and the statutes they apply — free to read, search, cite and build on.
-          </p>
-          <div className="animate-rise mx-auto mt-10 max-w-3xl text-left [animation-delay:180ms]">
-            <SearchBar autoFocus />
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              {SUGGESTIONS.map((q) => (
-                <Link key={q} href={`/search?q=${encodeURIComponent(q)}`} className="rounded-full border border-ink-line bg-white px-3.5 py-1.5 text-sm text-ink-2 transition hover:border-naija-400 hover:text-naija-700">
-                  {q}
-                </Link>
-              ))}
+    <div className="bg-white">
+      <Nav />
+      <main>
+        <section className="border-b border-ink-line">
+          <div className="mx-auto max-w-6xl px-4 pb-12 pt-14 sm:px-6 sm:pt-20">
+            <h1 className="max-w-3xl text-[40px] font-semibold leading-[1.08] tracking-[-0.025em] text-ink sm:text-[56px]">Nigerian law, free to read.</h1>
+            <p className="mt-4 max-w-2xl text-[18px] leading-relaxed text-ink-2">
+              Judgments published by the courts that delivered them, and the statutes they apply — to read, search, cite and build on.
+            </p>
+            <div className="mt-8 max-w-3xl">
+              <SearchBar autoFocus />
+              <p className="mt-3 text-[14px] text-ink-3">
+                Try{' '}
+                {SUGGESTIONS.map((q, i) => (
+                  <span key={q}>
+                    <Link href={`/search?q=${encodeURIComponent(q)}`} className="text-naija-600 underline decoration-naija-100 underline-offset-[3px] hover:decoration-naija-500">
+                      {q}
+                    </Link>
+                    {i < SUGGESTIONS.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </p>
             </div>
+            <dl className="mt-12 grid max-w-3xl grid-cols-2 border-t border-ink sm:grid-cols-4">
+              {(
+                [
+                  [s.judgments, 'Judgments'],
+                  [s.courts, s.courts === 1 ? 'Court publishing' : 'Courts publishing'],
+                  [s.laws, 'Statutes'],
+                  [s.sections, 'Sections of law'],
+                ] as const
+              ).map(([n, l]) => (
+                <div key={l} className="py-4 pr-4">
+                  <dt className="text-[13px] text-ink-3">{l}</dt>
+                  <dd className="mt-1 text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink tabular-nums">{Number(n).toLocaleString()}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-        </div>
+        </section>
 
-        <div className="border-t border-ink-line bg-white/60">
-          <dl className="mx-auto grid max-w-5xl grid-cols-2 divide-ink-line px-4 sm:grid-cols-4 sm:divide-x">
-            {[
-              [s.judgments, 'judgments'],
-              [s.courts, s.courts === 1 ? 'court publishing' : 'courts publishing'],
-              [s.laws, s.laws === 1 ? 'statute' : 'statutes'],
-              [s.sections, 'sections of law'],
-            ].map(([n, l]) => (
-              <div key={String(l)} className="px-4 py-6 text-center">
-                <dt className="font-serif text-4xl font-medium text-ink">{Number(n).toLocaleString()}</dt>
-                <dd className="mt-1 text-sm text-ink-3">{l}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
-
-      {/* Recently published */}
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-        <div className="flex items-end justify-between gap-6">
+        <section className="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[1.6fr_1fr]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">Fresh from the courts</p>
-            <h2 className="mt-2 font-serif text-4xl font-medium tracking-tight text-ink">Recently published</h2>
+            <div className="flex items-baseline justify-between gap-4 border-b border-ink pb-3">
+              <h2 className="text-[20px] font-semibold text-ink">Recently published judgments</h2>
+              <Link href="/search" className="prose-link text-[14px]">
+                All judgments
+              </Link>
+            </div>
+            {recent.length ? (
+              recent.map((j) => <JudgmentCard key={j.id} j={j} />)
+            ) : (
+              <p className="py-6 text-[15px] text-ink-2">The first judgments will appear here as courts publish them.</p>
+            )}
           </div>
-          <Link href="/search" className="hidden text-sm font-semibold text-ink-2 hover:text-naija-700 sm:block">
-            All judgments →
-          </Link>
-        </div>
-        {recent.length ? (
-          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {recent.map((j) => (
-              <JudgmentCard key={j.id} j={j} />
-            ))}
-          </div>
-        ) : (
-          <p className="mt-10 rounded-2xl border border-dashed border-ink-line p-10 text-center text-ink-3">The first judgments will appear here as courts publish them.</p>
-        )}
-      </section>
-
-      {/* How judgments arrive */}
-      <section className="border-y border-ink-line bg-white">
-        <div className="mx-auto grid max-w-7xl gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.2fr]">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">Where the law comes from</p>
-            <h2 className="mt-2 font-serif text-4xl font-medium tracking-tight text-ink">Straight from the registry. No middlemen.</h2>
-            <p className="mt-5 text-lg leading-relaxed text-ink-2">
-              Courts on CaseWin Court publish their own judgments. Each one is checked by a registrar for sensitive details before it goes
-              public — then it is here, free, within minutes of release.
+          <aside>
+            <div className="flex items-baseline justify-between gap-4 border-b border-ink pb-3">
+              <h2 className="text-[20px] font-semibold text-ink">Statutes</h2>
+              <Link href="/laws" className="prose-link text-[14px]">
+                A–Z
+              </Link>
+            </div>
+            <ul>
+              {STATUTES.map(([slug, title]) => (
+                <li key={slug} className="border-b border-ink-line">
+                  <Link href={`/laws/${slug}`} className="block py-3 font-serif text-[16px] leading-snug text-ink hover:text-naija-600 hover:underline hover:underline-offset-4">
+                    {title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-[13px] leading-relaxed text-ink-3">
+              Older Acts are from the Laws of the Federation 2004 and may since have been amended — each page says so, with its source.
             </p>
-            <a href={COURT_URL} className="mt-6 inline-block font-semibold text-naija-700 underline decoration-naija-100 decoration-2 underline-offset-4 hover:decoration-naija-500">
-              How courts publish →
-            </a>
-          </div>
-          <ol className="grid gap-4 sm:grid-cols-2">
-            {[
-              ['Delivered', 'The judge delivers judgment in open court.'],
-              ['Uploaded', 'The registry uploads the text to the case file.'],
-              ['Redacted', 'A registrar confirms names of minors, victims and sealed material are removed.'],
-              ['Published', 'It appears on OpenLegal — searchable, citable and in the API.'],
-            ].map(([t, d], i) => (
-              <li key={t} className="rounded-2xl border border-ink-line bg-paper p-6">
-                <span className="font-mono text-xs text-naija-600">0{i + 1}</span>
-                <h3 className="mt-2 font-serif text-xl font-semibold text-ink">{t}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{d}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
+          </aside>
+        </section>
 
-      {/* Contributor network */}
-      <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-6">
-        <div className="grid items-center gap-10 rounded-[2rem] border border-ink-line bg-white p-8 shadow-card sm:p-14 lg:grid-cols-[1.2fr_1fr]">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">Contributor network</p>
-            <h2 className="mt-3 font-serif text-4xl font-medium tracking-tight text-ink">Every law student can help build it.</h2>
-            <p className="mt-5 text-lg leading-relaxed text-ink-2">
-              Connect your AI assistant to OpenLegal and tell it to upload judgments you hold. It checks for duplicates first; reviewers verify
-              new cases; you earn contribution points and climb the leaderboard with your law school.
+        <section className="border-y border-ink-line bg-paper-2">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1fr_2fr]">
+            <div>
+              <h2 className="text-[22px] font-semibold tracking-[-0.01em] text-ink">Where the judgments come from</h2>
+              <p className="mt-2 text-[14px] leading-relaxed text-ink-2">
+                No scraping and no middlemen.{' '}
+                <a href={COURT_URL} className="prose-link">
+                  How courts publish
+                </a>
+              </p>
+            </div>
+            <dl className="border-t border-ink">
+              {(
+                [
+                  ['Courts', 'Courts on CaseWin Court publish their own judgments. A registrar confirms that names of minors, victims and sealed material are removed first.'],
+                  ['Contributors', 'Students and lawyers submit judgments they hold, through the site or their AI assistant. Each is checked against its source by a reviewer before it appears, and marked as contributed.'],
+                  ['Never generated', 'No judgment text on OpenLegal is written by AI. AI tools may find and summarise; the text always comes from the court’s own record.'],
+                ] as const
+              ).map(([t, d]) => (
+                <div key={t} className="grid gap-1 border-b border-ink-line py-4 sm:grid-cols-[10rem_1fr] sm:gap-6">
+                  <dt className="text-[15px] font-semibold text-ink">{t}</dt>
+                  <dd className="text-[14px] leading-relaxed text-ink-2">{d}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 lg:grid-cols-2">
+          <div className="border-t border-ink pt-5">
+            <h2 className="text-[20px] font-semibold text-ink">Contribute judgments</h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
+              Connect your AI assistant with a personal key and ask it to upload judgments you hold. It checks for duplicates first; reviewers verify new cases;
+              verified contributions earn points on the leaderboard.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/contribute" className="rounded-xl bg-naija-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-naija-600">
+            <p className="mt-4 flex gap-5 text-[15px]">
+              <Link href="/contribute" className="prose-link">
                 Start contributing
               </Link>
-              <Link href="/leaderboard" className="rounded-xl border border-ink-line px-5 py-3 text-sm font-semibold text-ink transition hover:border-ink-3">
+              <Link href="/leaderboard" className="prose-link">
                 Leaderboard
               </Link>
-            </div>
-          </div>
-          <div className="space-y-3 rounded-2xl bg-paper p-5 font-mono text-[13px] leading-relaxed">
-            <p className="text-ink-3">You → your AI</p>
-            <p className="rounded-xl bg-white p-3 text-ink ring-1 ring-ink-line">Upload this judgment to OpenLegal.</p>
-            <p className="text-ink-3">AI → OpenLegal → you</p>
-            <p className="rounded-xl bg-naija-50 p-3 text-naija-900 ring-1 ring-naija-100">
-              Received “Okonkwo v. Eze” — it’s new to OpenLegal. You earn 10 points when it is verified.
             </p>
-            <p className="text-right text-[11px] text-ink-4">Illustration</p>
           </div>
-        </div>
-      </section>
-
-      {/* For builders */}
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-        <div className="overflow-hidden rounded-[2rem] bg-naija-900 text-white">
-          <div className="grid gap-10 p-8 sm:p-14 lg:grid-cols-[1fr_1.15fr]">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-100">For builders &amp; AI tools</p>
-              <h2 className="mt-3 font-serif text-4xl font-medium tracking-tight">Plug Nigerian law into anything.</h2>
-              <p className="mt-5 text-lg leading-relaxed text-naija-100/90">
-                A free REST API and a Model Context Protocol server. Point Claude, ChatGPT or your own agent at OpenLegal and it can search
-                judgments and quote statutes — with citations back to the source.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/developers#mcp" className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-naija-900 transition hover:bg-naija-50">
-                  Connect via MCP
-                </Link>
-                <Link href="/developers#api" className="rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold transition hover:bg-white/5">
-                  REST API docs
-                </Link>
-              </div>
-            </div>
-            <pre className="overflow-x-auto rounded-2xl border border-white/10 bg-black/30 p-6 font-mono text-[13px] leading-relaxed text-naija-50">
-              <span className="text-naija-100/60"># Search judgments</span>
+          <div className="border-t border-ink pt-5">
+            <h2 className="text-[20px] font-semibold text-ink">Build on it</h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-2">A free REST API and an MCP server, so research tools and AI assistants can search and quote Nigerian law with citations.</p>
+            <pre className="mt-4 overflow-x-auto rounded-md border border-ink-line bg-paper-2 p-4 font-mono text-[12.5px] leading-relaxed text-ink">
+              <span className="text-ink-3"># Search judgments</span>
               {'\n'}curl &quot;{SITE_URL}/api/v1/judgments?q=fair+hearing&quot;
               {'\n\n'}
-              <span className="text-naija-100/60"># Add to an MCP client</span>
+              <span className="text-ink-3"># MCP server</span>
               {'\n'}
-              {`{
-  "mcpServers": {
-    "openlegal-nigeria": {
-      "type": "http",
-      "url": "${SITE_URL}/api/mcp"
-    }
-  }
-}`}
+              {SITE_URL}/api/mcp
             </pre>
+            <p className="mt-4 text-[15px]">
+              <Link href="/developers" className="prose-link">
+                API and MCP documentation
+              </Link>
+            </p>
           </div>
-        </div>
-      </section>
-
+        </section>
+      </main>
       <Footer />
     </div>
   )

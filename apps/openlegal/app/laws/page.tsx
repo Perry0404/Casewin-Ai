@@ -36,7 +36,7 @@ export default async function LawsPage({ searchParams }: { searchParams: { q?: s
   return (
     <Shell query="">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">Statutes</p>
+        <p className="text-[13px] text-ink-3">Statutes</p>
         <h1 className="mt-2 font-serif text-5xl font-medium tracking-tight text-ink">Laws of Nigeria</h1>
         <p className="mt-4 max-w-2xl text-lg text-ink-2">
           {laws.length.toLocaleString()} statutes, stored section by section so search takes you to the exact provision. Every law shows where its

@@ -49,8 +49,8 @@ const SECTIONS: [string, string[]][] = [
 export default function HowItWorks() {
   return (
     <PublicPage>
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">How we work</p>
-      <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900 sm:text-5xl">Trust is the whole product.</h1>
+      <p className="text-[13px] text-ink-500">How we work</p>
+      <h1 className="mt-2 text-[32px] font-semibold leading-tight tracking-[-0.02em] text-ink-950 sm:text-[40px]">Trust is the whole product.</h1>
       <p className="mt-4 text-lg text-ink-500">Families trust us with someone they love. Here is how we keep that trust — and keep our numbers honest.</p>
       <div className="mt-12 space-y-10">
         {SECTIONS.map(([t, items]) => (
@@ -59,7 +59,7 @@ export default function HowItWorks() {
             <ul className="mt-4 space-y-3">
               {items.map((x) => (
                 <li key={x} className="flex gap-3 text-ink-600">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brass-400" />
+                  <span className="mt-3 h-px w-3 shrink-0 bg-ink-950" />
                   {x}
                 </li>
               ))}

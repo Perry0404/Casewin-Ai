@@ -37,7 +37,7 @@ export default function OnboardPage({ searchParams }: { searchParams: { sent?: s
     <PublicShell>
       <div className="mx-auto grid max-w-6xl gap-14 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1fr_1.1fr]">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">Pilot programme</p>
+          <p className="text-[13px] text-ink-500">Pilot programme</p>
           <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900 sm:text-5xl">Bring your court online.</h1>
           <p className="mt-4 text-lg leading-relaxed text-ink-500">
             For Chief Judges, Chief Registrars and Directors of Court Administration. Tell us about your court and we will arrange a walkthrough.

@@ -1,10 +1,10 @@
 import './globals.css'
 import type { Metadata, Viewport } from 'next'
-import { Inter, JetBrains_Mono, Newsreader } from 'next/font/google'
+import { IBM_Plex_Mono, IBM_Plex_Sans, Source_Serif_4 } from 'next/font/google'
 
-const serif = Newsreader({ subsets: ['latin'], variable: '--font-serif', style: ['normal', 'italic'], axes: ['opsz'], adjustFontFallback: false })
-const sans = Inter({ subsets: ['latin'], variable: '--font-sans' })
-const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', weight: ['400', '500'] })
+const serif = Source_Serif_4({ subsets: ['latin'], variable: '--font-serif', style: ['normal', 'italic'] })
+const sans = IBM_Plex_Sans({ subsets: ['latin'], variable: '--font-sans', weight: ['400', '500', '600', '700'] })
+const mono = IBM_Plex_Mono({ subsets: ['latin'], variable: '--font-mono', weight: ['400', '500'] })
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://openlegal.casewinai.com'),
@@ -17,12 +17,12 @@ export const metadata: Metadata = {
   openGraph: { siteName: 'OpenLegal Nigeria', type: 'website' },
 }
 
-export const viewport: Viewport = { themeColor: '#FBFAF6', width: 'device-width', initialScale: 1 }
+export const viewport: Viewport = { themeColor: '#ffffff', width: 'device-width', initialScale: 1 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-NG" className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
-      <body className="min-h-screen font-sans">{children}</body>
+      <body className="min-h-screen font-sans text-[15px] leading-relaxed">{children}</body>
     </html>
   )
 }

@@ -46,7 +46,7 @@ export default async function ContributePage() {
       <section className="border-b border-ink-line bg-white">
         <div className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_1fr]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">Contributor network</p>
+            <p className="text-[13px] text-ink-3">Contributor network</p>
             <h1 className="mt-3 font-serif text-5xl font-medium leading-[1.05] tracking-tight text-ink">Help put Nigerian law online.</h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-2">
               Got a judgment from a case you worked on, a court you visited, or your research? Send it to OpenLegal — straight from your AI
@@ -117,23 +117,23 @@ async function Dashboard({ contributorId }: { contributorId: string }) {
   const pending = mine.submissions.filter((s) => s.status === 'pending').length
   return (
     <div className="space-y-5">
-      <div className="rounded-3xl bg-naija-900 p-6 text-white shadow-lift sm:p-8">
+      <div className="border-t-4 border-ink bg-paper-2 p-6 sm:p-7">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-naija-100/80">Welcome, {contributor.display_name}</p>
-            <p className="mt-3 font-serif text-6xl font-medium">{mine.points.toLocaleString()}</p>
-            <p className="text-sm text-naija-100/80">contribution points{mine.rank ? ` · #${mine.rank} on the leaderboard` : ''}</p>
+            <p className="text-[14px] text-ink-3">Welcome, {contributor.display_name}</p>
+            <p className="mt-2 text-[44px] font-semibold leading-none tracking-[-0.02em] text-ink tabular-nums">{mine.points.toLocaleString()}</p>
+            <p className="mt-1 text-[14px] text-ink-3">contribution points{mine.rank ? ` · #${mine.rank} on the leaderboard` : ''}</p>
           </div>
           <SignOut />
         </div>
-        <dl className="mt-6 grid grid-cols-2 gap-3 border-t border-white/10 pt-5 text-sm">
+        <dl className="mt-6 grid grid-cols-2 gap-3 border-t border-ink-line pt-5 text-sm">
           <div>
-            <dt className="text-naija-100/70">Verified</dt>
-            <dd className="font-serif text-2xl">{verified}</dd>
+            <dt className="text-ink-3">Verified</dt>
+            <dd className="text-[22px] font-semibold text-ink tabular-nums">{verified}</dd>
           </div>
           <div>
-            <dt className="text-naija-100/70">Waiting for review</dt>
-            <dd className="font-serif text-2xl">{pending}</dd>
+            <dt className="text-ink-3">Waiting for review</dt>
+            <dd className="text-[22px] font-semibold text-ink tabular-nums">{pending}</dd>
           </div>
         </dl>
       </div>

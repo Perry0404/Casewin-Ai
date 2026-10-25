@@ -18,7 +18,7 @@ export default function OrgForm({ email }: { email: string }) {
   const [state, action] = useFormState(submitOrganisation, undefined)
   return (
     <form action={action} className="space-y-4 rounded-3xl border border-ink-100 bg-white p-6 shadow-lift sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brass-600">Step 2 of 2 · signed in as {email}</p>
+      <p className="text-[13px] text-ink-500">Step 2 of 2 · signed in as {email}</p>
       <h2 className="font-display text-2xl font-semibold text-ink-900">The organisation</h2>
       <Field label="Registered name" required>
         <input name="name" required className={input} />

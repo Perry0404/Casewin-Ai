@@ -373,7 +373,7 @@ export default function FilingForm({ courts, filer: account }: { courts: CourtOp
 
       <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
         <div className="rounded-3xl border border-ink-100 bg-white p-6 shadow-card">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brass-600">Registry routing</p>
+          <p className="text-[13px] text-ink-500">Registry routing</p>
           <p className="mt-3 font-display text-xl font-semibold text-ink-900">{label(CASE_TYPES, effectiveType)}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {!caseType && <Badge tone="info">{suggestion.confidence}% match</Badge>}

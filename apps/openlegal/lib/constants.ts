@@ -17,6 +17,7 @@ export function caseTypeLabel(v: string | null | undefined) {
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://openlegal.casewinai.com'
 export const COURT_URL = process.env.NEXT_PUBLIC_COURT_URL || 'https://court.casewinai.com'
 export const CASEWIN_URL = process.env.NEXT_PUBLIC_CASEWIN_URL || 'https://casewinai.com'
+export const LEGALAID_URL = process.env.NEXT_PUBLIC_LEGALAID_URL || 'https://legalaid.casewinai.com'
 
 export function longDate(d: string | null | undefined) {
   if (!d) return ''

@@ -17,7 +17,7 @@ export default async function FilePage() {
   return (
     <PublicShell>
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">E-filing</p>
+        <p className="text-[13px] text-ink-500">E-filing</p>
         <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900 sm:text-5xl">File a new case</h1>
         <p className="mt-3 max-w-2xl text-lg text-ink-500">
           Submit your originating process to the registry. You get a tracking code at once; the registry assesses fees and issues your suit

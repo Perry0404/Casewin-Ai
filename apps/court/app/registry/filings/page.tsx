@@ -46,7 +46,7 @@ export default async function FilingsPage({ searchParams }: { searchParams: { ta
               className={cx('whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition', tab[0] === key ? 'bg-ink-900 text-white' : 'text-ink-500 hover:bg-ink-50 hover:text-ink-900')}
             >
               {name}
-              <span className={cx('ml-2 text-xs', tab[0] === key ? 'text-brass-200' : 'text-ink-300')}>{counts[i].count ?? 0}</span>
+              <span className={cx('ml-2 text-xs', tab[0] === key ? 'text-ink-300' : 'text-ink-400')}>{counts[i].count ?? 0}</span>
             </Link>
           ))}
         </nav>
@@ -59,7 +59,7 @@ export default async function FilingsPage({ searchParams }: { searchParams: { ta
       {filings?.length ? (
         <div className="overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-card">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-ink-100 bg-parchment/60 text-xs uppercase tracking-wider text-ink-400">
+            <thead className="border-b border-ink-100 bg-parchment/60 text-[12px] font-medium text-ink-500">
               <tr>
                 <th className="px-5 py-3 font-medium">Filing</th>
                 <th className="hidden px-5 py-3 font-medium md:table-cell">Filed by</th>

@@ -38,7 +38,7 @@ export default async function Submissions({ searchParams }: { searchParams: { ta
       <nav className="mb-5 inline-flex gap-1 rounded-xl bg-white p-1 shadow-card">
         {TABS.map((t, i) => (
           <Link key={t} href={`/admin/submissions?tab=${t}`} className={cx('rounded-lg px-3.5 py-2 text-sm font-medium capitalize transition', tab === t ? 'bg-ink-900 text-white' : 'text-ink-500 hover:bg-ink-50')}>
-            {t} <span className={tab === t ? 'text-brass-200' : 'text-ink-300'}>{counts[i].count ?? 0}</span>
+            {t} <span className={tab === t ? 'text-ink-300' : 'text-ink-400'}>{counts[i].count ?? 0}</span>
           </Link>
         ))}
       </nav>

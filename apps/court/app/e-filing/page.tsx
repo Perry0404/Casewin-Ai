@@ -71,7 +71,7 @@ export default function EFilingGuide() {
     <PublicShell>
       <header className="border-b border-ink-100 bg-white">
         <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-20">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brass-600">Guide</p>
+          <p className="text-[13px] text-ink-500">Guide</p>
           <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink-900 sm:text-6xl">How e-filing works</h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-ink-500">
             Everything you can do at the registry counter — from your phone or laptop, with a record of every step. Here is the whole journey, who
