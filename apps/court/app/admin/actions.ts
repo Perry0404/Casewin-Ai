@@ -161,6 +161,15 @@ export async function rejectSubmission(form: FormData) {
   redirect(`/admin/submissions?done=${status}`)
 }
 
+// ── OpenLegal statutes held for review ──────────────────────────────────────
+
+export async function reviewLaw(form: FormData) {
+  await requirePlatformAdmin()
+  const publish = str(form, 'decision') === 'publish'
+  await createAdminClient().from('laws').update({ is_published: publish, needs_review: false }).eq('id', str(form, 'id'))
+  revalidatePath('/admin/laws')
+}
+
 // ── Registrations (filers and court staff) ──────────────────────────────────
 
 export async function approveRegistration(form: FormData) {

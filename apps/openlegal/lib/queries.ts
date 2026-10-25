@@ -140,6 +140,10 @@ export interface Law {
   category: string | null
   description: string | null
   source_url: string | null
+  source_name: string | null
+  edition: string | null
+  currency_note: string | null
+  long_title: string | null
   law_sections: { id: string; part: string | null; number: string; heading: string | null; body: string; position: number }[]
 }
 
@@ -155,5 +159,5 @@ export async function getLawSection(slug: string, number: string) {
   const law = await getLaw(slug)
   if (!law) return null
   const section = law.law_sections.find((s) => s.number === number)
-  return section ? { law: { slug: law.slug, title: law.title, year: law.year, source_url: law.source_url }, section } : null
+  return section ? { law: { slug: law.slug, title: law.title, year: law.year, source_url: law.source_url, source_name: law.source_name, edition: law.edition, currency_note: law.currency_note }, section } : null
 }

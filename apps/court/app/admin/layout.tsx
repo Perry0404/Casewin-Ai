@@ -36,6 +36,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               Registrations
               {registrations ? <span className="ml-1.5 rounded-full bg-brass-400 px-1.5 py-0.5 text-[11px] font-bold text-ink-950">{registrations}</span> : null}
             </Link>
+            <Link href="/admin/laws" className="rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
+              Statutes
+            </Link>
             <Link href="/admin/submissions" className="rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
               Submissions
               {pending ? <span className="ml-1.5 rounded-full bg-brass-400 px-1.5 py-0.5 text-[11px] font-bold text-ink-950">{pending}</span> : null}

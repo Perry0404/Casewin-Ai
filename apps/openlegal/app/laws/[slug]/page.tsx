@@ -36,9 +36,16 @@ export default async function LawPage({ params }: { params: { slug: string } }) 
           {law.description && <p className="mt-4 text-lg text-ink-2">{law.description}</p>}
           <div className="mt-5 flex flex-wrap gap-2">
             <Tag>{law.jurisdiction === 'federal' ? 'Federal' : `${law.jurisdiction} State`}</Tag>
-            {law.year && <Tag>{law.year}</Tag>}
+            {law.edition && <Tag>{law.edition}</Tag>}
+            {law.year && <Tag>Commenced {law.year}</Tag>}
             <Tag tone="green">{law.law_sections.length} sections on OpenLegal</Tag>
           </div>
+          {law.currency_note && (
+            <div className="mt-6 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+              <span aria-hidden>⚠</span>
+              <p>{law.currency_note}</p>
+            </div>
+          )}
         </header>
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -76,9 +83,9 @@ export default async function LawPage({ params }: { params: { slug: string } }) 
             <p className="mt-12 rounded-xl bg-paper-2 p-4 text-sm text-ink-3">
               {law.source_url ? (
                 <>
-                  Source:{' '}
-                  <a href={law.source_url} className="underline">
-                    {law.source_url}
+                  Text source:{' '}
+                  <a href={law.source_url} className="underline" rel="noreferrer">
+                    {law.source_name ?? law.source_url}
                   </a>
                   .{' '}
                 </>

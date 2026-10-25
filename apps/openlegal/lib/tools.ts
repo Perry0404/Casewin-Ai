@@ -99,7 +99,9 @@ export async function toolGetLawSection(args: { law_id: string; section: string 
     part: r.section.part,
     text: r.section.body,
     url: `${SITE_URL}/laws/${r.law.slug}#s-${r.section.number}`,
-    note: 'Confirm against the official gazette where the provision may have been amended.',
+    edition: r.law.edition,
+    source: r.law.source_name,
+    note: r.law.currency_note ?? 'Confirm against the official gazette where the provision may have been amended.',
   }
 }
 
