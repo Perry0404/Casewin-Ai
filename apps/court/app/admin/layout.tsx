@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requirePlatformAdmin } from '@/lib/auth'
+import { getStaff, requirePlatformAdmin } from '@/lib/auth'
 import { Logo } from '@/components/ui'
 import SignOutButton from '@/components/SignOutButton'
 
@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePlatformAdmin()
+  const staff = await getStaff()
   return (
     <div className="min-h-screen bg-parchment">
       <header className="bg-ink-950 text-white">
@@ -26,6 +27,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/courts/new" className="rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
               Onboard a court
             </Link>
+            {staff && (
+              <Link href="/registry" className="rounded-lg px-3 py-2 text-brass-200 hover:bg-white/5 hover:text-white">
+                My registry →
+              </Link>
+            )}
             <span className="ml-3 hidden text-xs text-ink-400 md:inline">{user.email}</span>
             <SignOutButton />
           </nav>

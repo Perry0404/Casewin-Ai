@@ -13,10 +13,11 @@ export default async function Go({ searchParams }: { searchParams: { next?: stri
   const db = createAdminClient()
   const { data: staff } = await db.from('court_staff').select('id').eq('user_id', user.id).eq('is_active', true).limit(1).maybeSingle()
 
-  if (staff) {
-    await db.from('court_staff').update({ last_login_at: new Date().toISOString() }).eq('id', staff.id)
-    redirect(next?.startsWith('/registry') ? next : '/registry')
-  }
+  if (staff) await db.from('court_staff').update({ last_login_at: new Date().toISOString() }).eq('id', staff.id)
+
+  // A platform admin may also hold a court role; honour where they were headed.
+  if (staff && next?.startsWith('/registry')) redirect(next)
   if (await isPlatformAdmin(user.id)) redirect(next?.startsWith('/admin') ? next : '/admin')
+  if (staff) redirect('/registry')
   redirect('/login?error=no-access')
 }

@@ -34,8 +34,14 @@ and hearings are never readable with the anon key.
 
    Remove it later in the court app: Registry → Court settings → Remove all sample data.
 
-5. Supabase → Authentication → Providers → Email: turn **off** "Allow new users
-   to sign up". Court staff accounts are created by administrators only.
+5. Leave public sign-up **on**: this Supabase project is shared with the main
+   CaseWin app, whose users sign themselves up. Court access is never granted
+   by signing up — only a `court_staff` row (created by a court or platform
+   administrator) opens the registry.
+
+> **Current setup (Oct 2026):** one Supabase project (`casewinai`, provisioned
+> through the Vercel Marketplace) holds CaseWin, CaseWin Court and OpenLegal.
+> Table names don't overlap.
 
 ## Environment variables
 
