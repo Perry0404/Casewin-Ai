@@ -91,3 +91,81 @@ export async function linkCourtCase(f: FormData) {
   await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'court_link', body: `Linked to ${k.suit_number} — ${k.title}, on CaseWin Court` })
   redirect(`/desk/cases/${c.id}?saved=1#court`)
 }
+
+// ── Clearing house: refer a case to an organisation ─────────────────────────
+
+export async function referToOrg(f: FormData) {
+  const m = await requireMember()
+  if (!(m.isAdmin || m.role === 'coordinator')) redirect('/desk')
+  const c = await loadCase(str(f, 'id'))
+  if (!c) redirect('/desk')
+  const db = createAdminClient()
+  const { data: org } = await db.from('la_organisations').select('id, name, created_by').eq('id', str(f, 'org')).eq('status', 'approved').maybeSingle()
+  if (!org) redirect(`/desk/cases/${c.id}?error=assign`)
+  await db.from('la_cases').update({ referred_org: org.id, referred_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', c.id)
+  await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'referred', body: `Referred to ${org.name}` })
+  if (org.created_by)
+    await alertVolunteer(org.created_by, c.id, `Case ${c.ref} referred to ${org.name}`, `Case ${c.ref} (${c.state}) has been referred to ${org.name}. Assign a member from your Team page within 48 hours.`, 'referred').catch(() => {})
+  redirect(`/desk/cases/${c.id}?saved=1`)
+}
+
+// ── Diversion ────────────────────────────────────────────────────────────────
+
+const DIVERSION_STATUS = ['suitable', 'referred', 'in_progress', 'completed', 'declined', 'unsuitable']
+const DIVERSION_ROUTE = ['multi_door_courthouse', 'citizens_mediation_centre', 'community_mediation', 'restorative_meeting', 'plea_bargain', 'other']
+
+export async function setDiversion(f: FormData) {
+  const m = await requireMember()
+  const c = await loadCase(str(f, 'id'))
+  if (!c || !canWork(m, c)) redirect('/desk')
+  const status = DIVERSION_STATUS.includes(str(f, 'status', 20)) ? str(f, 'status', 20) : null
+  const route = DIVERSION_ROUTE.includes(str(f, 'route', 40)) ? str(f, 'route', 40) : null
+  if (!status) redirect(`/desk/cases/${c.id}#diversion`)
+  const note = str(f, 'note', 1000)
+  await createAdminClient()
+    .from('la_cases')
+    .update({ diversion_status: status, diversion_route: route, diversion_note: note || null, diversion_updated_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', c.id)
+  await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'diversion', body: `Diversion: ${status.replace(/_/g, ' ')}${route ? ` — ${route.replace(/_/g, ' ')}` : ''}${note ? ` — ${note}` : ''}` })
+  redirect(`/desk/cases/${c.id}?saved=1#diversion`)
+}
+
+// ── Rights-violation register ────────────────────────────────────────────────
+
+const INCIDENT_KINDS = ['extortion', 'torture', 'unlawful_detention', 'detention_of_relative', 'sexual_violence', 'death_in_custody', 'unlawful_seizure', 'threats', 'other']
+const AGENCIES = ['police', 'military', 'dss', 'efcc', 'correctional_service', 'other']
+
+export async function logIncident(f: FormData) {
+  const m = await requireMember()
+  const caseId = str(f, 'case_id', 40) || null
+  const c = caseId ? await loadCase(caseId) : null
+  if (caseId && (!c || !canWork(m, c))) redirect('/desk')
+  const kind = str(f, 'kind', 30)
+  const state = str(f, 'state', 40) || c?.state || ''
+  if (!INCIDENT_KINDS.includes(kind) || !state) redirect(caseId ? `/desk/cases/${caseId}?error=incident#rights` : '/desk/incidents?error=incident')
+  const amount = Number(str(f, 'amount', 12).replace(/\D/g, ''))
+  await createAdminClient()
+    .from('la_incidents')
+    .insert({
+      case_id: caseId,
+      kind,
+      occurred_on: /^\d{4}-\d{2}-\d{2}$/.test(str(f, 'occurred_on', 10)) ? str(f, 'occurred_on', 10) : null,
+      state,
+      town: str(f, 'town', 120) || c?.lga || null,
+      facility: str(f, 'facility', 200) || c?.facility || null,
+      agency: AGENCIES.includes(str(f, 'agency', 30)) ? str(f, 'agency', 30) : 'police',
+      description: str(f, 'description', 3000) || null,
+      amount_demanded: amount > 0 ? amount : null,
+      // Recorded by a volunteer who met the person or saw the evidence counts as verified.
+      verified: f.get('verified') === 'on',
+      recorded_by: m.user_id,
+    })
+  if (c) await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'incident', body: `Rights violation recorded: ${kind.replace(/_/g, ' ')}` })
+  redirect(caseId ? `/desk/cases/${caseId}?saved=1#rights` : '/desk/incidents?saved=1')
+}
+
+export async function setShowPublicly(f: FormData) {
+  const m = await requireMember()
+  await createAdminClient().from('la_members').update({ show_publicly: f.get('show') === 'yes' }).eq('user_id', m.user_id)
+  redirect('/desk/record?saved=1')
+}

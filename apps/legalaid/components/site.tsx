@@ -31,6 +31,7 @@ export function JusticeBar() {
 const NAV: [string, string][] = [
   ['/track', 'Track a request'],
   ['/rights', 'Your rights'],
+  ['/clearing-house', 'Clearing house'],
   ['/volunteer', 'Volunteer'],
   ['/organisations', 'Organisations'],
 ]
@@ -89,7 +90,7 @@ export function SiteFooter() {
           </p>
         </div>
         <FooterCol title="Get help" links={[['Report a case', '/help'], ['Track a request', '/track'], ['Your rights in custody', '/rights'], ['How we work', '/how-it-works'], ['Privacy', '/privacy']]} />
-        <FooterCol title="Help others" links={[['Volunteer', '/volunteer'], ['Register an organisation', '/organisations'], ['The record', '/impact'], ['Sign in', '/login']]} />
+        <FooterCol title="Help others" links={[['Volunteer', '/volunteer'], ['Register an organisation', '/organisations'], ['Clearing house', '/clearing-house'], ['The record', '/impact'], ['Sign in', '/login']]} />
         <FooterCol title="CaseWin" links={[['CaseWin Court', COURT_URL], ['OpenLegal Nigeria', OPENLEGAL_URL], ['CaseWin', CASEWIN_URL]]} />
       </div>
       <div className="border-t border-ink-200">

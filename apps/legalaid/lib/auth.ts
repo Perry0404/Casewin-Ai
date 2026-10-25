@@ -60,12 +60,12 @@ export async function requireAdmin() {
 }
 
 /** Who may see a file's private details: the assignee, their supervising lawyer, the assignee's coordinator, or an admin. */
-export function canWork(m: Member & { isAdmin: boolean }, c: { assigned_to: string | null; assigned_org: string | null; supervisor_id?: string | null }) {
+export function canWork(m: Member & { isAdmin: boolean }, c: { assigned_to: string | null; assigned_org: string | null; supervisor_id?: string | null; referred_org?: string | null }) {
   return (
     m.isAdmin ||
     c.assigned_to === m.user_id ||
     (c.supervisor_id != null && c.supervisor_id === m.user_id) ||
-    (m.role === 'coordinator' && m.org_id != null && c.assigned_org === m.org_id)
+    (m.role === 'coordinator' && m.org_id != null && (c.assigned_org === m.org_id || c.referred_org === m.org_id))
   )
 }
 

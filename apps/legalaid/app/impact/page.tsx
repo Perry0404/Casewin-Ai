@@ -1,59 +1,80 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PublicPage } from '@/components/site'
-import { Card, CardTitle, Empty, Stat, btn } from '@/components/ui'
+import { Bars, INCIDENT_LABELS, Monthly, TileMap } from '@/components/NationalPicture'
 import { publicStats } from '@/lib/stats'
+import { nationalPicture } from '@/lib/national'
 
-export const metadata: Metadata = { title: 'Impact', description: 'Real requests, volunteers and outcomes on CaseWin Legal Aid — counted from the case record, never estimated.' }
+export const metadata: Metadata = { title: 'The record', description: 'Real requests, volunteers and outcomes on CaseWin Legal Aid — counted from the case record, never estimated.' }
 export const revalidate = 300
 
 export default async function Impact() {
-  const s = await publicStats()
-  const max = Math.max(1, ...s.states.map(([, n]) => n))
+  const [s, n] = await Promise.all([publicStats(), nationalPicture()])
+  const h = s.medianHoursToAction
   return (
     <PublicPage wide>
-      <p className="text-[13px] text-ink-500">The record</p>
-      <h1 className="mt-2 text-[32px] font-semibold leading-tight tracking-[-0.02em] text-ink-950 sm:text-[40px]">What has actually happened</h1>
-      <p className="mt-4 max-w-2xl text-lg text-ink-500">
+      <h1 className="text-[32px] font-semibold leading-tight tracking-[-0.02em] text-ink-950 sm:text-[40px]">The record</h1>
+      <p className="mt-3 max-w-2xl text-[17px] text-ink-600">
         Counted live from real cases. Reports marked as not genuine are excluded; outcomes count only after a volunteer verified the facts.{' '}
-        <Link href="/how-it-works" className="underline">How we verify</Link>.
+        <Link href="/how-it-works" className="prose-link">
+          How we verify
+        </Link>{' '}
+        ·{' '}
+        <Link href="/clearing-house" className="prose-link">
+          Who did the work
+        </Link>
       </p>
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Requests for help" value={s.requests.toLocaleString()} />
-        <Stat label="Verified by a volunteer" value={s.verified.toLocaleString()} />
-        <Stat label="Taken by a volunteer" value={s.assigned.toLocaleString()} />
-        <Stat label="People released" value={s.released.toLocaleString()} tone="good" hint={`${s.resolved} cases with an outcome`} />
-        <Stat label="Median time to first action" value={s.medianHoursToAction == null ? '—' : s.medianHoursToAction < 48 ? `${Math.round(s.medianHoursToAction)} h` : `${Math.round(s.medianHoursToAction / 24)} d`} hint="from report to first call, visit or filing" />
-        <Stat label="Verified volunteers" value={s.volunteers} />
-        <Stat label="Organisations" value={s.organisations} />
-        <Stat label="States reached" value={s.states.length} hint="of 36 + FCT" />
-      </div>
-      <Card className="mt-6">
-        <CardTitle>Requests by state</CardTitle>
-        {s.states.length ? (
-          <ul className="space-y-2">
-            {s.states.map(([st, n]) => (
-              <li key={st} className="grid grid-cols-[8rem_1fr_3rem] items-center gap-3 text-sm">
-                <span className="text-ink-700">{st}</span>
-                <span className="h-2.5 rounded-full bg-ink-50">
-                  <span className="block h-full rounded-full bg-[#3B5B9A]" style={{ width: `${(n / max) * 100}%` }} />
-                </span>
-                <span className="text-right tabular-nums text-ink-900">{n}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <Empty title="The first requests are coming in this week">Every request will appear here as it arrives.</Empty>
-        )}
-      </Card>
-      <div className="mt-10 flex flex-wrap gap-3">
-        <Link href="/help" className={btn.primary}>
-          Report a case
-        </Link>
-        <Link href="/volunteer" className={btn.secondary}>
-          Volunteer
-        </Link>
-      </div>
+
+      <dl className="mt-10 grid grid-cols-2 border-t border-ink-950 sm:grid-cols-4">
+        {(
+          [
+            ['Requests for help', s.requests],
+            ['Verified by a volunteer', s.verified],
+            ['Taken by a volunteer', s.assigned],
+            ['People released', s.released],
+            ['Cases with an outcome', s.resolved],
+            ['Median time to first action', h == null ? '—' : h < 48 ? `${Math.round(h)} h` : `${Math.round(h / 24)} d`],
+            ['Verified volunteers', s.volunteers],
+            ['States reached', `${s.states.length} of 37`],
+          ] as const
+        ).map(([k, v]) => (
+          <div key={k} className="border-b border-ink-200 py-4 pr-4">
+            <dt className="text-[13px] text-ink-500">{k}</dt>
+            <dd className="mt-1 text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink-950 tabular-nums">{typeof v === 'number' ? v.toLocaleString() : v}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <section className="mt-14 grid gap-12 lg:grid-cols-[1.3fr_1fr]">
+        <div>
+          <h2 className="text-[20px] font-semibold text-ink-950">Requests by state</h2>
+          <p className="mb-4 mt-1 text-[14px] text-ink-600">Open cases on the platform.</p>
+          <TileMap states={n.states} metric="open" label="Open cases" />
+        </div>
+        <div className="space-y-10">
+          <div>
+            <h2 className="text-[20px] font-semibold text-ink-950">How long people have been held</h2>
+            <p className="mb-4 mt-1 text-[14px] text-ink-600">Everyone in custody on an open case, by days since arrest. A court must see them within 48 hours.</p>
+            <Bars rows={n.custody} />
+          </div>
+          <div>
+            <h2 className="text-[20px] font-semibold text-ink-950">Rights violations recorded</h2>
+            <p className="mb-4 mt-1 text-[14px] text-ink-600">Verified incidents only. Places and people are not published.</p>
+            {n.incidents.byKind.length ? (
+              <Bars rows={n.incidents.byKind.map(([k, v]) => ({ label: INCIDENT_LABELS[k]?.split(' (')[0] ?? k, value: v }))} color="#B47D1F" />
+            ) : (
+              <p className="text-[14px] text-ink-500">None recorded yet.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-14">
+        <h2 className="text-[20px] font-semibold text-ink-950">Requests and outcomes, last 12 months</h2>
+        <div className="mt-4 max-w-3xl">
+          <Monthly m={n.monthly} />
+        </div>
+      </section>
     </PublicPage>
   )
 }

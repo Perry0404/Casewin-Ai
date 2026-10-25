@@ -4,12 +4,14 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { ACTIONS, KINDS, OUTCOMES } from '@/lib/constants'
 import { date } from '@/lib/format'
 import PrintButton from '@/components/PrintButton'
+import { setShowPublicly } from '../case-actions'
 import { Card, CardTitle, Empty, Mono, PageHeader, Stat } from '@/components/ui'
 
 export const metadata: Metadata = { title: 'My pro bono record' }
 
 export default async function Record() {
   const m = await requireMember()
+  const { data: me } = await createAdminClient().from('la_members').select('show_publicly').eq('user_id', m.user_id).maybeSingle()
   const db = createAdminClient()
   const [{ data: cases }, { data: events }] = await Promise.all([
     db.from('la_cases').select('id, ref, kind, state, outcome, outcome_on, assigned_at').eq('assigned_to', m.user_id).order('assigned_at', { ascending: false }),
@@ -25,6 +27,16 @@ export default async function Record() {
         sub={`Generated from the CaseWin Legal Aid case record on ${date(new Date())}. Each line can be verified by its reference.`}
         actions={<PrintButton />}
       />
+      {!m.org_id && m.role !== 'coordinator' && (
+        <form action={setShowPublicly} className="no-print mb-8 flex flex-wrap items-center justify-between gap-3 border-l-4 border-ink-950 bg-parchment px-4 py-3 text-[14px]">
+          <span className="text-ink-800">
+            {me?.show_publicly ? 'Your name and case counts appear in the public clearing house.' : 'Your cases count in the public clearing house under “Other independent volunteers”. You can be listed by name instead.'}
+          </span>
+          <button name="show" value={me?.show_publicly ? 'no' : 'yes'} className={'rounded-md border border-ink-300 bg-white px-3 py-1.5 font-medium'}>
+            {me?.show_publicly ? 'Stop listing my name' : 'List me by name'}
+          </button>
+        </form>
+      )}
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <Stat label="Cases taken" value={(cases ?? []).length} />
         <Stat label="Recorded actions" value={actions} />

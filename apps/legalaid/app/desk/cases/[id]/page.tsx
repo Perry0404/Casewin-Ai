@@ -10,7 +10,10 @@ import { initials, whatsapp, intlPhone } from '@/lib/cases'
 import { date, dateTime } from '@/lib/format'
 import { Badge, Card, CardTitle, Field, Mono, Notice, btn, cx, input } from '@/components/ui'
 import { assignTo, claimCase, logAction, markSpam, recordOutcome, releaseCase, updateFacts } from '../../actions'
-import { linkCourtCase, openDocument, superviseCase, uploadDocument } from '../../case-actions'
+import { linkCourtCase, openDocument, referToOrg, setDiversion, superviseCase, uploadDocument } from '../../case-actions'
+import { suggest } from '@/lib/matching'
+import IncidentForm from '@/components/IncidentForm'
+import { INCIDENT_LABELS } from '@/components/NationalPicture'
 
 export const metadata: Metadata = { title: 'Case file', robots: { index: false } }
 
@@ -65,6 +68,13 @@ export default async function CasePage({ params, searchParams }: { params: { id:
       : Promise.resolve({ data: [] }),
     c.supervisor_id ? db.from('la_members').select('full_name, enrolment_number').eq('user_id', c.supervisor_id).maybeSingle() : Promise.resolve({ data: null }),
   ])
+  const manager = (m.isAdmin || m.role === 'coordinator') && open
+  const [suggestions, { data: incidents }, { data: referredTo }] = await Promise.all([
+    manager && !c.assigned_to ? suggest(c) : Promise.resolve(null),
+    works ? db.from('la_incidents').select('kind, verified, created_at').eq('case_id', c.id) : Promise.resolve({ data: [] }),
+    c.referred_org ? db.from('la_organisations').select('name').eq('id', c.referred_org).maybeSingle() : Promise.resolve({ data: null }),
+  ])
+  const coordinatorOnly = m.role === 'coordinator' && !m.isAdmin
   const callOk = c.safe_contact === 'yes'
   const textOk = c.safe_contact === 'yes' || c.safe_contact === 'text_only'
   const hello = `Hello${c.reporter_name ? ' ' + c.reporter_name.split(' ')[0] : ''}, this is ${m.full_name}, a volunteer ${m.role === 'lawyer' ? 'lawyer' : 'with CaseWin Legal Aid'}. I have taken your request ${c.ref} about ${c.person_name}. This help is free — nobody should ask you for money. When can we talk?`
@@ -394,6 +404,71 @@ export default async function CasePage({ params, searchParams }: { params: { id:
             </section>
           )}
 
+          {works && open && (
+            <section id="diversion">
+              <Card>
+                <CardTitle sub="Mediation or a restorative route can end a matter faster and keep people out of custody.">Diversion</CardTitle>
+                <p className="mb-3 text-[13px] text-ink-600">
+                  {c.diversion_status
+                    ? `Now: ${c.diversion_status.replace(/_/g, ' ')}${c.diversion_route ? ` — ${c.diversion_route.replace(/_/g, ' ')}` : ''}`
+                    : ['family', 'land_housing', 'employment', 'other_civil'].includes(c.kind)
+                      ? 'Civil disputes like this one are often suitable for mediation (Multi-Door Courthouse or a Citizens’ Mediation Centre).'
+                      : (c.person_age ?? 99) < 18
+                        ? 'A child: consider a restorative route instead of prosecution.'
+                        : 'For a minor, first-time allegation, consider asking the prosecution about mediation or a plea bargain.'}
+                </p>
+                <form action={setDiversion} className="space-y-2">
+                  <input type="hidden" name="id" value={c.id} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select name="status" defaultValue={c.diversion_status ?? 'suitable'} className={input + ' !py-2 !text-[14px]'}>
+                      <option value="suitable">Suitable</option>
+                      <option value="referred">Referred</option>
+                      <option value="in_progress">In progress</option>
+                      <option value="completed">Completed</option>
+                      <option value="declined">Declined by a party</option>
+                      <option value="unsuitable">Not suitable</option>
+                    </select>
+                    <select name="route" defaultValue={c.diversion_route ?? ''} className={input + ' !py-2 !text-[14px]'}>
+                      <option value="">Route…</option>
+                      <option value="multi_door_courthouse">Multi-Door Courthouse</option>
+                      <option value="citizens_mediation_centre">Citizens’ Mediation Centre</option>
+                      <option value="community_mediation">Community / traditional mediation</option>
+                      <option value="restorative_meeting">Restorative meeting</option>
+                      <option value="plea_bargain">Plea bargain (ACJA s.270)</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <input name="note" defaultValue={c.diversion_note ?? ''} placeholder="Note (e.g. session on 4 Nov at the Owerri MDC)" className={input + ' !py-2 !text-[14px]'} />
+                  <button className={btn.secondary}>Save</button>
+                </form>
+              </Card>
+            </section>
+          )}
+
+          {works && (c.kind === 'detention' || c.kind === 'police_abuse') && (
+            <section id="rights">
+              <Card>
+                <CardTitle sub="Extortion, torture, detention past the limit… one record per incident, for the rights register.">Rights violations</CardTitle>
+                {(incidents ?? []).length > 0 && (
+                  <ul className="mb-4 divide-y divide-ink-200 border-y border-ink-200 text-[14px]">
+                    {(incidents ?? []).map((i, n) => (
+                      <li key={n} className="flex justify-between py-2">
+                        <span className="text-ink-900">{INCIDENT_LABELS[i.kind]}</span>
+                        <span className="text-[12px] text-ink-500">{i.verified ? 'verified' : 'reported'} · {date(i.created_at)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <details>
+                  <summary className="cursor-pointer text-[14px] font-medium text-ink-800">Record an incident on this case</summary>
+                  <div className="mt-4">
+                    <IncidentForm caseId={c.id} facility={c.facility} />
+                  </div>
+                </details>
+              </Card>
+            </section>
+          )}
+
           {works && (
             <Card>
               <CardTitle>Update the facts</CardTitle>
@@ -464,9 +539,65 @@ export default async function CasePage({ params, searchParams }: { params: { id:
             </Card>
           )}
 
+          {referredTo && !c.assigned_to && (
+            <Notice tone="info">Referred to {referredTo.name}{c.referred_at ? ` on ${date(c.referred_at)}` : ''}. Their coordinator assigns a member.</Notice>
+          )}
+          {suggestions && (
+            <Card>
+              <CardTitle sub="Ranked by state, practice area, language, current load and how quickly they usually act.">Suggested volunteers</CardTitle>
+              {suggestions.people.filter((p) => !coordinatorOnly || (team ?? []).some((t) => t.user_id === p.user_id)).length ? (
+                <ul className="divide-y divide-ink-200 border-y border-ink-200">
+                  {suggestions.people
+                    .filter((p) => !coordinatorOnly || (team ?? []).some((t) => t.user_id === p.user_id))
+                    .map((p) => (
+                      <li key={p.user_id} className="flex items-start justify-between gap-3 py-3">
+                        <span className="min-w-0 text-[14px]">
+                          <span className="block font-medium text-ink-950">
+                            {p.name}
+                            <span className="ml-1.5 font-normal text-ink-500">{p.role === 'lawyer' ? 'Lawyer' : p.role === 'paralegal' ? 'Paralegal' : 'Law student'}{p.org ? ` · ${p.org}` : ''}</span>
+                          </span>
+                          <span className="block text-[12px] text-ink-600">{p.reasons.join(' · ')}</span>
+                          <span className="block text-[12px] text-ink-500">{p.load}</span>
+                        </span>
+                        <form action={assignTo}>
+                          <input type="hidden" name="id" value={c.id} />
+                          <input type="hidden" name="member" value={p.user_id} />
+                          <button className={btn.secondary + ' !px-3 !py-1.5'}>Assign</button>
+                        </form>
+                      </li>
+                    ))}
+                </ul>
+              ) : (
+                <p className="text-[14px] text-ink-600">No volunteer covering {c.state} has room right now.</p>
+              )}
+              {m.isAdmin && suggestions.orgs.length > 0 && (
+                <div className="mt-5">
+                  <p className="mb-2 text-[13px] font-medium text-ink-700">Or refer to an organisation in {c.state}</p>
+                  <ul className="divide-y divide-ink-200 border-y border-ink-200">
+                    {suggestions.orgs.map((o) => (
+                      <li key={o.id} className="flex items-center justify-between gap-3 py-2.5 text-[14px]">
+                        <span>
+                          <span className="font-medium text-ink-950">{o.name}</span>
+                          <span className="block text-[12px] text-ink-500">
+                            {o.kind} · {o.members} members · {o.active} active cases
+                          </span>
+                        </span>
+                        <form action={referToOrg}>
+                          <input type="hidden" name="id" value={c.id} />
+                          <input type="hidden" name="org" value={o.id} />
+                          <button className={btn.ghost}>{c.referred_org === o.id ? 'Referred' : 'Refer'}</button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </Card>
+          )}
+
           {(m.isAdmin || m.role === 'coordinator') && (team ?? []).length > 0 && c.status !== 'resolved' && (
             <Card>
-              <CardTitle>Assign</CardTitle>
+              <CardTitle sub="Anyone not in the suggestions.">Assign someone else</CardTitle>
               <form action={assignTo} className="flex gap-2">
                 <input type="hidden" name="id" value={c.id} />
                 <select name="member" className={input} defaultValue="">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useFormState, useFormStatus } from 'react-dom'
 import { FACILITY_TYPES, STATES } from '@/lib/constants'
 import { Card, Field, Mono, Notice, btn, input } from '@/components/ui'
@@ -17,9 +17,119 @@ function Submit({ n }: { n: number }) {
 
 const small = input + ' !py-2 !text-sm'
 
+// Offline: every answer is kept on this phone as it is typed. A visit submitted without
+// signal is queued here and sent automatically when the phone is back online.
+const DRAFT = 'la.visit.draft'
+const QUEUE = 'la.visit.queue'
+const SENT = 'la.visit.sent'
+type Entries = [string, string][]
+type Created = { ref: string; pin: string; name: string }[]
+const read = <T,>(k: string, d: T): T => {
+  try {
+    return JSON.parse(localStorage.getItem(k) ?? '') as T
+  } catch {
+    return d
+  }
+}
+const write = (k: string, v: unknown) => {
+  try {
+    if (v == null) localStorage.removeItem(k)
+    else localStorage.setItem(k, JSON.stringify(v))
+  } catch {}
+}
+const entriesOf = (f: HTMLFormElement): Entries => [...new FormData(f).entries()].filter(([, v]) => typeof v === 'string') as Entries
+const toFormData = (e: Entries) => {
+  const fd = new FormData()
+  for (const [k, v] of e) fd.append(k, v)
+  return fd
+}
+
 export default function VisitForm({ defaultState }: { defaultState: string }) {
   const [res, action] = useFormState(recordVisit, undefined)
   const [rows, setRows] = useState(3)
+  const form = useRef<HTMLFormElement>(null)
+  const [online, setOnline] = useState(true)
+  const [queued, setQueued] = useState(0)
+  const [sent, setSent] = useState<Created>([])
+  const [restored, setRestored] = useState<Entries | null>(null)
+
+  // Restore a draft, show anything sent while away, and keep the page available offline.
+  useEffect(() => {
+    setOnline(navigator.onLine)
+    setQueued(read<Entries[]>(QUEUE, []).length)
+    setSent(read<Created>(SENT, []))
+    const d = read<Entries | null>(DRAFT, null)
+    if (d?.length) {
+      setRows(Math.max(3, d.filter(([k]) => k === 'person_name').length))
+      setRestored(d)
+    }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
+    const on = () => {
+      setOnline(true)
+      void flush()
+    }
+    const off = () => setOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    if (navigator.onLine) void flush()
+    return () => {
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
+    }
+  }, [])
+
+  // Put restored values back into the inputs once the rows exist.
+  useEffect(() => {
+    if (!restored || !form.current) return
+    const seen = new Map<string, number>()
+    for (const [k, v] of restored) {
+      const i = seen.get(k) ?? 0
+      seen.set(k, i + 1)
+      const el = form.current.querySelectorAll<HTMLInputElement | HTMLSelectElement>(`[name="${k}"]`)[i]
+      if (!el) continue
+      if (el instanceof HTMLInputElement && el.type === 'checkbox') el.checked = true
+      else el.value = v
+    }
+    setRestored(null)
+  }, [restored, rows])
+
+  async function flush() {
+    const q = read<Entries[]>(QUEUE, [])
+    if (!q.length) return
+    const left: Entries[] = []
+    const done: Created = read<Created>(SENT, [])
+    for (const e of q) {
+      try {
+        const r = await recordVisit(undefined, toFormData(e))
+        if (r?.created?.length) done.push(...r.created)
+        if (r?.error) left.push(e)
+      } catch {
+        left.push(e)
+      }
+    }
+    write(QUEUE, left.length ? left : null)
+    write(SENT, done.length ? done : null)
+    setQueued(left.length)
+    setSent(done)
+  }
+
+  function saveDraft() {
+    if (form.current) write(DRAFT, entriesOf(form.current))
+  }
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (navigator.onLine) {
+      write(DRAFT, null)
+      return
+    }
+    e.preventDefault()
+    const q = read<Entries[]>(QUEUE, [])
+    q.push(entriesOf(e.currentTarget))
+    write(QUEUE, q)
+    write(DRAFT, null)
+    setQueued(q.length)
+    e.currentTarget.reset()
+  }
 
   if (res?.created?.length && !res.error)
     return (
@@ -43,7 +153,37 @@ export default function VisitForm({ defaultState }: { defaultState: string }) {
     )
 
   return (
-    <form action={action} className="space-y-5">
+    <form ref={form} action={action} onSubmit={onSubmit} onInput={saveDraft} onChange={saveDraft} className="space-y-5">
+      <div className={online ? 'border-l-4 border-verdict-500 bg-verdict-50 px-4 py-2.5 text-[14px] text-ink-800' : 'border-l-4 border-amberline-500 bg-amberline-50 px-4 py-2.5 text-[14px] text-ink-800'}>
+        {online ? 'Online. ' : 'No signal — keep going. '}
+        Answers are saved on this phone as you type{online ? '.' : ', and visits you save now will be sent when you are back online.'}
+        {queued > 0 && <b> {queued} visit{queued === 1 ? '' : 's'} waiting to send.</b>}
+      </div>
+      {sent.length > 0 && (
+        <Card>
+          <p className="font-semibold text-ink-950">Sent while you were away — give each family their reference and PIN</p>
+          <ul className="mt-3 divide-y divide-ink-200 text-[14px]">
+            {sent.map((r) => (
+              <li key={r.ref} className="flex justify-between py-2">
+                <span>{r.name}</span>
+                <span>
+                  <Mono className="font-semibold">{r.ref}</Mono> · PIN <Mono className="font-semibold">{r.pin}</Mono>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => {
+              write(SENT, null)
+              setSent([])
+            }}
+            className={btn.secondary + ' mt-3'}
+          >
+            I have written these down
+          </button>
+        </Card>
+      )}
       <Card>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="State" required>

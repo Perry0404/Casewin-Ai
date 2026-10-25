@@ -6,6 +6,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { CASE_SELECT, type CaseRow } from '@/lib/cases'
 import { ROLES } from '@/lib/constants'
 import CaseList from '@/components/CaseList'
+import { ProviderTable } from '@/components/ClearingHouse'
+import { clearingHouse } from '@/lib/clearing'
 import { Badge, Card, CardTitle, Empty, PageHeader, btn } from '@/components/ui'
 
 export const metadata: Metadata = { title: 'Team' }
@@ -30,13 +32,29 @@ export default async function Team() {
   const m = await requireMember()
   if (m.role !== 'coordinator' || !m.org_id) redirect('/desk')
   const db = createAdminClient()
-  const [{ data: members }, { data: cases }] = await Promise.all([
+  const [{ data: members }, { data: cases }, { data: referred }, ch] = await Promise.all([
     db.from('la_members').select('user_id, full_name, role, state, status, phone').eq('org_id', m.org_id).order('status').order('full_name'),
     db.from('la_cases').select(CASE_SELECT).eq('assigned_org', m.org_id).in('status', ['assigned', 'in_progress']).limit(500),
+    db.from('la_cases').select(CASE_SELECT).eq('referred_org', m.org_id).eq('status', 'new').limit(200),
+    clearingHouse({ publicView: false }),
   ])
+  const mine = ch.providers.filter((p) => p.key === `org:${m.org_id}`)
   return (
     <>
-      <PageHeader eyebrow={m.org?.name} title="Your team" sub="Members who chose your organisation, and every open case they hold." />
+      <PageHeader eyebrow={m.org?.name} title="Your organisation" sub="Your record in the clearing house, cases referred to you, your members, and every open case they hold." />
+      <section className="mb-10">
+        <h2 className="mb-2 text-[16px] font-semibold text-ink-950">Your record in the clearing house</h2>
+        <ProviderTable providers={mine} />
+      </section>
+      {(referred ?? []).length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-[16px] font-semibold text-ink-950">Referred to you — assign a member</h2>
+          <p className="mb-3 mt-1 text-[13px] text-ink-600">Open a case and choose a member under Suggested volunteers.</p>
+          <Card pad={false}>
+            <CaseList cases={referred as CaseRow[]} />
+          </Card>
+        </section>
+      )}
       <div className="grid gap-6 lg:grid-cols-[1fr_1.6fr]">
         <Card pad={false}>
           <div className="p-5 pb-0 sm:p-6 sm:pb-0">

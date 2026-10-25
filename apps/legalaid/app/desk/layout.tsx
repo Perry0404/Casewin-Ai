@@ -8,10 +8,15 @@ export default async function DeskLayout({ children }: { children: React.ReactNo
   const tabs: [string, string][] = [
     ['/desk', 'My cases'],
     ['/desk/board', 'Case board'],
+    ['/desk/interventions', 'Interventions'],
+    ['/desk/custody', 'Custody clock'],
+    ['/desk/command', 'Command'],
+    ['/desk/clearing-house', 'Clearing house'],
+    ['/desk/incidents', 'Rights register'],
     ['/desk/visit', 'Record a visit'],
     ['/desk/record', 'My record'],
   ]
-  if (m.role === 'coordinator' && m.org_id) tabs.splice(2, 0, ['/desk/team', 'Team'])
+  if (m.role === 'coordinator' && m.org_id) tabs.splice(2, 0, ['/desk/team', 'Organisation'])
   if (m.isAdmin) tabs.push(['/admin', 'Admin'])
   return (
     <div className="min-h-screen bg-white">
