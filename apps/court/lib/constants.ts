@@ -74,4 +74,5 @@ export function label<T extends readonly { value: string; label: string }[]>(lis
 }
 
 export const OPENLEGAL_URL = process.env.NEXT_PUBLIC_OPENLEGAL_URL || 'https://openlegal.casewinai.com'
+export const LEGALAID_URL = process.env.NEXT_PUBLIC_LEGALAID_URL || 'https://legalaid.casewinai.com'
 export const CASEWIN_URL = process.env.NEXT_PUBLIC_CASEWIN_URL || 'https://casewinai.com'

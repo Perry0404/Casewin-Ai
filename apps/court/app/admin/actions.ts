@@ -224,5 +224,39 @@ export async function setRequestStatus(form: FormData) {
   const status = str(form, 'status')
   if (!['new', 'contacted', 'onboarded', 'declined'].includes(status)) return
   await createAdminClient().from('court_requests').update({ status }).eq('id', str(form, 'id'))
-  revalidatePath('/admin')
+  revalidatePath('/admin/courts')
+}
+
+// ── CaseWin Legal Aid: volunteers and organisations ─────────────────────────
+
+export async function reviewVolunteer(form: FormData) {
+  await requirePlatformAdmin()
+  const decision = str(form, 'decision')
+  const note = str(form, 'note', 500)
+  if (decision !== 'approved' && !note) redirect('/admin/legal-aid?error=note')
+  const status = ['approved', 'rejected', 'suspended'].includes(decision) ? decision : 'rejected'
+  await createAdminClient()
+    .from('la_members')
+    .update({ status, reviewer_note: note || null, approved_at: status === 'approved' ? new Date().toISOString() : null })
+    .eq('user_id', str(form, 'user_id'))
+  revalidatePath('/admin/legal-aid')
+}
+
+export async function reviewLegalAidOrg(form: FormData) {
+  await requirePlatformAdmin()
+  const decision = str(form, 'decision')
+  const note = str(form, 'note', 500)
+  if (decision !== 'approved' && !note) redirect('/admin/legal-aid?error=note')
+  const status = decision === 'approved' ? 'approved' : decision === 'suspended' ? 'suspended' : 'rejected'
+  const db = createAdminClient()
+  const { data: org } = await db
+    .from('la_organisations')
+    .update({ status, reviewer_note: note || null, approved_at: status === 'approved' ? new Date().toISOString() : null })
+    .eq('id', str(form, 'id'))
+    .select('created_by')
+    .single()
+  // Whoever registered the organisation is its coordinator, and stands or falls with it.
+  if (org?.created_by)
+    await db.from('la_members').update({ status, approved_at: status === 'approved' ? new Date().toISOString() : null }).eq('user_id', org.created_by).eq('role', 'coordinator')
+  revalidatePath('/admin/legal-aid')
 }

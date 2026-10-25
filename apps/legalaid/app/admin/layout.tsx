@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { requireAdmin } from '@/lib/auth'
 import { Logo } from '@/components/ui'
+import { COURT_URL } from '@/lib/constants'
 import SignOutButton from '@/components/SignOutButton'
 
 export const dynamic = 'force-dynamic'
@@ -21,11 +22,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
           <nav className="flex items-center gap-1 text-sm">
             <Link href="/admin" className="rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
-              Overview
+              Cases
             </Link>
             <Link href="/admin/cases" className="rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
               All cases
             </Link>
+            <a href={`${COURT_URL}/admin`} className="rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
+              Justice admin ↗
+            </a>
             <Link href="/desk" className="rounded-lg px-3 py-2 text-brass-200 hover:bg-white/5 hover:text-white">
               Desk →
             </Link>

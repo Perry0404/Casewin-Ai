@@ -23,11 +23,17 @@ export async function pdfLines(data) {
       if (!it.str?.trim()) continue
       const y = Math.round(it.transform[5] / 2) * 2
       if (!rows.has(y)) rows.set(y, [])
-      rows.get(y).push({ x: it.transform[4], s: it.str })
+      rows.get(y).push({ x: it.transform[4], w: it.width ?? 0, s: it.str })
     }
     for (const y of [...rows.keys()].sort((a, b) => b - a)) {
       const row = rows.get(y).sort((a, b) => a.x - b.x)
-      const join = (rs) => rs.map((r) => r.s).join(' ').replace(/\s+/g, ' ').trim()
+      // Join by position: pieces that touch are one word ("S"+"u"+"b" → "Sub"), a real gap is a space.
+      const join = (rs) =>
+        rs
+          .map((r, k) => (k && r.x - (rs[k - 1].x + rs[k - 1].w) < 0.8 && !/\s$/.test(rs[k - 1].s) && !/^\s/.test(r.s) ? '' : ' ') + r.s)
+          .join('')
+          .replace(/\s+/g, ' ')
+          .trim()
       const main = join(row.filter((r) => r.x < marginX))
       const note = join(row.filter((r) => r.x >= marginX))
       if (main) out.push(main)
@@ -40,18 +46,66 @@ export async function pdfLines(data) {
 export const titleCase = (s) => s.toLowerCase().replace(/(^|[\s(\-/])([a-z])/g, (m, pre, ch) => pre + ch.toUpperCase()).replace(/\b(And|Of|The|For|To|In|On|By|With|An|A)\b/g, (m, w, i) => (i === 0 ? m : m.toLowerCase()))
 
 export function parse(lines, strip) {
-  const clean = lines.filter((l) => {
+  const kept = lines.filter((l) => {
     const t = l.replace(MARGIN, '')
     return !(strip && strip.test(t)) && !/^\d{1,4}$/.test(t) && !/^Page \d+( of \d+)?$/i.test(t)
   })
-  // The table of contents repeats every heading; the body starts at the "1." whose next lines are not "2.".
-  const ones = clean.map((l, i) => (/^1\.\s+\S/.test(l) ? i : -1)).filter((i) => i >= 0)
-  const start = ones.find((i) => !clean.slice(i + 1, i + 7).some((l) => /^2\.\s/.test(l))) ?? ones[0] ?? 0
+  // Some PDFs have no margin column: long lines simply run past 72% of the page,
+  // and the "notes" are the ends of sentences ("of the", "‐"). When most notes
+  // look like that, glue every note back onto the line it came from.
+  const noteTexts = kept.filter((l) => l.startsWith(MARGIN)).map((l) => l.slice(1).trim())
+  // Measured: run-on PDFs have ~90% of notes starting lowercase; real margin headings 33–46%.
+  const fragments = noteTexts.filter((t) => /^[a-z‐\-–,;.)]/.test(t)).length
+  const marginIsColumn = noteTexts.length < 5 || fragments / noteTexts.length < 0.75
+  const clean = marginIsColumn
+    ? kept
+    : kept.reduce((acc, l) => {
+        if (l.startsWith(MARGIN) && acc.length) acc[acc.length - 1] = `${acc[acc.length - 1]} ${l.slice(1).trim()}`.replace(/\s*‐\s*$/, '‐')
+        else acc.push(l)
+        return acc
+      }, [])
+  // The table of contents repeats every heading as an unbroken run of numbered lines
+  // (a few lines apart at most, even when headings wrap or part titles intervene).
+  // If the first "1." opens such a run, the body starts at the first "1." after it.
+  const ones = clean.map((l, i) => (/^1\.\s*\S/.test(l) ? i : -1)).filter((i) => i >= 0)
+  const isNumbered = (l) => /^\d{1,3}[A-Z]?\.\s*\S/.test(l)
+  let tocEnd = ones[0] ?? 0
+  let tocCount = 1
+  for (let i = tocEnd + 1; i < clean.length && i - tocEnd <= 6; i++) {
+    if (isNumbered(clean[i])) {
+      tocEnd = i
+      tocCount++
+    }
+  }
+  const start = tocCount >= 6 ? ones.find((i) => i > tocEnd) ?? ones[0] ?? 0 : ones[0] ?? 0
   // Chapter/part headings that come just before section 1 belong to it.
   let back = start
   while (back > 0 && /^(CHAPTER|PART)\b/.test(clean[back - 2] ?? '') && back - start > -6) back -= 2
 
+  // Best source of headings: the arrangement of sections before the body
+  // ("14. Demand for information regarding registration"), where wrapped
+  // headings continue on the next line(s).
+  const toc = new Map()
+  let lastNum = null
+  for (const raw of clean.slice(0, start)) {
+    if (raw.startsWith(MARGIN)) continue
+    const m = raw.match(/^(\d{1,3}[A-Z]?)\.\s*(.+)$/)
+    if (m) {
+      lastNum = m[1]
+      toc.set(m[1], m[2].trim())
+    } else if (lastNum && !/^(PART|CHAPTER|SCHEDULE|ARRANGEMENT|SECTIONS?$)/i.test(raw) && raw.length < 90 && /^[a-z(]|^[A-Z][a-z]/.test(raw)) {
+      toc.set(lastNum, `${toc.get(lastNum)} ${raw}`.trim())
+    } else lastNum = null
+  }
+  const same = (a, b) => {
+    const n = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
+    const [x, y] = [n(a), n(b)]
+    return x.length > 3 && y.length > 3 && (x === y || x.startsWith(y.slice(0, 24)) || y.startsWith(x.slice(0, 24)))
+  }
+  const tocHeadings = [...toc.values()].map((h) => h.replace(/\.$/, ''))
+
   const sections = []
+  let renumbered = 0
   let chapter = null
   let part = null
   let current = null
@@ -88,44 +142,39 @@ export function parse(lines, strip) {
       continue
     }
     // "100. Heading" — some PDFs drop the space ("100.Heading"), so allow none before a capital.
-    const sec = !inSchedules && line.match(/^(\d{1,3}[A-Z]?)\.(?:\s+(.{2,200})|([A-Z(].{1,200}))$/)
+    const m = line.match(/^(\d{1,3}[A-Z]?)\.(?:\s+(.{2,200})|([A-Z(].{1,200}))$/)
+    // Some sources print a schedule mid-Act (CITA's Third Schedule after s.24): the next
+    // expected section, with its heading in the arrangement, ends the schedule.
+    if (inSchedules && m && parseInt(m[1], 10) === expected && tocHeadings.some((h) => same((m[2] ?? m[3]).replace(/\.$/, ''), h))) inSchedules = false
+    const sec = !inSchedules && m
     const num = sec ? parseInt(sec[1], 10) : NaN
     const text = sec ? (sec[2] ?? sec[3]) : ''
     // "1. (1) The Commission…" is a section starting with its first subsection —
     // accepted only for exactly the next expected number, to avoid list items.
-    if (sec && num >= expected && num <= expected + 3 && (!/^\(/.test(text) || num === expected)) {
-      if (num !== expected) outOfOrder++
+    // A section the source misnumbered ("1. Privilege of law officers" where 6 is due) is
+    // recognised by its heading appearing in the arrangement, and takes the expected number.
+    // "16A." — a section inserted by amendment after 16.
+    const inserted = sec && /[A-Z]$/.test(sec[1]) && num === expected - 1 && !sections.some((s) => s.number === sec[1])
+    const misnumbered = sec && !inserted && sections.length > 0 && (num < expected || num > expected + 3) && tocHeadings.some((h) => same(text.replace(/\.$/, ''), h))
+    if (sec && ((num >= expected && num <= expected + 3 && (!/^\(/.test(text) || num === expected)) || inserted || misnumbered)) {
+      if (misnumbered) renumbered++
+      else if (num !== expected && !inserted) outOfOrder++
+      const number = misnumbered ? String(expected) : sec[1]
       const rest = text.trim()
-      const isHeading = !/^\(/.test(rest) && rest.length <= 140 && !/[;,]$/.test(rest) && !/^(The|A|An|Any|Every|Where|If|Subject|Notwithstanding|In)\b.*\b(shall|may|is|are)\b/.test(rest)
-      current = { part: label(), number: sec[1], heading: isHeading ? rest.replace(/\.$/, '') : null, start: i, body: isHeading ? [] : [rest] }
+      const isHeading = !/^\(/.test(rest) && rest.length <= 140 && !/[;,—–-]$/.test(rest) && !/^(The|A|An|Any|Every|Where|If|Subject|Notwithstanding|In)\b.*\b(shall|may|is|are)\b/.test(rest)
+      current = { part: label(), number, heading: isHeading ? rest.replace(/\.$/, '') : null, start: i, body: isHeading ? [] : [rest] }
       sections.push(current)
-      expected = num + 1
+      expected = (misnumbered ? expected : num) + 1
       continue
     }
     if (current) current.body.push(line)
   }
 
-  // Best source of headings: the arrangement of sections before the body
-  // ("14. Demand for information regarding registration"), where wrapped
-  // headings continue on the next line(s).
-  const toc = new Map()
-  let lastNum = null
-  for (const raw of clean.slice(0, start)) {
-    if (raw.startsWith(MARGIN)) continue
-    const m = raw.match(/^(\d{1,3}[A-Z]?)\.\s*(.+)$/)
-    if (m) {
-      lastNum = m[1]
-      toc.set(m[1], m[2].trim())
-    } else if (lastNum && !/^(PART|CHAPTER|SCHEDULE|ARRANGEMENT|SECTIONS?$)/i.test(raw) && raw.length < 90 && /^[a-z(]|^[A-Z][a-z]/.test(raw)) {
-      toc.set(lastNum, `${toc.get(lastNum)} ${raw}`.trim())
-    } else lastNum = null
-  }
-  const tocUsable = toc.size >= Math.min(10, sections.length * 0.5)
-  const same = (a, b) => {
-    const n = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
-    const [x, y] = [n(a), n(b)]
-    return x === y || x.startsWith(y.slice(0, 24)) || y.startsWith(x.slice(0, 24))
-  }
+  // Use the arrangement only if it agrees with the body where both give a heading —
+  // some sources number their arrangement wrongly (two "1."s shift every heading).
+  const withBoth = sections.filter((s) => s.heading && toc.has(s.number))
+  const agree = withBoth.filter((s) => same(s.heading, toc.get(s.number))).length
+  const tocUsable = toc.size >= Math.min(10, sections.length * 0.5) && (withBoth.length < 5 || agree / withBoth.length >= 0.6)
   if (tocUsable) {
     for (const s of sections) {
       const h = toc.get(s.number)?.replace(/\.$/, '')
@@ -168,6 +217,8 @@ export function parse(lines, strip) {
       }, [])
       .join('\n')
       .replace(/(\w)- (\w)/g, '$1$2')
+      // PLAC's PDFs print hyphens as " ‐ " (U+2010). Kept as hyphens: "two-thirds" matters more than the odd "con-stitution".
+      .replace(/(\w) ?‐ ?(\w)/g, '$1-$2')
       // PDF kerning artifacts: "Act ," → "Act,", "V oters" → "Voters" (never touches "A" or "I").
       .replace(/ ([,;:.)])/g, '$1')
       .replace(/\b([B-HJ-Z]) ([a-z]{2,})/g, '$1$2')
@@ -175,5 +226,8 @@ export function parse(lines, strip) {
 
   const out = sections.map((s, i) => ({ ...s, position: i + 1, body: reflow(s.body) })).filter((s) => s.body)
   const numbered = out.filter((s) => /^\d/.test(s.number))
-  return { sections: out, quality: { sections: numbered.length, outOfOrder, ok: numbered.length >= 3 && outOfOrder <= Math.max(2, numbered.length * 0.05) } }
+  return {
+    sections: out,
+    quality: { sections: numbered.length, outOfOrder, renumbered, ok: numbered.length >= 3 && outOfOrder <= Math.max(2, numbered.length * 0.05) && renumbered <= Math.max(2, numbered.length * 0.2) },
+  }
 }

@@ -1,136 +1,128 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import { createAdminClient } from '@/lib/supabase/server'
-import { computeAnalytics } from '@/lib/analytics'
+import { LEGALAID_URL, OPENLEGAL_URL } from '@/lib/constants'
 import { relative } from '@/lib/format'
-import AnalyticsDashboard from '@/components/AnalyticsDashboard'
-import { Badge, Card, CardTitle, Empty, PageHeader, Stat, btn } from '@/components/ui'
-import { setRequestStatus } from './actions'
+import { Card, PageHeader, cx } from '@/components/ui'
 
-export const metadata: Metadata = { title: 'Platform admin' }
+export const metadata: Metadata = { title: 'Justice admin' }
 
-const REQUEST_TONE = { new: 'warn', contacted: 'info', onboarded: 'good', declined: 'neutral' } as const
-
-export default async function AdminHome() {
+// One inbox for everything waiting on a platform administrator, across the three products.
+export default async function Inbox() {
   const db = createAdminClient()
-  const since90 = new Date(Date.now() - 90 * 86400000).toISOString()
-  const [{ data: courts }, { data: requests }, staff, filings, published, analytics] = await Promise.all([
-    db.from('courts').select('id, name, state, status, created_at').order('created_at'),
-    db.from('court_requests').select('*').order('created_at', { ascending: false }).limit(20),
-    db.from('court_staff').select('court_id, is_active'),
-    db.from('filings').select('court_id').gte('created_at', since90),
-    db.from('judgments').select('id', { count: 'exact', head: true }).eq('status', 'published'),
-    computeAnalytics(db, null),
+  const now = new Date().toISOString()
+  const count = (q: PromiseLike<{ count: number | null }>) => Promise.resolve(q).then((r) => r.count ?? 0)
+  const [
+    registrations,
+    requests,
+    courts,
+    volunteers,
+    orgs,
+    waiting,
+    overdue,
+    unverified,
+    released,
+    submissions,
+    statutes,
+    { data: recentRegs },
+    { data: recentVols },
+    { data: recentSubs },
+  ] = await Promise.all([
+    count(db.from('registrations').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+    count(db.from('court_requests').select('id', { count: 'exact', head: true }).eq('status', 'new')),
+    count(db.from('courts').select('id', { count: 'exact', head: true })),
+    count(db.from('la_members').select('user_id', { count: 'exact', head: true }).eq('status', 'pending').neq('role', 'coordinator')),
+    count(db.from('la_organisations').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+    count(db.from('la_cases').select('id', { count: 'exact', head: true }).eq('status', 'new')),
+    count(db.from('la_cases').select('id', { count: 'exact', head: true }).eq('status', 'assigned').is('first_action_at', null).lt('first_action_due', now)),
+    count(db.from('la_cases').select('id', { count: 'exact', head: true }).is('verified_at', null).not('status', 'in', '(spam,closed)')),
+    count(db.from('la_cases').select('id', { count: 'exact', head: true }).in('outcome', ['released_bail', 'released_unconditional', 'charges_struck_out', 'discharged', 'acquitted'])),
+    count(db.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+    count(db.from('laws').select('id', { count: 'exact', head: true }).eq('needs_review', true)),
+    db.from('registrations').select('id, full_name, kind, created_at').eq('status', 'pending').order('created_at').limit(4),
+    db.from('la_members').select('user_id, full_name, role, created_at').eq('status', 'pending').order('created_at').limit(4),
+    db.from('submissions').select('id, title, created_at').eq('status', 'pending').order('created_at').limit(4),
   ])
-
-  const staffBy = new Map<string, number>()
-  for (const s of staff.data ?? []) if (s.is_active) staffBy.set(s.court_id, (staffBy.get(s.court_id) ?? 0) + 1)
-  const filingsBy = new Map<string, number>()
-  for (const f of filings.data ?? []) filingsBy.set(f.court_id, (filingsBy.get(f.court_id) ?? 0) + 1)
-  const newRequests = (requests ?? []).filter((r) => r.status === 'new').length
+  const total = registrations + requests + volunteers + orgs + overdue + submissions
 
   return (
     <>
       <PageHeader
-        eyebrow="CaseWin Court · platform"
-        title="Courts on the network"
-        actions={
-          <Link href="/admin/courts/new" className={btn.primary}>
-            Onboard a court
-          </Link>
-        }
+        eyebrow="CaseWin justice infrastructure"
+        title={total ? `${total} ${total === 1 ? 'thing needs' : 'things need'} you` : 'All clear'}
+        sub="Everything waiting on a platform administrator across CaseWin Court, CaseWin Legal Aid and OpenLegal Nigeria. Oldest first in each list."
       />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Courts" value={courts?.length ?? 0} hint={`${(courts ?? []).filter((c) => c.status === 'active').length} live · ${(courts ?? []).filter((c) => c.status === 'pilot').length} in pilot`} />
-        <Stat label="Court officers with logins" value={(staff.data ?? []).filter((s) => s.is_active).length} />
-        <Stat label="E-filings · 90 days" value={(filings.data ?? []).length.toLocaleString()} />
-        <Stat label="Judgments on OpenLegal" value={(published.count ?? 0).toLocaleString()} />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Product name="CaseWin Court" host="court.casewinai.com" accent="bg-brass-400">
+          <Row label="E-filer & staff registrations" n={registrations} href="/admin/registrations" urgent />
+          <Row label="Courts asking to join" n={requests} href="/admin/courts" urgent />
+          <Row label="Courts on the network" n={courts} href="/admin/courts" />
+          <Recent items={(recentRegs ?? []).map((r) => [r.full_name, r.kind === 'filer' ? 'e-filer' : 'court staff', r.created_at, '/admin/registrations'])} />
+        </Product>
+        <Product name="CaseWin Legal Aid" host="legalaid.casewinai.com" accent="bg-verdict-500">
+          <Row label="Volunteers to verify" n={volunteers} href="/admin/legal-aid" urgent />
+          <Row label="Organisations to verify" n={orgs} href="/admin/legal-aid" urgent />
+          <Row label="Claims with no action in 48 h" n={overdue} href={`${LEGALAID_URL}/admin`} urgent external />
+          <Row label="People waiting for a volunteer" n={waiting} href={`${LEGALAID_URL}/desk/board`} external />
+          <Row label="Reports not yet verified" n={unverified} href={`${LEGALAID_URL}/admin/cases`} external />
+          <Row label="People released so far" n={released} href={`${LEGALAID_URL}/impact`} external />
+          <Recent items={(recentVols ?? []).map((v) => [v.full_name, v.role.replace('_', ' '), v.created_at, '/admin/legal-aid'])} />
+        </Product>
+        <Product name="OpenLegal Nigeria" host="openlegal.casewinai.com" accent="bg-[#3B5B9A]">
+          <Row label="Contributed judgments to check" n={submissions} href="/admin/submissions" urgent />
+          <Row label="Statutes held for review" n={statutes} href="/admin/laws" />
+          <Row label="Open the public site" n={null} href={OPENLEGAL_URL} external />
+          <Recent items={(recentSubs ?? []).map((s) => [s.title, 'submission', s.created_at, `/admin/submissions/${s.id}`])} />
+        </Product>
       </div>
-
-      <div className="mt-8 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Card pad={false}>
-          <div className="p-5 pb-0 sm:p-6 sm:pb-0">
-            <CardTitle>Courts</CardTitle>
-          </div>
-          {courts?.length ? (
-            <table className="w-full text-left text-sm">
-              <thead className="border-y border-ink-100 bg-parchment/60 text-xs uppercase tracking-wider text-ink-400">
-                <tr>
-                  <th className="px-6 py-3 font-medium">Court</th>
-                  <th className="px-6 py-3 font-medium">Officers</th>
-                  <th className="hidden px-6 py-3 font-medium sm:table-cell">E-filings · 90d</th>
-                  <th className="px-6 py-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ink-100">
-                {courts.map((c) => (
-                  <tr key={c.id} className="relative hover:bg-parchment/50">
-                    <td className="px-6 py-3.5">
-                      <Link href={`/admin/courts/${c.id}`} className="font-medium text-ink-900 after:absolute after:inset-0">
-                        {c.name}
-                      </Link>
-                      <span className="block text-xs text-ink-400">{c.state} State</span>
-                    </td>
-                    <td className="px-6 py-3.5 tabular-nums text-ink-600">{staffBy.get(c.id) ?? 0}</td>
-                    <td className="hidden px-6 py-3.5 tabular-nums text-ink-600 sm:table-cell">{filingsBy.get(c.id) ?? 0}</td>
-                    <td className="px-6 py-3.5">
-                      <Badge tone={c.status === 'active' ? 'good' : c.status === 'pilot' ? 'info' : 'bad'}>{c.status}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="p-6">
-              <Empty title="No courts yet" />
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <CardTitle sub={newRequests ? `${newRequests} new` : 'From court.casewinai.com/onboard'}>Onboarding requests</CardTitle>
-          {requests?.length ? (
-            <ul className="divide-y divide-ink-100">
-              {requests.map((r) => (
-                <li key={r.id} className="py-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-ink-900">{r.court_name}</p>
-                      <p className="text-xs text-ink-400">
-                        {r.contact_name}
-                        {r.contact_role && `, ${r.contact_role}`} · {relative(r.created_at)}
-                      </p>
-                      <p className="mt-0.5 text-xs text-ink-500">
-                        <a href={`mailto:${r.contact_email}`} className="underline">
-                          {r.contact_email}
-                        </a>
-                        {r.contact_phone && ` · ${r.contact_phone}`}
-                      </p>
-                      {r.message && <p className="mt-1.5 text-sm text-ink-600">{r.message}</p>}
-                    </div>
-                    <Badge tone={REQUEST_TONE[r.status as keyof typeof REQUEST_TONE]}>{r.status}</Badge>
-                  </div>
-                  <form action={setRequestStatus} className="mt-2 flex gap-1">
-                    <input type="hidden" name="id" value={r.id} />
-                    {(['contacted', 'onboarded', 'declined'] as const)
-                      .filter((s) => s !== r.status)
-                      .map((s) => (
-                        <button key={s} name="status" value={s} className="rounded-md px-2 py-1 text-xs text-ink-500 hover:bg-ink-50 hover:text-ink-900">
-                          Mark {s}
-                        </button>
-                      ))}
-                  </form>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-ink-400">No requests yet.</p>
-          )}
-        </Card>
-      </div>
-
-      <h2 className="mb-4 mt-12 font-display text-2xl font-semibold text-ink-900">Network analytics — all courts</h2>
-      <AnalyticsDashboard a={analytics} />
     </>
+  )
+}
+
+function Product({ name, host, accent, children }: { name: string; host: string; accent: string; children: ReactNode }) {
+  return (
+    <Card pad={false} className="overflow-hidden">
+      <div className={cx('h-1', accent)} />
+      <div className="p-5 pb-3 sm:p-6 sm:pb-3">
+        <p className="font-display text-xl font-semibold text-ink-900">{name}</p>
+        <p className="font-mono text-xs text-ink-400">{host}</p>
+      </div>
+      <ul className="divide-y divide-ink-100 border-t border-ink-100">{children}</ul>
+    </Card>
+  )
+}
+
+function Row({ label, n, href, urgent = false, external = false }: { label: string; n: number | null; href: string; urgent?: boolean; external?: boolean }) {
+  const hot = urgent && (n ?? 0) > 0
+  const inner = (
+    <>
+      <span className="text-sm text-ink-700">
+        {label}
+        {external && <span className="ml-1 text-ink-300">↗</span>}
+      </span>
+      {n != null && (
+        <span className={cx('min-w-[2rem] rounded-full px-2 py-0.5 text-center text-sm font-semibold tabular-nums', hot ? 'bg-brass-400 text-ink-950' : 'text-ink-400')}>{n.toLocaleString()}</span>
+      )}
+    </>
+  )
+  const cls = 'flex items-center justify-between gap-3 px-5 py-3 transition hover:bg-parchment/60 sm:px-6'
+  return <li>{external ? <a href={href} className={cls}>{inner}</a> : <Link href={href} className={cls}>{inner}</Link>}</li>
+}
+
+function Recent({ items }: { items: [string, string, string, string][] }) {
+  if (!items.length) return null
+  return (
+    <li className="bg-parchment/40 px-5 py-3 sm:px-6">
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-400">Waiting longest</p>
+      {items.map(([t, k, at, href]) => (
+        <Link key={href + t} href={href} className="flex justify-between gap-3 py-1 text-[13px] hover:text-ink-900">
+          <span className="truncate text-ink-700">
+            {t} <span className="text-ink-400">· {k}</span>
+          </span>
+          <span className="shrink-0 text-ink-400">{relative(at)}</span>
+        </Link>
+      ))}
+    </li>
   )
 }

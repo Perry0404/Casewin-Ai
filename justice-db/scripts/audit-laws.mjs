@@ -4,7 +4,7 @@
 //   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node justice-db/scripts/audit-laws.mjs [--prefix=plac:pdf:] [--dry]
 //
 // Faults detected:
-//   shifted  — a section's body opens with the previous section's heading (headings off by one)
+//   shifted  — section bodies repeatedly open with the previous section's heading (headings off by one)
 //   swallowed — a section body far longer than a section can be (later sections merged into it)
 //   truncated — a body cut at the 60,000-character storage limit
 
@@ -20,10 +20,13 @@ for (const law of laws ?? []) {
   const { data: secs } = await db.from('law_sections').select('number, heading, body').eq('law_id', law.id).order('position')
   const main = (secs ?? []).filter((s) => !/^Sch/.test(s.number))
   const faults = new Set()
+  // A body may legitimately open with words from the previous heading; only a pattern means a shift.
+  let shifts = 0
   for (let i = 1; i < main.length; i++) {
     const prev = norm(main[i - 1].heading)
-    if (prev.length > 6 && norm(main[i].body).startsWith(prev)) faults.add('shifted')
+    if (prev.length > 6 && norm(main[i].body).startsWith(prev)) shifts++
   }
+  if (shifts >= Math.max(3, main.length * 0.03)) faults.add('shifted')
   for (const s of main) if (s.body.length > 15000) faults.add('swallowed')
   // A cut-off schedule of forms is tolerable; a cut-off schedule that *is* the law (Criminal Code) is not.
   for (const s of secs ?? []) if (s.body.length >= 60000 && (!/^Sch/.test(s.number) || main.length < 20)) faults.add('truncated')
