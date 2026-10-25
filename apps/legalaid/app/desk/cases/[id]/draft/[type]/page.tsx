@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { canWork, logEvent, requireMember } from '@/lib/auth'
+import { notFound, redirect } from 'next/navigation'
+import { canWork, logEvent, needsSupervisor, requireMember } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { date } from '@/lib/format'
 import { assess } from '@/lib/triage'
@@ -17,6 +17,11 @@ export default async function Draft({ params }: { params: { id: string; type: st
   const m = await requireMember()
   const { data: c } = await createAdminClient().from('la_cases').select('*').eq('id', params.id).maybeSingle()
   if (!c || !canWork(m, c) || !['bail', 'frep', 'letter'].includes(params.type)) notFound()
+  const { data: holder } = c.assigned_to ? await createAdminClient().from('la_members').select('role').eq('user_id', c.assigned_to).maybeSingle() : { data: null }
+  if (needsSupervisor(holder ?? { role: 'lawyer' }, c)) redirect(`/desk/cases/${c.id}?error=supervise`)
+  // Drafts are signed by counsel: the volunteer if a lawyer, otherwise the supervising lawyer.
+  const { data: sup } = m.role !== 'lawyer' && c.supervisor_id ? await createAdminClient().from('la_members').select('full_name, enrolment_number, phone').eq('user_id', c.supervisor_id).maybeSingle() : { data: null }
+  const counsel = sup ?? { full_name: m.full_name, enrolment_number: m.enrolment_number, phone: m.phone }
   const a = assess(c)
   const he = c.person_sex === 'female' ? 'she' : c.person_sex === 'male' ? 'he' : 'they'
   const his = c.person_sex === 'female' ? 'her' : c.person_sex === 'male' ? 'his' : 'their'
@@ -90,10 +95,10 @@ export default async function Draft({ params }: { params: { id: string; type: st
               Yours faithfully,
               <br />
               <br />
-              {m.full_name}
-              {m.enrolment_number && <>, {m.enrolment_number}</>}
+              {counsel.full_name}
+              {counsel.enrolment_number && <>, {counsel.enrolment_number}</>}
               <br />
-              {m.phone}
+              {counsel.phone}
             </p>
           </>
         ) : (
@@ -159,12 +164,12 @@ export default async function Draft({ params }: { params: { id: string; type: st
               Dated this ___ day of __________ 20__
               <br />
               <br />
-              {m.full_name}
-              {m.enrolment_number && <> ({m.enrolment_number})</>}
+              {counsel.full_name}
+              {counsel.enrolment_number && <> ({counsel.enrolment_number})</>}
               <br />
               Counsel to the {params.type === 'frep' ? 'Applicant' : 'Defendant/Applicant'}, acting pro bono
               <br />
-              {m.phone}
+              {counsel.phone}
             </p>
           </>
         )}

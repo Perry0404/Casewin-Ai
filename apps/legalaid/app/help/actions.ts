@@ -3,9 +3,10 @@
 import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/server'
-import { FACILITY_TYPES, KINDS, STATES } from '@/lib/constants'
+import { FACILITY_TYPES, INCOME_BANDS, KINDS, SAFE_CONTACT, STATES, VULNERABLE } from '@/lib/constants'
 import { hashIp, hashPin, newPin, newRef, validPhone } from '@/lib/cases'
 import { getUser, logEvent } from '@/lib/auth'
+import { alertNewCase } from '@/lib/notify'
 
 const str = (f: FormData, k: string, n = 200) => String(f.get(k) ?? '').trim().slice(0, n)
 const day = (f: FormData, k: string) => {
@@ -30,6 +31,9 @@ export async function submitReport(_: ReportState, f: FormData): Promise<ReportS
   if (!validPhone(reporterPhone)) return { error: 'Give a phone number we can reach you on, e.g. 0803 123 4567.' }
   if (story.length < 30) return { error: 'Tell us a little more about what happened (a few sentences).' }
   if (f.get('consent') !== 'on') return { error: 'Please confirm the consent box so a volunteer can use these details.' }
+  const safeContact = SAFE_CONTACT[str(f, 'safe_contact', 20)] ? str(f, 'safe_contact', 20) : 'yes'
+  const safeNote = str(f, 'safe_contact_note', 300)
+  if ((safeContact === 'no_calls' || safeContact === 'other_way') && safeNote.length < 5) return { error: 'Tell us how and when we can reach you safely.' }
 
   const ip = (headers().get('x-forwarded-for') ?? '').split(',')[0]!.trim() || 'unknown'
   const ipHash = hashIp(ip)
@@ -72,6 +76,11 @@ export async function submitReport(_: ReportState, f: FormData): Promise<ReportS
         story,
         has_lawyer: f.get('has_lawyer') === 'yes',
         can_pay: f.get('can_pay') === 'yes',
+        safe_contact: safeContact,
+        safe_contact_note: safeNote || null,
+        income_band: INCOME_BANDS[str(f, 'income_band', 20)] ? str(f, 'income_band', 20) : null,
+        vulnerable: f.getAll('vulnerable').map(String).filter((v) => VULNERABLE[v]),
+        form_language: str(f, 'form_language', 5) || 'en',
         consent_at: new Date().toISOString(),
         pin_hash: hashPin(ref, pin),
         ip_hash: ipHash,
@@ -86,6 +95,7 @@ export async function submitReport(_: ReportState, f: FormData): Promise<ReportS
   if (!inserted) return { error: 'We could not save the report. Please try again.' }
 
   await logEvent({ case_id: inserted.id, kind: 'reported', actor_label: 'Reporter', body: 'Request received.', public: true })
+  await alertNewCase({ id: inserted.id, ref, kind, state, facility: str(f, 'facility', 200) || null, reporter_phone: reporterPhone, safe_contact: safeContact }).catch(() => {})
   // Shown once on the next page; never put in a URL.
   cookies().set('issued', JSON.stringify({ ref, pin }), { httpOnly: true, secure: true, sameSite: 'strict', maxAge: 900, path: '/help/sent' })
   redirect('/help/sent')

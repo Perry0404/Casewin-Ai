@@ -3,13 +3,15 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/server'
-import { canWork, logEvent, requireMember } from '@/lib/auth'
-import { ACTIONS, FACILITY_TYPES, OUTCOMES, STATES } from '@/lib/constants'
+import { canWork, logEvent, needsSupervisor, requireMember } from '@/lib/auth'
+import { ACTIONS, FACILITY_TYPES, LAWYER_ONLY_ACTIONS, OUTCOMES, STATES } from '@/lib/constants'
+import { alertFamily, alertVolunteer } from '@/lib/notify'
 import { hashPin, newPin, newRef } from '@/lib/cases'
 
 const str = (f: FormData, k: string, n = 300) => String(f.get(k) ?? '').trim().slice(0, n)
 const day = (f: FormData, k: string) => (/^\d{4}-\d{2}-\d{2}$/.test(str(f, k, 10)) ? str(f, k, 10) : null)
 const FIRST_ACTION_HOURS = 48
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://legalaid.casewinai.com'
 const firstName = (n: string) => n.split(/\s+/).slice(0, 2).join(' ')
 
 async function loadCase(id: string) {
@@ -21,20 +23,24 @@ export async function claimCase(f: FormData) {
   const m = await requireMember()
   const db = createAdminClient()
   const id = str(f, 'id')
+  if (f.get('no_conflict') !== 'on') redirect(`/desk/cases/${id}?error=conflict`)
   const { count } = await db.from('la_cases').select('id', { count: 'exact', head: true }).eq('assigned_to', m.user_id).in('status', ['assigned', 'in_progress'])
   if (!m.isAdmin && (count ?? 0) >= m.capacity) redirect(`/desk/cases/${id}?error=capacity`)
   const now = new Date()
   // Only an unassigned, open case can be claimed — the filter makes two volunteers claiming at once safe.
   const { data } = await db
     .from('la_cases')
-    .update({ assigned_to: m.user_id, assigned_org: m.org_id, assigned_at: now.toISOString(), first_action_due: new Date(now.getTime() + FIRST_ACTION_HOURS * 3600000).toISOString(), first_action_at: null, status: 'assigned', updated_at: now.toISOString() })
+    .update({ assigned_to: m.user_id, assigned_org: m.org_id, assigned_at: now.toISOString(), first_action_due: new Date(now.getTime() + FIRST_ACTION_HOURS * 3600000).toISOString(), first_action_at: null, status: 'assigned', conflict_cleared_by: m.user_id, conflict_cleared_at: now.toISOString(), updated_at: now.toISOString() })
     .eq('id', id)
     .is('assigned_to', null)
     .eq('status', 'new')
     .select('id')
     .maybeSingle()
   if (!data) redirect(`/desk/cases/${id}?error=taken`)
+  await logEvent({ case_id: id, actor: m.user_id, actor_label: m.full_name, kind: 'conflict_check', body: 'Confirmed no conflict of interest.' })
   await logEvent({ case_id: id, actor: m.user_id, actor_label: m.full_name, kind: 'assigned', body: `Volunteer ${firstName(m.full_name)} has taken the case and will contact you within 48 hours.`, public: true })
+  const c = await loadCase(id)
+  if (c) await alertFamily(c, `Volunteer ${firstName(m.full_name)} has taken your case and will contact you within 48 hours.`, 'assigned').catch(() => {})
   redirect(`/desk/cases/${id}?claimed=1`)
 }
 
@@ -68,6 +74,8 @@ export async function assignTo(f: FormData) {
     .eq('id', c.id)
   await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'assigned', body: `Assigned to ${to.full_name} by ${m.full_name}` })
   await logEvent({ case_id: c.id, kind: 'public_update', actor_label: 'CaseWin Legal Aid', body: `Volunteer ${firstName(to.full_name)} has been assigned and will contact you within 48 hours.`, public: true })
+  await alertFamily(c, `Volunteer ${firstName(to.full_name)} has been assigned and will contact you within 48 hours.`, 'assigned').catch(() => {})
+  await alertVolunteer(to.user_id, c.id, `Case ${c.ref} assigned to you`, `${m.full_name} assigned you case ${c.ref} (${c.state}). Please act within 48 hours: ${SITE}/desk/cases/${c.id}`, 'assigned_volunteer').catch(() => {})
   redirect(`/desk/cases/${c.id}`)
 }
 
@@ -80,6 +88,7 @@ export async function logAction(f: FormData) {
   const note = str(f, 'note', 4000)
   const publicText = str(f, 'public_text', 500)
   if (kind === 'note' && !note) redirect(`/desk/cases/${c.id}?error=note`)
+  if (LAWYER_ONLY_ACTIONS.includes(kind) && needsSupervisor(m, c)) redirect(`/desk/cases/${c.id}?error=supervise`)
   const now = new Date().toISOString()
   const patch: Record<string, unknown> = { updated_at: now }
   if (ACTIONS[kind]!.first && !c.first_action_at) patch.first_action_at = now
@@ -90,7 +99,10 @@ export async function logAction(f: FormData) {
   await createAdminClient().from('la_cases').update(patch).eq('id', c.id)
   await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind, body: [ACTIONS[kind]!.label, note].filter(Boolean).join(' — ') })
   if (verify && !c.verified_at) await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'verified', body: `Facts confirmed: ${verify}` })
-  if (publicText) await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'public_update', body: publicText, public: true })
+  if (publicText) {
+    await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'public_update', body: publicText, public: true })
+    await alertFamily(c, publicText, 'update').catch(() => {})
+  }
   revalidatePath(`/desk/cases/${c.id}`)
   redirect(`/desk/cases/${c.id}?saved=1`)
 }
@@ -113,8 +125,11 @@ export async function updateFacts(f: FormData) {
   if (!changed.length) redirect(`/desk/cases/${c.id}`)
   await createAdminClient().from('la_cases').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', c.id)
   await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'facts', body: 'Updated: ' + changed.map(([k, v]) => `${k.replace(/_/g, ' ')} → ${v ?? '—'}`).join('; ') })
-  if (fields.next_hearing_on && fields.next_hearing_on !== c.next_hearing_on)
-    await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'public_update', body: `Next court date: ${new Date(fields.next_hearing_on).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}${fields.court_name ? `, ${fields.court_name}` : ''}.`, public: true })
+  if (fields.next_hearing_on && fields.next_hearing_on !== c.next_hearing_on) {
+    const text = `Next court date: ${new Date(fields.next_hearing_on).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}${fields.court_name ? `, ${fields.court_name}` : ''}.`
+    await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'public_update', body: text, public: true })
+    await alertFamily(c, text, 'hearing').catch(() => {})
+  }
   redirect(`/desk/cases/${c.id}?saved=1`)
 }
 
@@ -124,6 +139,7 @@ export async function recordOutcome(f: FormData) {
   if (!c || !canWork(m, c)) redirect('/desk')
   const outcome = str(f, 'outcome', 40)
   if (!OUTCOMES[outcome]) redirect(`/desk/cases/${c.id}?error=outcome`)
+  if (needsSupervisor(m, c)) redirect(`/desk/cases/${c.id}?error=supervise`)
   // An outcome only counts once the facts were confirmed by someone who met the person or saw the record.
   const verify = str(f, 'verify_method', 60)
   if (!c.verified_at && !verify) redirect(`/desk/cases/${c.id}?error=verify-first`)
@@ -142,6 +158,7 @@ export async function recordOutcome(f: FormData) {
     .eq('id', c.id)
   await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'outcome', body: `${OUTCOMES[outcome]!.label}${str(f, 'note', 2000) ? ' — ' + str(f, 'note', 2000) : ''}` })
   await logEvent({ case_id: c.id, actor: m.user_id, actor_label: m.full_name, kind: 'public_update', body: `Outcome: ${OUTCOMES[outcome]!.label}.`, public: true })
+  await alertFamily(c, `Outcome: ${OUTCOMES[outcome]!.label}.`, 'outcome').catch(() => {})
   redirect(`/desk/cases/${c.id}?saved=1`)
 }
 

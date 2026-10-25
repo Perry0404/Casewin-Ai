@@ -18,6 +18,17 @@ export default async function Board({ searchParams }: { searchParams: { state?: 
   let q = createAdminClient().from('la_cases').select(CASE_SELECT).eq('status', 'new').in('state', states).limit(300)
   if (searchParams.kind && KINDS[searchParams.kind]) q = q.eq('kind', searchParams.kind)
   const { data } = await q
+  // Lawyers also see cases held by law students and paralegals that still need a supervising lawyer.
+  let needSupervision: CaseRow[] = []
+  if (m.role === 'lawyer' || m.isAdmin) {
+    const db = createAdminClient()
+    const { data: juniors } = await db.from('la_members').select('user_id').in('role', ['law_student', 'paralegal']).eq('status', 'approved')
+    const ids = (juniors ?? []).map((j) => j.user_id)
+    if (ids.length) {
+      const { data: rows } = await db.from('la_cases').select(CASE_SELECT).in('status', ['assigned', 'in_progress']).is('supervisor_id', null).in('assigned_to', ids).in('state', states).limit(100)
+      needSupervision = (rows ?? []) as CaseRow[]
+    }
+  }
 
   return (
     <>
@@ -54,6 +65,15 @@ export default async function Board({ searchParams }: { searchParams: { state?: 
           </div>
         )}
       </Card>
+      {needSupervision.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-[18px] font-semibold text-ink-950">Cases that need a supervising lawyer</h2>
+          <p className="mb-4 mt-1 text-[14px] text-ink-600">Held by law students or paralegals. They can contact and visit; court steps wait for a lawyer to supervise.</p>
+          <Card pad={false}>
+            <CaseList cases={needSupervision} masked />
+          </Card>
+        </section>
+      )}
     </>
   )
 }

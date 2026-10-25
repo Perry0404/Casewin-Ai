@@ -23,6 +23,7 @@ export default async function Inbox() {
     overdue,
     unverified,
     released,
+    complaints,
     submissions,
     statutes,
     { data: recentRegs },
@@ -38,13 +39,14 @@ export default async function Inbox() {
     count(db.from('la_cases').select('id', { count: 'exact', head: true }).eq('status', 'assigned').is('first_action_at', null).lt('first_action_due', now)),
     count(db.from('la_cases').select('id', { count: 'exact', head: true }).is('verified_at', null).not('status', 'in', '(spam,closed)')),
     count(db.from('la_cases').select('id', { count: 'exact', head: true }).in('outcome', ['released_bail', 'released_unconditional', 'charges_struck_out', 'discharged', 'acquitted'])),
+    count(db.from('la_complaints').select('id', { count: 'exact', head: true }).eq('status', 'open')),
     count(db.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
     count(db.from('laws').select('id', { count: 'exact', head: true }).eq('needs_review', true)),
     db.from('registrations').select('id, full_name, kind, created_at').eq('status', 'pending').order('created_at').limit(4),
     db.from('la_members').select('user_id, full_name, role, created_at').eq('status', 'pending').order('created_at').limit(4),
     db.from('submissions').select('id, title, created_at').eq('status', 'pending').order('created_at').limit(4),
   ])
-  const total = registrations + requests + volunteers + orgs + overdue + submissions
+  const total = registrations + requests + volunteers + orgs + overdue + submissions + complaints
 
   return (
     <>
@@ -61,6 +63,7 @@ export default async function Inbox() {
           <Recent items={(recentRegs ?? []).map((r) => [r.full_name, r.kind === 'filer' ? 'e-filer' : 'court staff', r.created_at, '/admin/registrations'])} />
         </Product>
         <Product name="CaseWin Legal Aid" host="legalaid.casewinai.com" accent="bg-verdict-500">
+          <Row label="Complaints from families" n={complaints} href={`${LEGALAID_URL}/admin/complaints`} urgent external />
           <Row label="Volunteers to verify" n={volunteers} href="/admin/legal-aid" urgent />
           <Row label="Organisations to verify" n={orgs} href="/admin/legal-aid" urgent />
           <Row label="Claims with no action in 48 h" n={overdue} href={`${LEGALAID_URL}/admin`} urgent external />

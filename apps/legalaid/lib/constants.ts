@@ -82,3 +82,55 @@ export const ORG_KINDS: Record<string, string> = {
 }
 
 export const PRACTICE_AREAS = ['Criminal defence', 'Bail & remand', 'Fundamental rights', 'Family & domestic violence', 'Land & tenancy', 'Employment', 'Child justice', 'Inheritance'] as const
+
+// ── Safety, means, supervision, documents, complaints ───────────────────────
+
+export const SAFE_CONTACT: Record<string, { label: string; short: string }> = {
+  yes: { label: 'Yes, call or WhatsApp this number', short: 'Safe to call' },
+  text_only: { label: 'Text or WhatsApp only — do not call', short: 'Text only — do not call' },
+  no_calls: { label: 'Do not contact this number at all — use the note below', short: 'Do NOT contact this number' },
+  other_way: { label: 'Only at the times or in the way I describe below', short: 'Contact only as described' },
+}
+
+/** National minimum wage (Minimum Wage (Amendment) Act 2024). Used only as a guide for the means check. */
+export const MIN_WAGE = 70000
+
+export const INCOME_BANDS: Record<string, string> = {
+  none: 'No income',
+  below_min_wage: `Less than ₦${MIN_WAGE.toLocaleString()} a month`,
+  up_to_2x: `₦${MIN_WAGE.toLocaleString()} – ₦${(MIN_WAGE * 2).toLocaleString()} a month`,
+  above_2x: `More than ₦${(MIN_WAGE * 2).toLocaleString()} a month`,
+  unknown: 'Don’t know',
+}
+
+export const VULNERABLE: Record<string, string> = {
+  child: 'Under 18',
+  disability: 'Has a disability',
+  pregnant: 'Pregnant or nursing',
+  ill: 'Sick or injured',
+  elderly: 'Elderly',
+  displaced: 'Displaced / no fixed address',
+}
+
+/** Actions that only a lawyer may take — students and paralegals need a supervising lawyer on the case. */
+export const LAWYER_ONLY_ACTIONS = ['bail_application', 'fundamental_rights', 'appeared_in_court', 'mediation']
+
+export const DOC_KINDS: Record<string, string> = {
+  charge_sheet: 'Charge sheet',
+  remand_warrant: 'Remand warrant',
+  court_order: 'Court order',
+  bail_bond: 'Bail bond / conditions',
+  id: 'Identity document',
+  photo: 'Photo (injury, scene)',
+  medical: 'Medical report',
+  letter: 'Letter',
+  other: 'Other',
+}
+
+export const COMPLAINT_KINDS: Record<string, string> = {
+  asked_for_money: 'Someone asked me for money',
+  no_contact: 'Nobody has contacted me',
+  misconduct: 'The volunteer behaved badly',
+  delete_my_data: 'Please delete this report and my details',
+  other: 'Something else',
+}

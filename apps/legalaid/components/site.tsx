@@ -88,7 +88,7 @@ export function SiteFooter() {
             Not a law firm, and nothing here is legal advice. In an emergency also contact the Legal Aid Council of Nigeria or the nearest NBA branch.
           </p>
         </div>
-        <FooterCol title="Get help" links={[['Report a case', '/help'], ['Track a request', '/track'], ['Your rights in custody', '/rights'], ['How we work', '/how-it-works']]} />
+        <FooterCol title="Get help" links={[['Report a case', '/help'], ['Track a request', '/track'], ['Your rights in custody', '/rights'], ['How we work', '/how-it-works'], ['Privacy', '/privacy']]} />
         <FooterCol title="Help others" links={[['Volunteer', '/volunteer'], ['Register an organisation', '/organisations'], ['The record', '/impact'], ['Sign in', '/login']]} />
         <FooterCol title="CaseWin" links={[['CaseWin Court', COURT_URL], ['OpenLegal Nigeria', OPENLEGAL_URL], ['CaseWin', CASEWIN_URL]]} />
       </div>

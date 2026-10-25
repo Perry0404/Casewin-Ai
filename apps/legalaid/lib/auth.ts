@@ -59,9 +59,19 @@ export async function requireAdmin() {
   return user
 }
 
-/** Who may see a file's private details: the assignee, the assignee's coordinator, or an admin. */
-export function canWork(m: Member & { isAdmin: boolean }, c: { assigned_to: string | null; assigned_org: string | null }) {
-  return m.isAdmin || c.assigned_to === m.user_id || (m.role === 'coordinator' && m.org_id != null && c.assigned_org === m.org_id)
+/** Who may see a file's private details: the assignee, their supervising lawyer, the assignee's coordinator, or an admin. */
+export function canWork(m: Member & { isAdmin: boolean }, c: { assigned_to: string | null; assigned_org: string | null; supervisor_id?: string | null }) {
+  return (
+    m.isAdmin ||
+    c.assigned_to === m.user_id ||
+    (c.supervisor_id != null && c.supervisor_id === m.user_id) ||
+    (m.role === 'coordinator' && m.org_id != null && c.assigned_org === m.org_id)
+  )
+}
+
+/** Students and paralegals act on a file only once a lawyer supervises it. */
+export function needsSupervisor(m: Pick<Member, 'role'>, c: { supervisor_id?: string | null }) {
+  return (m.role === 'law_student' || m.role === 'paralegal') && !c.supervisor_id
 }
 
 export async function logEvent(e: { case_id: string; actor?: string | null; actor_label?: string; kind: string; body?: string | null; public?: boolean }) {

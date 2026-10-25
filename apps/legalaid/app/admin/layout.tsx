@@ -13,6 +13,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         tabs={[
           ['/admin', 'Overview'],
           ['/admin/cases', 'All cases'],
+          ['/admin/complaints', 'Complaints'],
+          ['/admin/alerts', 'Alerts'],
           ['/desk', 'Desk'],
         ]}
         user={user.email ?? ''}
