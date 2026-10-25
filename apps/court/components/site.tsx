@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { Logo, btn, cx } from './ui'
-import { CASEWIN_URL, LEGALAID_URL, OPENLEGAL_URL } from '@/lib/constants'
+import { CASEWIN_URL, COURT_URL, LEGALAID_URL, OPENLEGAL_URL } from '@/lib/constants'
 
 /** The thin strip that ties the CaseWin justice services together. */
 export function JusticeBar({ current }: { current: 'court' | 'openlegal' | 'legalaid' }) {
   const items: [string, string, string][] = [
-    ['court', 'Court', 'https://court.casewinai.com'],
+    ['court', 'Court', COURT_URL],
     ['openlegal', 'OpenLegal', OPENLEGAL_URL],
     ['legalaid', 'Legal Aid', LEGALAID_URL],
   ]

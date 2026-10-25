@@ -1,4 +1,5 @@
 import './globals.css'
+import DemoBar from '@/components/DemoBar'
 import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Mono, IBM_Plex_Sans, Source_Serif_4 } from 'next/font/google'
 
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   },
   description: 'E-filing, suit numbers, cause lists, hearings, judgments and judicial analytics for Nigerian courts.',
   icons: { icon: '/icon.svg' },
+  robots: process.env.NEXT_PUBLIC_DEMO === '1' ? { index: false, follow: false } : undefined,
 }
 
 export const viewport: Viewport = {
@@ -25,7 +27,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-NG" className={`${sans.variable} ${serif.variable} ${mono.variable}`}>
-      <body className="min-h-screen font-sans text-[15px] leading-relaxed">{children}</body>
+      <body className="min-h-screen font-sans text-[15px] leading-relaxed">
+        <DemoBar />
+        {children}
+      </body>
     </html>
   )
 }

@@ -9,7 +9,7 @@ export function adminDb(): SupabaseClient {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   if (!client) {
-    client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, { auth: { persistSession: false, autoRefreshToken: false } })
+    client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, { auth: { persistSession: false, autoRefreshToken: false }, db: { schema: (process.env.NEXT_PUBLIC_DB_SCHEMA || 'public') as 'public' } })
   }
   return client
 }

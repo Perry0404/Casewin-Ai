@@ -55,6 +55,7 @@ export async function getUser() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  if (user?.email?.endsWith('@demo.casewinai.com') && process.env.NEXT_PUBLIC_DEMO !== '1') return null
   return user
 }
 

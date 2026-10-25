@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { LEGALAID_URL, OPENLEGAL_URL } from '@/lib/constants'
 import { relative } from '@/lib/format'
 import { Card, PageHeader, cx } from '@/components/ui'
+import Glance from './Glance'
 
 export const metadata: Metadata = { title: 'Justice admin' }
 
@@ -79,6 +80,7 @@ export default async function Inbox() {
           <Recent items={(recentSubs ?? []).map((s) => [s.title, 'submission', s.created_at, `/admin/submissions/${s.id}`])} />
         </Product>
       </div>
+      <Glance />
     </>
   )
 }

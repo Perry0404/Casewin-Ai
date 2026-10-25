@@ -10,7 +10,7 @@ export function db(): SupabaseClient {
     client = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'public-anon-key',
-      { auth: { persistSession: false } },
+      { auth: { persistSession: false }, db: { schema: (process.env.NEXT_PUBLIC_DB_SCHEMA || 'public') as 'public' } },
     )
   }
   return client

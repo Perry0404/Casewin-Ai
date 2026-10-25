@@ -4,6 +4,9 @@ import { cookies } from 'next/headers'
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'public-anon-key'
+// 'public' for the real service; 'demo' on the demo sites, which hold sample data only.
+// Typed as 'public': both schemas have identical tables.
+const SCHEMA = (process.env.NEXT_PUBLIC_DB_SCHEMA || 'public') as 'public'
 
 /** Session-aware client — use only to find out who is signed in. */
 export function createSessionClient() {
@@ -36,7 +39,7 @@ export function createSessionClient() {
 export function createAdminClient(): SupabaseClient {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
-  return createSupabaseClient(URL, key, { auth: { persistSession: false, autoRefreshToken: false } })
+  return createSupabaseClient(URL, key, { auth: { persistSession: false, autoRefreshToken: false }, db: { schema: SCHEMA } })
 }
 
 export function isConfigured() {

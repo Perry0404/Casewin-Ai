@@ -1,4 +1,5 @@
 import './globals.css'
+import DemoBar from '@/components/DemoBar'
 import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Mono, IBM_Plex_Sans, Source_Serif_4 } from 'next/font/google'
 
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   },
   description: 'Judgments published by Nigerian courts and the laws they apply — free to read, search and build on, with an open API and MCP server for AI tools.',
   icons: { icon: '/icon.svg' },
+  robots: process.env.NEXT_PUBLIC_DEMO === '1' ? { index: false, follow: false } : undefined,
   openGraph: { siteName: 'OpenLegal Nigeria', type: 'website' },
 }
 
@@ -22,7 +24,10 @@ export const viewport: Viewport = { themeColor: '#ffffff', width: 'device-width'
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-NG" className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
-      <body className="min-h-screen font-sans text-[15px] leading-relaxed">{children}</body>
+      <body className="min-h-screen font-sans text-[15px] leading-relaxed">
+        <DemoBar />
+        {children}
+      </body>
     </html>
   )
 }
