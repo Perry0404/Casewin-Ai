@@ -71,10 +71,15 @@ export async function updateSession(request: NextRequest, requireAuth: boolean =
 
     // Use getSession() for speed (local JWT check, no server roundtrip)
     // getUser() makes a server call which adds 1-3s latency
+    // getSession() refreshes an expired token over the network; if Supabase is
+    // slow or paused that call can hang until the middleware times out (504)
+    // and take the whole site down. Give up after 1.5s and treat the visitor
+    // as signed out instead.
     let user = null
     try {
-      const { data } = await supabase.auth.getSession()
-      user = data?.session?.user ?? null
+      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500))
+      const session = supabase.auth.getSession().then(({ data }) => data?.session?.user ?? null)
+      user = await Promise.race([session, timeout])
     } catch {
       // Ignore errors — page will still load
     }
