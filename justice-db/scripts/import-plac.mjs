@@ -2,7 +2,11 @@
 // compendium (https://www.placng.org/lawsofnigeria/) into OpenLegal, one row
 // per section, with the source credited on every law page.
 //
-//   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node justice-db/scripts/import-plac.mjs [--dry] [--only=17,42] [--from-page=1] [--to-page=69]
+//   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node justice-db/scripts/import-plac.mjs [--dry] [--only=17,42] [--from-page=1] [--to-page=69] [--pdf-only]
+//
+// About a quarter of the compendium is linked as PDFs (laws/E1.pdf) rather than
+// HTML pages; those are parsed with lib/pdf-law.mjs, which needs pdfjs-dist
+// resolvable from the current directory (npm i --no-save pdfjs-dist@4).
 //
 // Politeness: one request every 3 seconds, identified user agent. Re-running
 // updates laws in place (keyed on PLAC's id) instead of duplicating them.
@@ -127,7 +131,8 @@ async function listLaws() {
   const to = Number(args['to-page'] ?? 69)
   for (let p = from; p <= to; p++) {
     const html = await get(`${BASE}?page=${p}`)
-    for (const m of html.matchAll(/href='view2\.php\?sn=(\d+)'[^>]*>([^<]+)</g)) out.push({ sn: m[1], title: m[2].replace(/\s+/g, ' ').trim() })
+    if (!args['pdf-only']) for (const m of html.matchAll(/href='view2\.php\?sn=(\d+)'[^>]*>([^<]+)</g)) out.push({ sn: m[1], title: m[2].replace(/\s+/g, ' ').trim() })
+    for (const m of html.matchAll(/href='laws\/([A-Za-z0-9_-]+)\.pdf'[^>]*>([^<]+)</g)) out.push({ sn: `pdf:${m[1]}`, pdf: m[1], title: m[2].replace(/\s+/g, ' ').trim() })
     await sleep(DELAY)
   }
   return out
@@ -139,12 +144,30 @@ async function main() {
   let published = 0
   let review = 0
   let failed = 0
+  let refused = 0
   for (const t of targets) {
     try {
-      const html = await get(`${BASE}view2.php?sn=${t.sn}`)
-      const titleFromPage = html.match(/<h\d[^>]*>\s*([A-Z][A-Z0-9 ,.’'()&-]+ACT[^<]*)<\/h\d>/)?.[1]
-      const rawTitle = t.title ?? titleFromPage ?? `PLAC law ${t.sn}`
-      const law = parseLaw(html, titleCase(rawTitle.replace(/\s+/g, ' ').trim()))
+      const sourceUrl = t.pdf ? `${BASE}laws/${t.pdf}.pdf` : `${BASE}view2.php?sn=${t.sn}`
+      let law
+      if (t.pdf) {
+        const { pdfLines, parse } = await import('./lib/pdf-law.mjs')
+        const res = await fetch(sourceUrl, { headers: { 'user-agent': UA } })
+        if (!res.ok) throw new Error(`PDF ${res.status}`)
+        const lines = await pdfLines(new Uint8Array(await res.arrayBuffer()))
+        if (lines.length < 50) {
+          refused++
+          console.log(`REFUSED   sn=${t.sn} ${t.title} — scanned PDF, needs OCR and a human check`)
+          await sleep(DELAY)
+          continue
+        }
+        const parsed = parse(lines, null)
+        law = { title: titleCase(t.title), longTitle: null, commencement: null, sections: parsed.sections, quality: { ...parsed.quality, arrangement: '-' } }
+      } else {
+        const html = await get(sourceUrl)
+        const titleFromPage = html.match(/<h\d[^>]*>\s*([A-Z][A-Z0-9 ,.’'()&-]+ACT[^<]*)<\/h\d>/)?.[1]
+        const rawTitle = t.title ?? titleFromPage ?? `PLAC law ${t.sn}`
+        law = parseLaw(html, titleCase(rawTitle.replace(/\s+/g, ' ').trim()))
+      }
       const year = Number(law.commencement?.match(/\d{4}$/)?.[0]) || null
       const ok = law.quality.ok
 
@@ -152,7 +175,10 @@ async function main() {
         console.log(`${ok ? 'OK    ' : 'REVIEW'} sn=${t.sn} ${law.title} — ${law.quality.sections} sections (arrangement ${law.quality.arrangement}, out-of-order ${law.quality.outOfOrder})`)
         if (args.show) for (const s of law.sections.slice(0, Number(args.show))) console.log(`   [${s.part ?? ''}] ${s.number}. ${s.heading ?? ''} :: ${s.body.slice(0, 120).replace(/\n/g, ' ⏎ ')}`)
       } else {
-        const slug = `${slugify(law.title)}-lfn-2004`
+        // PLAC lists some titles twice; the first keeps the plain slug, later ones get their PLAC id.
+        let slug = `${slugify(law.title)}-lfn-2004`
+        const { data: clash } = await db.from('laws').select('external_id').eq('slug', slug).maybeSingle()
+        if (clash && clash.external_id !== `plac:${t.sn}`) slug = `${slug}-${String(t.sn).replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
         const { data: row, error } = await db
           .from('laws')
           .upsert(
@@ -164,7 +190,7 @@ async function main() {
               jurisdiction: 'federal',
               long_title: law.longTitle,
               description: law.longTitle,
-              source_url: `${BASE}view2.php?sn=${t.sn}`,
+              source_url: sourceUrl,
               source_name: 'Policy and Legal Advocacy Centre (PLAC) — Laws of the Federation of Nigeria 2004',
               edition: 'LFN 2004',
               currency_note: 'Text as compiled in the Laws of the Federation of Nigeria 2004 (revised to 31 December 2002). It may since have been amended or repealed — check later Acts before relying on it.',
@@ -196,7 +222,7 @@ async function main() {
     }
     await sleep(DELAY)
   }
-  console.log(`done: ${published} published, ${review} held for review, ${failed} failed`)
+  console.log(`done: ${published} published, ${review} held for review, ${refused} scanned (skipped), ${failed} failed`)
 }
 
 main()

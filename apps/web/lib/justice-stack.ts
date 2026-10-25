@@ -53,7 +53,7 @@ export const JUSTICE_STACK: JusticeLayer[] = [
       { name: 'Knowledge Agent', href: '/tools/knowledge', desc: 'Upload firm documents and query them by meaning', icon: '\u{1F9E0}', status: 'live', premium: true },
       { name: 'Daily Intelligence Brief', href: '/tools/intelligence', desc: 'AI-curated legal updates tailored to your practice', icon: '\u{1F4F0}', status: 'live', premium: true },
       { name: 'OpenLegal Nigeria', href: OPENLEGAL_URL, desc: 'Free, court-published judgments and statutes — with an MCP server for AI tools', icon: '\u{1F4D6}', status: 'live', external: true },
-      { name: 'Legal Aid Intelligence', href: LEGAL_AID_URL, desc: 'Prototype: detention reports by USSD, custody clock, provider matching (synthetic data)', icon: '\u{2696}\u{FE0F}', status: 'live', external: true },
+      { name: 'Legal Aid Intelligence', href: LEGAL_AID_URL, desc: 'Free lawyers for people in detention: report a case, a verified volunteer acts within 48 hours', icon: '\u{2696}\u{FE0F}', status: 'live', external: true },
       { name: 'Legal Research', href: '/tools/research', desc: 'AI-assisted research across Nigerian judgments and statutes', icon: '\u{1F50D}', status: 'live' },
       { name: 'Case Search', href: '/tools/cases', desc: 'Find and track relevant cases', icon: '\u{1F4DA}', status: 'live' },
       { name: 'Citations', href: '/tools/citations', desc: 'Verify and format legal citations', icon: '\u{1F517}', status: 'live' },
