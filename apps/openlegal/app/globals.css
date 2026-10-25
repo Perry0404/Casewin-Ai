@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: #fbfaf6;
+  color: #15171a;
+}
+
+::selection {
+  background: #cdebdb;
+}
+
+mark {
+  background: #ffefa8;
+  color: inherit;
+  padding: 0 0.1em;
+  border-radius: 2px;
+}
+
+/* Long-form judgment text */
+.prose-judgment {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: #23262b;
+  hyphens: auto;
+}
+.prose-judgment p + p {
+  margin-top: 1.1em;
+}
+
+.paper-lines {
+  background-image: repeating-linear-gradient(0deg, transparent 0 31px, rgba(21, 23, 26, 0.045) 31px 32px);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
