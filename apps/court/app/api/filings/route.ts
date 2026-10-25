@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { classifyFiling } from '@/lib/classify'
 import { trackingCode } from '@/lib/format'
-import { logEvent } from '@/lib/auth'
+import { getFiler, logEvent } from '@/lib/auth'
 import { CASE_TYPES, PROCESS_TYPES } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
@@ -16,16 +16,16 @@ interface Party {
 }
 
 // POST /api/filings — submits a new e-filing to a court's registry queue.
+// Only approved filers can file; who filed always comes from their verified
+// account, never from the request body.
 export async function POST(req: NextRequest) {
+  const filer = await getFiler()
+  if (!filer) return NextResponse.json({ error: 'Sign in with an approved e-filing account.' }, { status: 401 })
   const body = await req.json().catch(() => null)
   if (!body) return bad('Invalid request')
 
-  // Honeypot: real users never fill this hidden field.
-  if (body.website) return NextResponse.json({ reference: 'EF-OK' })
-
-  const required = ['court_id', 'filer_name', 'filer_email', 'title', 'process_type']
+  const required = ['court_id', 'title', 'process_type']
   for (const k of required) if (!String(body[k] ?? '').trim()) return bad(`Missing ${k.replace('_', ' ')}`)
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.filer_email)) return bad('Enter a valid email address')
   if (!PROCESS_TYPES.some((p) => p.value === body.process_type)) return bad('Choose the originating process')
 
   const claimants = cleanParties(body.claimants)
@@ -71,12 +71,13 @@ export async function POST(req: NextRequest) {
         court_id: court.id,
         division_id: divisionId,
         reference,
-        filer_name: clip(body.filer_name, 160),
-        filer_email: clip(body.filer_email, 200).toLowerCase(),
-        filer_phone: clip(body.filer_phone, 40) || null,
-        filer_type: ['lawyer', 'litigant', 'agency'].includes(body.filer_type) ? body.filer_type : 'lawyer',
-        bar_number: clip(body.bar_number, 60) || null,
-        law_firm: clip(body.law_firm, 160) || null,
+        filer_user_id: filer.user_id,
+        filer_name: filer.full_name,
+        filer_email: filer.email.toLowerCase(),
+        filer_phone: filer.phone,
+        filer_type: filer.filer_type,
+        bar_number: filer.bar_number,
+        law_firm: filer.law_firm,
         case_type: declaredType ?? classification.case_type,
         process_type: body.process_type,
         title: clip(body.title, 300),
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
         court_id: court.id,
         filing_id: data.id,
         action: 'filing.submitted',
-        actor_label: `${clip(body.filer_name, 160)} (filer)`,
+        actor_label: `${filer.full_name} (filer)`,
         detail: { documents: documents.length },
       })
       return NextResponse.json({ reference: data.reference })

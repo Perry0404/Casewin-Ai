@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Logo } from '@/components/ui'
 import LoginForm from './LoginForm'
 
-export const metadata: Metadata = { title: 'Staff sign in' }
+export const metadata: Metadata = { title: 'Sign in' }
 
 const ERRORS: Record<string, string> = {
   'no-access': 'This account is not linked to an active court. Ask your court administrator.',
@@ -22,15 +22,15 @@ export default function LoginPage({ searchParams }: { searchParams: { next?: str
           <p className="font-display text-3xl font-medium leading-snug">“Justice delayed is justice denied.”</p>
           <p className="mt-4 text-sm text-ink-300">The registry is where delay begins — or ends.</p>
         </blockquote>
-        <p className="relative text-xs text-ink-400">Authorised court staff only. All activity is recorded.</p>
+        <p className="relative text-xs text-ink-400">Court staff and verified e-filers. All activity is recorded.</p>
       </div>
       <div className="flex items-center justify-center bg-parchment px-4 py-16">
         <div className="w-full max-w-sm">
           <Link href="/" className="lg:hidden">
             <Logo />
           </Link>
-          <h1 className="mt-10 font-display text-3xl font-semibold tracking-tight text-ink-900 lg:mt-0">Staff sign in</h1>
-          <p className="mt-2 text-ink-500">Use the email and password your court administrator gave you.</p>
+          <h1 className="mt-10 font-display text-3xl font-semibold tracking-tight text-ink-900 lg:mt-0">Sign in</h1>
+          <p className="mt-2 text-ink-500">Court staff and approved e-filers. New here? <a href="/register" className="font-medium text-ink-800 underline decoration-brass-300 underline-offset-4">Register</a>.</p>
           <LoginForm next={searchParams.next} initialError={searchParams.error ? ERRORS[searchParams.error] : undefined} />
         </div>
       </div>

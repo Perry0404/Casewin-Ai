@@ -94,6 +94,37 @@ export async function requirePlatformAdmin() {
   return user
 }
 
+export interface FilerAccount {
+  user_id: string
+  full_name: string
+  email: string
+  phone: string | null
+  filer_type: 'lawyer' | 'litigant' | 'agency'
+  bar_number: string | null
+  law_firm: string | null
+  address: string | null
+}
+
+/** The signed-in user's approved e-filing account, or null. */
+export async function getFiler(): Promise<FilerAccount | null> {
+  const user = await getUser()
+  if (!user) return null
+  const { data } = await createAdminClient().from('filer_accounts').select('*').eq('user_id', user.id).eq('is_active', true).maybeSingle()
+  return (data as FilerAccount) ?? null
+}
+
+export async function requireFiler(): Promise<FilerAccount> {
+  const filer = await getFiler()
+  if (!filer) redirect('/register')
+  return filer
+}
+
+/** Latest registration the user has made, if any. */
+export async function getRegistration(userId: string) {
+  const { data } = await createAdminClient().from('registrations').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle()
+  return data as null | { id: string; kind: 'filer' | 'court_staff'; status: 'pending' | 'approved' | 'rejected'; reviewer_note: string | null; created_at: string; full_name: string }
+}
+
 /** Writes one row to the audit trail. Never throws: auditing must not block the work. */
 export async function logEvent(event: {
   court_id: string

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { getFiler } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,7 @@ const ALLOWED = ['application/pdf', 'image/jpeg', 'image/png', 'application/vnd.
 // documents. Files go straight from the browser to private storage under
 // pending/<batch>/; POST /api/filings later hashes them and attaches them.
 export async function POST(req: NextRequest) {
+  if (!(await getFiler())) return NextResponse.json({ error: 'Sign in with an approved e-filing account.' }, { status: 401 })
   const { files } = (await req.json().catch(() => ({}))) as { files?: { name: string; size: number; type: string }[] }
   if (!Array.isArray(files) || files.length === 0) return NextResponse.json({ error: 'No files' }, { status: 400 })
   if (files.length > MAX_FILES) return NextResponse.json({ error: `Attach at most ${MAX_FILES} documents.` }, { status: 400 })

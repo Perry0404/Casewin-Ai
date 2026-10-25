@@ -14,6 +14,7 @@ const ICONS: Record<string, string> = {
   judgments: 'M10 3 3 6.5h14L10 3ZM5 8v6m3.3-6v6m3.4-6v6M15 8v6M3 16.5h14',
   analytics: 'M4 16V9m4 7V5m4 11v-5m4 5V7',
   staff: 'M7.5 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5 8a5 5 0 0 1 10 0m2-8a2.5 2.5 0 1 0 0-5m1.5 13a4 4 0 0 0-3-3.9',
+  guide: 'M4 4.5h5a2 2 0 0 1 2 2V17a1.5 1.5 0 0 0-1.5-1.5H4v-11Zm12 0h-5a2 2 0 0 0-2 2V17a1.5 1.5 0 0 1 1.5-1.5H16v-11Z',
   settings: 'M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm6.4-2.5a6.4 6.4 0 0 0-.1-1.1l1.6-1.3-1.6-2.7-1.9.7a6 6 0 0 0-1.9-1.1L12.2 2.5H8.8l-.3 2a6 6 0 0 0-1.9 1.1l-1.9-.7-1.6 2.7 1.6 1.3a6.4 6.4 0 0 0 0 2.2l-1.6 1.3 1.6 2.7 1.9-.7a6 6 0 0 0 1.9 1.1l.3 2h3.4l.3-2a6 6 0 0 0 1.9-1.1l1.9.7 1.6-2.7-1.6-1.3c.1-.4.1-.7.1-1.1Z',
 }
 
@@ -27,6 +28,7 @@ export default function RegistryNav({ court, name, role, queue, admin }: { court
     ['causelist', 'Cause list', '/registry/cause-list'],
     ['judgments', 'Judgments', '/registry/judgments'],
     ['analytics', 'Judicial analytics', '/registry/analytics'],
+    ['guide', 'Registry guide', '/registry/guide'],
     ...(admin
       ? [
           ['staff', 'Staff & logins', '/registry/staff'],

@@ -12,14 +12,14 @@ export function SiteNav({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
           <Logo dark={dark} />
         </Link>
         <nav className="hidden items-center gap-7 text-sm font-medium lg:flex">
-          <Link href="/#how" className={link}>How it works</Link>
+          <Link href="/e-filing" className={link}>How e-filing works</Link>
           <Link href="/#analytics" className={link}>Judicial analytics</Link>
           <Link href="/cause-list" className={link}>Cause lists</Link>
           <Link href="/track" className={link}>Track a filing</Link>
         </nav>
         <div className="flex items-center gap-2">
           <Link href="/login" className={`hidden rounded-xl px-3.5 py-2 text-sm font-semibold sm:inline-flex ${dark ? 'text-white hover:bg-white/10' : 'text-ink-800 hover:bg-ink-50'}`}>
-            Staff sign in
+            Sign in
           </Link>
           <Link href="/file" className={dark ? btn.brass + ' !py-2.5' : btn.primary}>
             File a case
@@ -30,7 +30,8 @@ export function SiteNav({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
         <Link href="/cause-list" className={link}>Cause lists</Link>
         <Link href="/track" className={link}>Track a filing</Link>
         <Link href="/verify" className={link}>Verify a document</Link>
-        <Link href="/login" className={link + ' sm:hidden'}>Staff sign in</Link>
+        <Link href="/login" className={link + ' sm:hidden'}>Sign in</Link>
+        <Link href="/register" className={link}>Register</Link>
       </nav>
     </header>
   )
@@ -50,6 +51,7 @@ export function SiteFooter() {
           title="For the public"
           links={[
             ['File a case', '/file'],
+            ['How e-filing works', '/e-filing'],
             ['Track a filing', '/track'],
             ['Cause lists', '/cause-list'],
             ['Verify a document', '/verify'],
@@ -59,7 +61,8 @@ export function SiteFooter() {
           title="For courts"
           links={[
             ['Bring your court online', '/onboard'],
-            ['Staff sign in', '/login'],
+            ['Sign in', '/login'],
+            ['Register (filers & staff)', '/register'],
             ['Security & integrity', '/#integrity'],
           ]}
         />

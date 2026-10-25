@@ -161,6 +161,55 @@ export async function rejectSubmission(form: FormData) {
   redirect(`/admin/submissions?done=${status}`)
 }
 
+// ── Registrations (filers and court staff) ──────────────────────────────────
+
+export async function approveRegistration(form: FormData) {
+  await requirePlatformAdmin()
+  const db = createAdminClient()
+  const { data: r } = await db.from('registrations').select('*').eq('id', str(form, 'id')).eq('status', 'pending').maybeSingle()
+  if (!r) redirect('/admin/registrations')
+
+  if (r.kind === 'filer') {
+    const { error } = await db.from('filer_accounts').upsert({
+      user_id: r.user_id,
+      full_name: r.full_name,
+      email: r.email,
+      phone: r.phone,
+      filer_type: r.filer_type ?? 'lawyer',
+      bar_number: r.bar_number,
+      law_firm: r.law_firm,
+      address: r.address,
+      is_active: true,
+      approved_at: new Date().toISOString(),
+    })
+    if (error) redirect(`/admin/registrations?error=${encodeURIComponent(error.message)}`)
+  } else {
+    const role = ['court_admin', 'registrar', 'clerk', 'judge'].includes(str(form, 'role')) ? str(form, 'role') : r.requested_role
+    const judgeId = role === 'judge' ? str(form, 'judge_id') || null : null
+    const { error } = await db.from('court_staff').upsert(
+      { user_id: r.user_id, court_id: r.court_id, role, full_name: r.full_name, email: r.email, judge_id: judgeId, is_active: true, must_change_password: false },
+      { onConflict: 'user_id,court_id' },
+    )
+    if (error) redirect(`/admin/registrations?error=${encodeURIComponent(error.message)}`)
+  }
+  await db.from('registrations').update({ status: 'approved', reviewer_note: str(form, 'note', 500) || null, reviewed_at: new Date().toISOString() }).eq('id', r.id)
+  redirect('/admin/registrations?done=approved')
+}
+
+export async function rejectRegistration(form: FormData) {
+  await requirePlatformAdmin()
+  const note = str(form, 'note', 500)
+  if (!note) redirect('/admin/registrations?error=Give+a+reason+%E2%80%94+the+applicant+sees+it')
+  await createAdminClient().from('registrations').update({ status: 'rejected', reviewer_note: note, reviewed_at: new Date().toISOString() }).eq('id', str(form, 'id')).eq('status', 'pending')
+  redirect('/admin/registrations?done=rejected')
+}
+
+export async function setFilerActive(form: FormData) {
+  await requirePlatformAdmin()
+  await createAdminClient().from('filer_accounts').update({ is_active: str(form, 'active') === 'true' }).eq('user_id', str(form, 'user_id'))
+  revalidatePath('/admin/registrations')
+}
+
 export async function setRequestStatus(form: FormData) {
   await requirePlatformAdmin()
   const status = str(form, 'status')

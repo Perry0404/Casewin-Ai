@@ -35,7 +35,16 @@ function kb(n: number) {
   return n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`
 }
 
-export default function FilingForm({ courts }: { courts: CourtOption[] }) {
+export interface FilerInfo {
+  full_name: string
+  email: string
+  phone: string | null
+  filer_type: string
+  bar_number: string | null
+  law_firm: string | null
+}
+
+export default function FilingForm({ courts, filer: account }: { courts: CourtOption[]; filer: FilerInfo }) {
   const [step, setStep] = useState(0)
   const [courtId, setCourtId] = useState(courts[0]?.id ?? '')
   const [divisionId, setDivisionId] = useState(courts[0]?.divisions[0]?.id ?? '')
@@ -48,8 +57,6 @@ export default function FilingForm({ courts }: { courts: CourtOption[] }) {
   const [claimAmount, setClaimAmount] = useState('')
   const [urgent, setUrgent] = useState(false)
   const [docs, setDocs] = useState<Attached[]>([])
-  const [filer, setFiler] = useState({ filer_type: 'lawyer', filer_name: '', filer_email: '', filer_phone: '', bar_number: '', law_firm: '' })
-  const [website, setWebsite] = useState('')
   const [agree, setAgree] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -67,11 +74,7 @@ export default function FilingForm({ courts }: { courts: CourtOption[] }) {
       if (!defendants.some((p) => p.name.trim())) return 'Add at least one defendant or respondent.'
     }
     if (s === 2 && reliefs.trim().length < 20) return 'Set out the reliefs claimed (at least a sentence).'
-    if (s === 4) {
-      if (!filer.filer_name.trim() || !filer.filer_email.trim()) return 'Enter your name and email.'
-      if (filer.filer_type === 'lawyer' && !filer.bar_number.trim()) return 'Enter your Supreme Court enrolment number.'
-      if (!agree) return 'Confirm the declaration to submit.'
-    }
+    if (s === 4 && !agree) return 'Confirm the declaration to submit.'
     return null
   }
 
@@ -134,8 +137,6 @@ export default function FilingForm({ courts }: { courts: CourtOption[] }) {
           claim_amount: claimAmount.replace(/[^\d.]/g, ''),
           urgent,
           documents,
-          website,
-          ...filer,
         }),
       })
       const out = await res.json()
@@ -166,8 +167,8 @@ export default function FilingForm({ courts }: { courts: CourtOption[] }) {
           Next, a registry clerk reviews the papers and assesses your filing fees. Your suit number is issued once payment is confirmed.
         </p>
         <div className="mt-8 flex justify-center gap-3">
-          <Link href={`/track?ref=${reference}&email=${encodeURIComponent(filer.filer_email)}`} className={btn.primary}>
-            Track this filing
+          <Link href="/portal" className={btn.primary}>
+            Go to my filings
           </Link>
           <button onClick={() => location.reload()} className={btn.secondary}>
             File another
@@ -306,41 +307,22 @@ export default function FilingForm({ courts }: { courts: CourtOption[] }) {
 
           {step === 4 && (
             <>
-              <Field label="I am filing as">
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {[
-                    ['lawyer', 'Counsel'],
-                    ['litigant', 'Party in person'],
-                    ['agency', 'Government agency'],
-                  ].map(([v, l]) => (
-                    <Choice key={v} active={filer.filer_type === v} onClick={() => setFiler({ ...filer, filer_type: v })}>
-                      {l}
-                    </Choice>
-                  ))}
+              <div className="flex items-start gap-4 rounded-2xl border border-verdict-500/20 bg-verdict-50 p-5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-verdict-600 text-white">✓</span>
+                <div className="text-sm">
+                  <p className="font-semibold text-ink-900">Filing as {account.full_name}</p>
+                  <p className="text-ink-600">
+                    {account.filer_type === 'lawyer' ? 'Counsel' : account.filer_type === 'agency' ? 'Government agency' : 'Party in person'}
+                    {account.bar_number && ` · ${account.bar_number}`}
+                    {account.law_firm && ` · ${account.law_firm}`}
+                  </p>
+                  <p className="text-ink-500">
+                    {account.email}
+                    {account.phone && ` · ${account.phone}`}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-400">From your verified account. Contact the registry to change these details.</p>
                 </div>
-              </Field>
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Full name" required>
-                  <input className={input} value={filer.filer_name} onChange={(e) => setFiler({ ...filer, filer_name: e.target.value })} autoComplete="name" />
-                </Field>
-                <Field label="Email" required>
-                  <input className={input} type="email" value={filer.filer_email} onChange={(e) => setFiler({ ...filer, filer_email: e.target.value })} autoComplete="email" />
-                </Field>
-                <Field label="Phone">
-                  <input className={input} type="tel" value={filer.filer_phone} onChange={(e) => setFiler({ ...filer, filer_phone: e.target.value })} autoComplete="tel" />
-                </Field>
-                {filer.filer_type === 'lawyer' && (
-                  <>
-                    <Field label="Supreme Court enrolment no." required>
-                      <input className={input} value={filer.bar_number} onChange={(e) => setFiler({ ...filer, bar_number: e.target.value })} placeholder="SCN012345" />
-                    </Field>
-                    <Field label="Law firm / chambers">
-                      <input className={input} value={filer.law_firm} onChange={(e) => setFiler({ ...filer, law_firm: e.target.value })} />
-                    </Field>
-                  </>
-                )}
               </div>
-              <input tabIndex={-1} autoComplete="off" className="hidden" value={website} onChange={(e) => setWebsite(e.target.value)} aria-hidden />
 
               <div className="rounded-2xl bg-parchment p-5 text-sm">
                 <h3 className="font-semibold text-ink-900">Summary</h3>

@@ -9,7 +9,10 @@ export const dynamic = 'force-dynamic'
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePlatformAdmin()
   const staff = await getStaff()
-  const { count: pending } = await createAdminClient().from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+  const [{ count: pending }, { count: registrations }] = await Promise.all([
+    createAdminClient().from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    createAdminClient().from('registrations').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+  ])
   return (
     <div className="min-h-screen bg-parchment">
       <header className="bg-ink-950 text-white">
@@ -28,6 +31,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </Link>
             <Link href="/admin/courts/new" className="rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
               Onboard a court
+            </Link>
+            <Link href="/admin/registrations" className="rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
+              Registrations
+              {registrations ? <span className="ml-1.5 rounded-full bg-brass-400 px-1.5 py-0.5 text-[11px] font-bold text-ink-950">{registrations}</span> : null}
             </Link>
             <Link href="/admin/submissions" className="rounded-lg px-3 py-2 text-ink-200 hover:bg-white/5 hover:text-white">
               Submissions

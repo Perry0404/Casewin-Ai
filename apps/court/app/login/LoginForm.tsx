@@ -32,7 +32,7 @@ export default function LoginForm({ next, initialError }: { next?: string; initi
       <Field label="Email">
         <input name="email" type="email" autoComplete="username" className={input} required />
       </Field>
-      <Field label="Password" hint="Forgotten it? Your court administrator can reset it.">
+      <Field label="Password" hint="Court staff: forgotten it? Your court administrator can reset it.">
         <input name="password" type="password" autoComplete="current-password" className={input} required />
       </Field>
       <button className={btn.primary + ' w-full !py-3'} disabled={busy}>
