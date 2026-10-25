@@ -94,6 +94,73 @@ export async function setCourtStatus(form: FormData) {
   revalidatePath(`/admin/courts/${str(form, 'court_id')}`)
 }
 
+// ── OpenLegal contributor submissions ───────────────────────────────────────
+
+const VERIFIED_POINTS = 10
+const CONFIRMATION_POINTS = 1
+
+export async function approveSubmission(form: FormData) {
+  await requirePlatformAdmin()
+  const db = createAdminClient()
+  const id = str(form, 'id')
+  if (form.get('redaction_confirmed') !== 'on') redirect(`/admin/submissions/${id}?error=redaction`)
+  const { data: s } = await db.from('submissions').select('*').eq('id', id).eq('status', 'pending').maybeSingle()
+  if (!s) redirect('/admin/submissions')
+
+  const list = (k: string) =>
+    str(form, k, 4000)
+      .split(/\n|;|,/)
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .slice(0, 30)
+  const title = str(form, 'title') || s.title
+  const suit = str(form, 'suit_number', 80) || null
+  const fullText = String(form.get('full_text') ?? s.full_text).trim().slice(0, 400000)
+
+  const { data: j, error } = await db
+    .from('judgments')
+    .insert({
+      slug: `${slugify(suit ? suit.replace(/\//g, '-') : '')}-${slugify(title)}`.replace(/^-/, '').slice(0, 96) + '-' + crypto.randomUUID().slice(0, 4),
+      source: 'community',
+      title,
+      suit_number: suit,
+      court_name: str(form, 'court_name') || s.court_name,
+      division: str(form, 'division', 120) || null,
+      state: str(form, 'state', 60) || null,
+      judges: list('judges'),
+      case_type: str(form, 'case_type', 40) || null,
+      delivered_on: /^\d{4}-\d{2}-\d{2}$/.test(str(form, 'delivered_on')) ? str(form, 'delivered_on') : null,
+      holding: str(form, 'holding', 2000) || null,
+      summary: str(form, 'summary', 6000) || null,
+      keywords: list('keywords'),
+      full_text: fullText,
+      status: 'published',
+      redaction_confirmed: true,
+      published_at: new Date().toISOString(),
+      contributed_by: s.contributor_id,
+    })
+    .select('id')
+    .single()
+  if (error || !j) redirect(`/admin/submissions/${id}?error=publish`)
+
+  await db.from('submissions').update({ status: 'verified', judgment_id: j.id, reviewed_at: new Date().toISOString(), reviewer_note: str(form, 'note', 1000) || null }).eq('id', id)
+  await db.rpc('award_points', { p_contributor: s.contributor_id, p_delta: VERIFIED_POINTS, p_reason: `Verified: ${title}`, p_submission: id })
+  const { data: confirmers } = await db.from('submission_confirmations').select('contributor_id').eq('submission_id', id)
+  for (const c of confirmers ?? []) {
+    await db.rpc('award_points', { p_contributor: c.contributor_id, p_delta: CONFIRMATION_POINTS, p_reason: `Confirmed: ${title}`, p_submission: id })
+  }
+  redirect('/admin/submissions?done=verified')
+}
+
+export async function rejectSubmission(form: FormData) {
+  await requirePlatformAdmin()
+  const status = str(form, 'status') === 'duplicate' ? 'duplicate' : 'rejected'
+  const note = str(form, 'note', 1000)
+  if (!note) redirect(`/admin/submissions/${str(form, 'id')}?error=note`)
+  await createAdminClient().from('submissions').update({ status, reviewer_note: note, reviewed_at: new Date().toISOString() }).eq('id', str(form, 'id')).eq('status', 'pending')
+  redirect(`/admin/submissions?done=${status}`)
+}
+
 export async function setRequestStatus(form: FormData) {
   await requirePlatformAdmin()
   const status = str(form, 'status')

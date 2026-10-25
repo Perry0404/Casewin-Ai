@@ -64,12 +64,12 @@ export async function getJudgment(slug: string) {
   return (data as Judgment | null) ?? null
 }
 
-export type RecentJudgment = Pick<Judgment, 'id' | 'slug' | 'title' | 'suit_number' | 'court_name' | 'division' | 'case_type' | 'delivered_on' | 'holding' | 'judges' | 'is_sample'>
+export type RecentJudgment = Pick<Judgment, 'id' | 'slug' | 'title' | 'suit_number' | 'court_name' | 'division' | 'case_type' | 'delivered_on' | 'holding' | 'judges' | 'is_sample' | 'source'>
 
 export async function recentJudgments(limit = 6) {
   const { data } = await db()
     .from('judgments')
-    .select('id, slug, title, suit_number, court_name, division, case_type, delivered_on, holding, judges, is_sample')
+    .select('id, slug, title, suit_number, court_name, division, case_type, delivered_on, holding, judges, is_sample, source')
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(limit)
   return (data ?? []) as RecentJudgment[]

@@ -44,6 +44,9 @@ export function Nav({ query }: { query?: string }) {
           <Link href="/courts" className="hidden rounded-lg px-3 py-2 hover:bg-paper-2 hover:text-ink sm:block">
             Courts
           </Link>
+          <Link href="/contribute" className="hidden rounded-lg px-3 py-2 text-naija-700 hover:bg-naija-50 md:block">
+            Contribute
+          </Link>
           <Link href="/developers" className="rounded-lg bg-ink px-3.5 py-2 text-white transition hover:bg-ink-2">
             API &amp; MCP
           </Link>
@@ -90,7 +93,7 @@ export function Footer() {
             Free access to Nigerian law. Judgments are published by the courts that delivered them, through CaseWin Court.
           </p>
         </div>
-        <FooterCol title="Read" links={[['Judgments', '/search'], ['Laws', '/laws'], ['Courts', '/courts']]} />
+        <FooterCol title="Read & contribute" links={[['Judgments', '/search'], ['Laws', '/laws'], ['Courts', '/courts'], ['Contribute a judgment', '/contribute'], ['Leaderboard', '/leaderboard']]} />
         <FooterCol title="Build" links={[['REST API', '/developers#api'], ['MCP server', '/developers#mcp'], ['About the data', '/about']]} />
         <FooterCol title="Justice stack" links={[['CaseWin Court', COURT_URL], ['CaseWin AI', CASEWIN_URL]]} />
       </div>
@@ -149,7 +152,7 @@ export function JudgmentCard({
   j,
   snippet,
 }: {
-  j: { slug: string; title: string; suit_number: string | null; court_name: string; division?: string | null; case_type: string | null; delivered_on: string | null; holding?: string | null; judges?: string[]; is_sample?: boolean }
+  j: { slug: string; title: string; suit_number: string | null; court_name: string; division?: string | null; case_type: string | null; delivered_on: string | null; holding?: string | null; judges?: string[]; is_sample?: boolean; source?: string }
   snippet?: string
 }) {
   return (
@@ -173,6 +176,7 @@ export function JudgmentCard({
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {j.case_type && <Tag tone="green">{caseTypeLabel(j.case_type)}</Tag>}
         {j.judges?.[0] && <Tag>{j.judges[0]}</Tag>}
+        {j.source === 'community' && <Tag>Community-contributed · verified</Tag>}
         {j.is_sample && <Tag tone="sample">Sample — not a real decision</Tag>}
       </div>
     </article>

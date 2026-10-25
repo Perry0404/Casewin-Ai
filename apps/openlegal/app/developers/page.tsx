@@ -23,6 +23,9 @@ const TOOLS = [
   ['get_law_section', 'The text of one section, e.g. constitution-1999 § 36.'],
   ['list_laws', 'Statutes available, with their ids.'],
   ['list_courts', 'Courts publishing on the network.'],
+  ['check_case', 'Is a case already on OpenLegal, or waiting for review?'],
+  ['submit_judgment', 'Contribute a judgment’s full text (needs your contributor key — see /contribute).'],
+  ['my_contributions', 'Your contribution points, rank and submission statuses.'],
 ]
 
 const ENDPOINTS = [
@@ -31,6 +34,8 @@ const ENDPOINTS = [
   ['GET', '/api/v1/laws', 'List statutes.'],
   ['GET', '/api/v1/laws?q=personal+liberty', 'Search statute sections.'],
   ['GET', '/api/v1/laws?law=constitution-1999&section=36', 'One section.'],
+  ['POST', '/api/v1/submissions', 'Contribute a judgment. Header: Authorization: Bearer olk_… (your contributor key).'],
+  ['GET', '/api/v1/submissions', 'Your points and submission statuses (same header).'],
 ]
 
 function Code({ children, copy }: { children: string; copy?: boolean }) {

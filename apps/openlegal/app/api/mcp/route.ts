@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { toolGetJudgment, toolGetLawSection, toolListCourts, toolListLaws, toolSearchJudgments, toolSearchLaws } from '@/lib/tools'
+import { adminDb } from '@/lib/admin-db'
+import { contributorByKey, keyFromRequest, myContributions, submitJudgment, type SubmissionInput } from '@/lib/contrib'
+import { SITE_URL } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +18,8 @@ const SERVER_INFO = { name: 'openlegal-nigeria', title: 'OpenLegal Nigeria', ver
 const INSTRUCTIONS =
   'OpenLegal Nigeria provides judgments published by Nigerian courts and the text of Nigerian statutes. ' +
   'Search first, then fetch the full judgment or section you need. Always give the user the cite_as string and url for anything you rely on. ' +
-  'Results marked sample: true are demonstration data and must never be presented as real law.'
+  'Results marked sample: true are demonstration data and must never be presented as real law. ' +
+  'Users can contribute judgments they hold: use check_case first, then submit_judgment with the full text, only with the user\'s agreement, and tell them the result.'
 
 const TOOLS = [
   {
@@ -87,6 +91,55 @@ const TOOLS = [
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
   {
+    name: 'check_case',
+    title: 'Is this case on OpenLegal?',
+    description: 'Check whether a judgment is already on OpenLegal Nigeria (or waiting for review) before submitting it.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Case title, e.g. "Okonkwo v. Eze"' },
+        suit_number: { type: 'string' },
+        court: { type: 'string', description: 'Court that delivered it' },
+        year: { type: 'integer' },
+      },
+      required: ['title', 'court'],
+    },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  {
+    name: 'submit_judgment',
+    title: 'Contribute a judgment',
+    description:
+      'Submit the FULL TEXT of a Nigerian court judgment the user holds or found, so it can be published free on OpenLegal Nigeria. ' +
+      'Requires the user\'s personal OpenLegal key in the connection URL (?key=olk_…). Always ask the user before submitting, ' +
+      'send only the court\'s own judgment text (never a law report\'s headnotes or summaries), and relay the returned message to the user — ' +
+      'it says whether the case is new (points when verified), already published, or already submitted by someone else.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'e.g. "Okonkwo v. Eze"' },
+        suit_number: { type: 'string', description: 'e.g. HOW/142/2019 or CA/OW/12/2020' },
+        court: { type: 'string', description: 'e.g. "High Court of Imo State", "Court of Appeal, Owerri Division", "Supreme Court of Nigeria"' },
+        division: { type: 'string' },
+        delivered_on: { type: 'string', description: 'YYYY-MM-DD' },
+        judges: { type: 'array', items: { type: 'string' } },
+        case_type: { type: 'string', enum: ['civil', 'commercial', 'land', 'family', 'probate', 'criminal', 'fundamental_rights', 'election', 'employment'] },
+        full_text: { type: 'string', description: 'The complete judgment text' },
+        source_url: { type: 'string', description: 'Where it was obtained, if online' },
+        source_note: { type: 'string', description: 'e.g. "certified true copy from the registry"' },
+      },
+      required: ['title', 'court', 'full_text'],
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  {
+    name: 'my_contributions',
+    title: 'My contributions & points',
+    description: 'Show the user\'s contribution points, leaderboard rank and the status of their submissions. Requires their OpenLegal key.',
+    inputSchema: { type: 'object', properties: {} },
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  },
+  {
     name: 'list_courts',
     title: 'List courts',
     description: 'List the courts publishing on the network.',
@@ -104,8 +157,44 @@ function toolResult(data: unknown) {
   return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }], structuredContent: data as Record<string, unknown> }
 }
 
-async function callTool(name: string, args: Record<string, unknown>) {
+const NEED_KEY = {
+  content: [
+    {
+      type: 'text',
+      text: `Contributing needs a free personal key. Create one at ${SITE_URL}/contribute, then reconnect OpenLegal using the URL shown there (it ends in ?key=olk_…).`,
+    },
+  ],
+  isError: true,
+}
+
+async function callTool(name: string, args: Record<string, unknown>, req: Request) {
   switch (name) {
+    case 'check_case': {
+      const { data } = await adminDb().rpc('find_existing_case', {
+        p_suit: args.suit_number ?? null,
+        p_court: String(args.court ?? ''),
+        p_title: String(args.title ?? ''),
+        p_year: Number(args.year) || null,
+        p_fingerprint: '',
+      })
+      const hit = (data ?? [])[0] as { kind: string; slug: string | null; title: string } | undefined
+      const result = !hit
+        ? { status: 'not_found', message: 'Not on OpenLegal yet. If the user has the full judgment text, it can be submitted with submit_judgment.' }
+        : hit.kind === 'judgment'
+          ? { status: 'published', message: `“${hit.title}” is already on OpenLegal.`, url: `${SITE_URL}/judgments/${hit.slug}` }
+          : { status: 'pending_review', message: `“${hit.title}” has been submitted and is waiting for review. Submitting the same text again counts as a confirmation.` }
+      return toolResult(result)
+    }
+    case 'submit_judgment': {
+      const c = await contributorByKey(keyFromRequest(req))
+      if (!c) return NEED_KEY
+      return toolResult(await submitJudgment(c, { ...(args as SubmissionInput), court: String(args.court ?? '') }, 'mcp'))
+    }
+    case 'my_contributions': {
+      const c = await contributorByKey(keyFromRequest(req))
+      if (!c) return NEED_KEY
+      return toolResult(await myContributions(c))
+    }
     case 'search_judgments':
       return toolResult(await toolSearchJudgments(args))
     case 'get_judgment': {
@@ -158,7 +247,7 @@ export async function POST(req: NextRequest) {
       case 'tools/call': {
         const name = String(msg.params?.name ?? '')
         const args = (msg.params?.arguments ?? {}) as Record<string, unknown>
-        const result = await callTool(name, args)
+        const result = await callTool(name, args, req)
         if (!result) return fail(msg.id, -32602, `Unknown tool: ${name}`)
         return ok(msg.id, result)
       }

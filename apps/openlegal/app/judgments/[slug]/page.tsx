@@ -78,6 +78,7 @@ export default async function JudgmentPage({ params }: { params: { slug: string 
               ))}
           </dl>
           <div className="mt-5 flex flex-wrap gap-2">
+            <Tag tone={j.source === 'community' ? 'neutral' : 'green'}>{j.source === 'community' ? 'Community-contributed · verified' : 'Court-published'}</Tag>
             {j.case_type && <Tag tone="green">{caseTypeLabel(j.case_type)}</Tag>}
             {j.keywords.map((k) => (
               <Link key={k} href={`/search?q=${encodeURIComponent(k)}`}>
@@ -158,7 +159,10 @@ export default async function JudgmentPage({ params }: { params: { slug: string 
               </div>
             )}
             <div className="rounded-2xl bg-paper-2 p-5 text-sm text-ink-3">
-              Published by the {j.court_name} registry{j.published_at ? ` on ${longDate(j.published_at)}` : ''}. Confirm against the certified true copy before relying on it.
+              {j.source === 'community'
+                ? `Contributed by a member of the OpenLegal community and verified by our reviewers${j.published_at ? ` on ${longDate(j.published_at)}` : ''}. It was not published by the court itself.`
+                : `Published by the ${j.court_name} registry${j.published_at ? ` on ${longDate(j.published_at)}` : ''}.`}{' '}
+              Confirm against the certified true copy before relying on it.
             </div>
           </aside>
         </div>

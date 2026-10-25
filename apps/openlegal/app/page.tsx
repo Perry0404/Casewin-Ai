@@ -140,6 +140,37 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Contributor network */}
+      <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-6">
+        <div className="grid items-center gap-10 rounded-[2rem] border border-ink-line bg-white p-8 shadow-card sm:p-14 lg:grid-cols-[1.2fr_1fr]">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-naija-600">Contributor network</p>
+            <h2 className="mt-3 font-serif text-4xl font-medium tracking-tight text-ink">Every law student can help build it.</h2>
+            <p className="mt-5 text-lg leading-relaxed text-ink-2">
+              Connect your AI assistant to OpenLegal and tell it to upload judgments you hold. It checks for duplicates first; reviewers verify
+              new cases; you earn contribution points and climb the leaderboard with your law school.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/contribute" className="rounded-xl bg-naija-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-naija-600">
+                Start contributing
+              </Link>
+              <Link href="/leaderboard" className="rounded-xl border border-ink-line px-5 py-3 text-sm font-semibold text-ink transition hover:border-ink-3">
+                Leaderboard
+              </Link>
+            </div>
+          </div>
+          <div className="space-y-3 rounded-2xl bg-paper p-5 font-mono text-[13px] leading-relaxed">
+            <p className="text-ink-3">You → your AI</p>
+            <p className="rounded-xl bg-white p-3 text-ink ring-1 ring-ink-line">Upload this judgment to OpenLegal.</p>
+            <p className="text-ink-3">AI → OpenLegal → you</p>
+            <p className="rounded-xl bg-naija-50 p-3 text-naija-900 ring-1 ring-naija-100">
+              Received “Okonkwo v. Eze” — it’s new to OpenLegal. You earn 10 points when it is verified.
+            </p>
+            <p className="text-right text-[11px] text-ink-4">Illustration</p>
+          </div>
+        </div>
+      </section>
+
       {/* For builders */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
         <div className="overflow-hidden rounded-[2rem] bg-naija-900 text-white">

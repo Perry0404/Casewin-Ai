@@ -35,6 +35,7 @@ export async function toolSearchJudgments(args: { query?: string; court?: string
       holding: r.holding,
       excerpt: strip(r.snippet),
       cite_as: citeAs(r),
+      provenance: r.source === 'community' ? 'community-contributed, verified by OpenLegal reviewers' : 'published by the court registry',
       url: `${SITE_URL}/judgments/${r.slug}`,
       ...(r.is_sample ? { sample: true, warning: 'Demonstration data — not a real decision.' } : {}),
     })),
@@ -64,6 +65,7 @@ export async function toolGetJudgment(args: { id: string; max_chars?: number }) 
     cases_cited: j.cases_cited,
     keywords: j.keywords,
     full_text: j.full_text.length > max ? j.full_text.slice(0, max) + '\n\n[Truncated — request a larger max_chars or read it at the URL.]' : j.full_text,
+    provenance: j.source === 'community' ? 'community-contributed, verified by OpenLegal reviewers' : 'published by the court registry',
     url: `${SITE_URL}/judgments/${j.slug}`,
     ...(j.is_sample ? { sample: true, warning: 'Demonstration data — not a real decision. Do not cite.' } : {}),
   }
