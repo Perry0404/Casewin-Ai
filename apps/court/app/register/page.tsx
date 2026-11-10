@@ -67,7 +67,9 @@ const ERRORS: Record<string, string> = {
 
 export default async function RegisterPage({ searchParams }: { searchParams: { error?: string; sent?: string } }) {
   const user = isConfigured() ? await getUser() : null
-  if (user && ((await getStaff()) || (await getFiler()) || (await isPlatformAdmin(user.id)))) redirect('/go')
+  // Court staff and platform admins may also register as filers with the same account.
+  if (user && (await getFiler())) redirect('/go')
+  if (user && (await getStaff()) && !(await isPlatformAdmin(user.id))) redirect('/go')
   const registration = user ? await getRegistration(user.id) : null
   const courts = isConfigured() ? await listCourts() : []
 
