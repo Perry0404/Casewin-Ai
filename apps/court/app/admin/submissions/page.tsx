@@ -27,7 +27,7 @@ export default async function Submissions({ searchParams }: { searchParams: { ta
       .limit(100),
     db
       .from('submissions')
-      .select('id, title, court_name, suit_number, channel, flags, confirmations, created_at, contributor:contributors(display_name, institution)')
+      .select('id, title, court_name, suit_number, channel, flags, confirmations, created_at, contributor:contributors!submissions_contributor_id_fkey(display_name, institution)')
       .eq('status', tab)
       .order('created_at', { ascending: tab !== 'pending' ? false : true })
       .limit(100),

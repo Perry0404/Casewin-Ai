@@ -17,7 +17,7 @@ const ERRORS: Record<string, string> = {
 
 export default async function ReviewSubmission({ params, searchParams }: { params: { id: string }; searchParams: { error?: string } }) {
   const db = createAdminClient()
-  const { data: s } = await db.from('submissions').select('*, contributor:contributors(display_name, institution, role, points)').eq('id', params.id).maybeSingle()
+  const { data: s } = await db.from('submissions').select('*, contributor:contributors!submissions_contributor_id_fkey(display_name, institution, role, points)').eq('id', params.id).maybeSingle()
   if (!s) notFound()
   const { data: similar } = await db.rpc('find_existing_case', {
     p_suit: s.suit_number,
