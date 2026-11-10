@@ -47,7 +47,9 @@ export default async function Inbox() {
     db.from('la_members').select('user_id, full_name, role, created_at').eq('status', 'pending').order('created_at').limit(4),
     db.from('submissions').select('id, title, created_at').eq('status', 'pending').order('created_at').limit(4),
   ])
-  const total = registrations + requests + volunteers + orgs + overdue + submissions + complaints
+  const { count: courtDraftCount } = await db.from('judgments').select('id', { count: 'exact', head: true }).eq('status', 'draft')
+  const courtDrafts = courtDraftCount ?? 0
+  const total = registrations + requests + volunteers + orgs + overdue + submissions + complaints + courtDrafts
 
   return (
     <>
@@ -74,6 +76,7 @@ export default async function Inbox() {
           <Recent items={(recentVols ?? []).map((v) => [v.full_name, v.role.replace('_', ' '), v.created_at, '/admin/legal-aid'])} />
         </Product>
         <Product name="OpenLegal Nigeria" host="openlegal.casewinai.com" accent="bg-[#3B5B9A]">
+          <Row label="Court judgments to approve" n={courtDrafts} href="/admin/submissions" urgent />
           <Row label="Contributed judgments to check" n={submissions} href="/admin/submissions" urgent />
           <Row label="Statutes held for review" n={statutes} href="/admin/laws" />
           <Row label="Open the public site" n={null} href={OPENLEGAL_URL} external />
@@ -81,7 +84,66 @@ export default async function Inbox() {
         </Product>
       </div>
       <Glance />
+      <HowItWorks />
     </>
+  )
+}
+
+// Who does what, in one place: the platform admin (here) and each court's own registry.
+function HowItWorks() {
+  const levels: [string, string, string, string[]][] = [
+    [
+      '1',
+      'Justice admin',
+      'court.casewinai.com/admin · CaseWin platform administrators only',
+      [
+        'Bring a court online: Courts → New court. This creates the court, its divisions and its first court administrator, and shows a one-time password to hand over.',
+        'Approve e-filers (lawyers, litigants, agencies) and staff who registered themselves: People & access.',
+        'Approve judgments before they go public, whether uploaded by a court or sent in by an OpenLegal contributor: Judgments.',
+        'Verify Legal Aid volunteers and organisations, review held statutes, and read every court’s activity log.',
+      ],
+    ],
+    [
+      '2',
+      'Court registry',
+      'court.casewinai.com/registry · one per court, for that court’s own staff',
+      [
+        'The court administrator signs in with the password from level 1, then creates accounts for judges, registrars and clerks under Staff. Each gets their own email and one-time password, and must change it at first sign-in.',
+        'Clerks and registrars review filings and list hearings; registrars and the court administrator accept filings and issue suit numbers. Judges record hearing outcomes.',
+        'A judge, registrar or clerk uploads a judgment from its case file. It stays a draft until a registrar, the court administrator or the Justice admin approves it.',
+      ],
+    ],
+    [
+      '3',
+      'Public and filers',
+      'court.casewinai.com · openlegal.casewinai.com · legalaid.casewinai.com',
+      [
+        'Lawyers and litigants file and track cases in the portal. The public reads cause lists and published judgments, and asks for legal aid.',
+      ],
+    ],
+  ]
+  return (
+    <section className="mt-14">
+      <h2 className="border-b border-ink-950 pb-2 text-[18px] font-semibold text-ink-950">How access works</h2>
+      <ol className="divide-y divide-ink-200">
+        {levels.map(([n, title, where, items]) => (
+          <li key={n} className="grid gap-2 py-5 md:grid-cols-[14rem_1fr]">
+            <div>
+              <p className="text-[15px] font-semibold text-ink-950">
+                <span className="mr-2 text-ink-400">{n}</span>
+                {title}
+              </p>
+              <p className="mt-1 text-[12px] text-ink-500">{where}</p>
+            </div>
+            <ul className="list-disc space-y-1.5 pl-5 text-[14px] text-ink-700">
+              {items.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 

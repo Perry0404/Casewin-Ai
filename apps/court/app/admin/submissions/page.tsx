@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/server'
-import { relative } from '@/lib/format'
-import { Badge, Empty, Notice, PageHeader, cx } from '@/components/ui'
+import { date, relative } from '@/lib/format'
+import { Badge, Empty, Mono, Notice, PageHeader, SampleTag, cx } from '@/components/ui'
 
-export const metadata: Metadata = { title: 'OpenLegal submissions' }
+export const metadata: Metadata = { title: 'Judgments to approve' }
 
 const TABS = ['pending', 'verified', 'rejected', 'duplicate'] as const
 const FLAG_LABEL: Record<string, string> = {
@@ -17,7 +17,14 @@ const FLAG_LABEL: Record<string, string> = {
 export default async function Submissions({ searchParams }: { searchParams: { tab?: string; done?: string } }) {
   const tab = TABS.find((t) => t === searchParams.tab) ?? 'pending'
   const db = createAdminClient()
-  const [{ data: rows }, ...counts] = await Promise.all([
+  const [{ data: courtDrafts }, { data: rows }, ...counts] = await Promise.all([
+    // Uploaded by a court registry (judge, registrar, court admin) and not yet published.
+    db
+      .from('judgments')
+      .select('id, title, suit_number, delivered_on, is_sample, created_at, court_name, uploaded_by, court:courts(name, state)')
+      .eq('status', 'draft')
+      .order('created_at')
+      .limit(100),
     db
       .from('submissions')
       .select('id, title, court_name, suit_number, channel, flags, confirmations, created_at, contributor:contributors(display_name, institution)')
@@ -26,10 +33,56 @@ export default async function Submissions({ searchParams }: { searchParams: { ta
       .limit(100),
     ...TABS.map((t) => db.from('submissions').select('id', { count: 'exact', head: true }).eq('status', t)),
   ])
+  const staffIds = [...new Set((courtDrafts ?? []).map((j) => j.uploaded_by).filter(Boolean))] as string[]
+  const { data: staffRows } = staffIds.length ? await db.from('court_staff').select('id, full_name, role').in('id', staffIds) : { data: [] }
+  const uploaders = new Map((staffRows ?? []).map((s) => [s.id, `${s.full_name} (${s.role.replace(/_/g, ' ')})`]))
 
   return (
     <>
-      <PageHeader eyebrow="OpenLegal Nigeria" title="Contributor submissions" sub="Nothing goes public until it is verified here. Check each one against the court record before approving." />
+      <PageHeader
+        eyebrow="OpenLegal Nigeria"
+        title="Judgments to approve"
+        sub="Every judgment waiting to go public, from both sources: uploaded by a court registry, or sent in by an OpenLegal contributor. Nothing is public until it is approved."
+      />
+
+      <section className="mb-12">
+        <h2 className="border-b border-ink-950 pb-2 text-[18px] font-semibold text-ink-950">
+          From courts <span className="font-normal text-ink-500">· uploaded by judges and registrars · {courtDrafts?.length ?? 0} waiting</span>
+        </h2>
+        {courtDrafts?.length ? (
+          <ul className="divide-y divide-ink-200 border-b border-ink-200">
+            {courtDrafts.map((j) => {
+              const court = j.court as unknown as { name: string; state: string } | null
+              const by = j.uploaded_by ? uploaders.get(j.uploaded_by) : null
+              return (
+                <li key={j.id} className="relative flex flex-col gap-1 py-4 hover:bg-parchment/50 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="min-w-0 flex-1">
+                    {j.suit_number && <Mono className="text-ink-500">{j.suit_number}</Mono>}
+                    <Link href={`/admin/judgments/${j.id}`} className="block text-[16px] font-semibold text-ink-950 after:absolute after:inset-0">
+                      {j.title}
+                    </Link>
+                    <p className="text-sm text-ink-500">
+                      {court?.name ?? j.court_name}
+                      {j.delivered_on && ` · delivered ${date(j.delivered_on)}`}
+                      {by && ` · uploaded by ${by}`} · {relative(j.created_at)}
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {j.is_sample && <SampleTag />}
+                    <Badge tone="warn">Waiting for approval</Badge>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        ) : (
+          <p className="py-4 text-sm text-ink-500">No court uploads waiting.</p>
+        )}
+      </section>
+
+      <h2 className="mb-4 border-b border-ink-950 pb-2 text-[18px] font-semibold text-ink-950">
+        From OpenLegal contributors <span className="font-normal text-ink-500">· sent in by lawyers, students and the public</span>
+      </h2>
       {searchParams.done && (
         <div className="mb-6">
           <Notice tone="good">Submission marked {searchParams.done}. Points have been updated.</Notice>

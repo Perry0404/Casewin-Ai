@@ -5,18 +5,10 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { CASE_TYPES, OPENLEGAL_URL, label } from '@/lib/constants'
 import { date, dateTime } from '@/lib/format'
 import { Badge, Card, CardTitle, Mono, Notice, PageHeader, SampleTag, btn, input } from '@/components/ui'
+import { redactionHints } from '@/lib/redaction'
 import { publishJudgment, withdrawJudgment } from '../../actions'
 
 export const metadata = { title: 'Judgment' }
-
-// Patterns that often signal details which must be redacted before publication.
-const REDACTION_HINTS: [RegExp, string][] = [
-  [/\b(minor|child|aged \d{1,2}|\d{1,2}[- ]year[- ]old)\b/i, 'mentions a child or a person’s age'],
-  [/\b(rape|sexual|defilement|indecent)\b/i, 'concerns a sexual offence — the victim’s identity must be withheld'],
-  [/\b(in camera|under seal|sealed)\b/i, 'refers to sealed or in-camera proceedings'],
-  [/\b(\+?234|0)[789][01]\d{8}\b/, 'contains what looks like a phone number'],
-  [/\b\d{11}\b/, 'contains an 11-digit number (possible NIN or BVN)'],
-]
 
 export default async function JudgmentDetail({ params, searchParams }: { params: { id: string }; searchParams: { error?: string } }) {
   const staff = await requireStaff()
@@ -24,7 +16,7 @@ export default async function JudgmentDetail({ params, searchParams }: { params:
   const { data: j } = await db.from('judgments').select('*').eq('id', params.id).eq('court_id', staff.court_id).maybeSingle()
   if (!j) notFound()
 
-  const hints = REDACTION_HINTS.filter(([re]) => re.test(j.full_text)).map(([, why]) => why)
+  const hints = redactionHints(j.full_text)
   const publicUrl = `${OPENLEGAL_URL}/judgments/${j.slug}`
 
   return (

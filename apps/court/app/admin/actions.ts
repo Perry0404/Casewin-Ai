@@ -260,3 +260,36 @@ export async function reviewLegalAidOrg(form: FormData) {
     await db.from('la_members').update({ status, approved_at: status === 'approved' ? new Date().toISOString() : null }).eq('user_id', org.created_by).eq('role', 'coordinator')
   revalidatePath('/admin/legal-aid')
 }
+
+// Judgments uploaded by a court registry wait as drafts. The court's registrar normally
+// publishes them; a platform administrator can also publish or withdraw them from here.
+export async function adminPublishJudgment(form: FormData) {
+  const user = await requirePlatformAdmin()
+  const db = createAdminClient()
+  const id = str(form, 'id')
+  if (form.get('redaction_confirmed') !== 'on') redirect(`/admin/judgments/${id}?error=redaction`)
+  const { data: j } = await db.from('judgments').select('id, case_id, court_id').eq('id', id).eq('status', 'draft').maybeSingle()
+  if (!j) redirect('/admin/submissions')
+  await db.from('judgments').update({ status: 'published', redaction_confirmed: true, published_at: new Date().toISOString() }).eq('id', j.id)
+  if (j.court_id) {
+    await db.from('case_events').insert({ court_id: j.court_id, case_id: j.case_id, action: 'judgment.published', actor_label: `Platform admin (${user.email ?? 'admin'})` })
+  }
+  revalidatePath('/admin/submissions')
+  redirect(`/admin/judgments/${j.id}?done=published`)
+}
+
+export async function adminWithdrawJudgment(form: FormData) {
+  const user = await requirePlatformAdmin()
+  const db = createAdminClient()
+  const id = str(form, 'id')
+  const reason = str(form, 'reason', 500)
+  if (!reason) redirect(`/admin/judgments/${id}?error=reason`)
+  const { data: j } = await db.from('judgments').select('id, case_id, court_id').eq('id', id).maybeSingle()
+  if (!j) redirect('/admin/submissions')
+  await db.from('judgments').update({ status: 'withdrawn' }).eq('id', j.id)
+  if (j.court_id) {
+    await db.from('case_events').insert({ court_id: j.court_id, case_id: j.case_id, action: 'judgment.withdrawn', actor_label: `Platform admin (${user.email ?? 'admin'})`, detail: { reason } })
+  }
+  revalidatePath('/admin/submissions')
+  redirect(`/admin/judgments/${j.id}?done=withdrawn`)
+}

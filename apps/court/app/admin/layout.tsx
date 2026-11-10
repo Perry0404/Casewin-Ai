@@ -10,8 +10,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const staff = await getStaff()
   const db = createAdminClient()
   const n = (q: PromiseLike<{ count: number | null }>) => Promise.resolve(q).then((r) => r.count ?? 0)
-  const [submissions, registrations, volunteers, orgs, statutes] = await Promise.all([
+  const [contributed, courtDrafts, registrations, volunteers, orgs, statutes] = await Promise.all([
     n(db.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+    n(db.from('judgments').select('id', { count: 'exact', head: true }).eq('status', 'draft')),
     n(db.from('registrations').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
     n(db.from('la_members').select('user_id', { count: 'exact', head: true }).eq('status', 'pending').neq('role', 'coordinator')),
     n(db.from('la_organisations').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
@@ -19,11 +20,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ])
   const tabs: [string, string, number][] = [
     ['/admin', 'Inbox', 0],
+    ['/admin/submissions', 'Judgments', contributed + courtDrafts],
     ['/admin/courts', 'Courts', 0],
-    ['/admin/registrations', 'Registrations', registrations],
+    ['/admin/registrations', 'People & access', registrations],
     ['/admin/legal-aid', 'Legal Aid', volunteers + orgs],
-    ['/admin/submissions', 'Judgments', submissions],
     ['/admin/laws', 'Statutes', statutes],
+    ['/admin/activity', 'Activity log', 0],
   ]
   return (
     <div className="min-h-screen bg-white">
