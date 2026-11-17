@@ -5,7 +5,7 @@ import LoginForm from './LoginForm'
 
 export const metadata: Metadata = { title: 'Sign in' }
 
-export default function LoginPage({ searchParams }: { searchParams: { next?: string } }) {
+export default function LoginPage({ searchParams }: { searchParams: { next?: string; error?: string } }) {
   return (
     <div className="min-h-screen bg-white">
       <SiteHeader />
@@ -13,6 +13,11 @@ export default function LoginPage({ searchParams }: { searchParams: { next?: str
         <div>
           <h1 className="text-[30px] font-semibold tracking-[-0.015em] text-ink-950">Sign in</h1>
           <p className="mt-2 text-[15px] text-ink-600">Volunteers, coordinators and administrators. Asking for help doesn’t need an account.</p>
+          <p className="mt-4 border-l-2 border-ink-950 pl-3 text-[14px] text-ink-700">
+            {searchParams.error === 'link'
+              ? 'That sign-in link is no longer valid. Ask your coordinator to send you a new one on WhatsApp.'
+              : 'On a legal aid panel? You don’t need a password. Open the personal sign-in link sent to you on WhatsApp, then tap the case link again.'}
+          </p>
           <LoginForm next={searchParams.next} />
           <p className="mt-8 border-t border-ink-200 pt-5 text-[14px] text-ink-600">
             Need help, not an account?{' '}

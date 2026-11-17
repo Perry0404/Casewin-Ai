@@ -16,7 +16,8 @@ export default async function DeskLayout({ children }: { children: React.ReactNo
     ['/desk/visit', 'Record a visit'],
     ['/desk/record', 'My record'],
   ]
-  if (m.role === 'coordinator' && m.org_id) tabs.splice(2, 0, ['/desk/team', 'Organisation'])
+  if (m.role === 'coordinator' && m.org_id) tabs.splice(2, 0, ['/desk/panel', 'Panel'], ['/desk/team', 'Organisation'])
+  else if (m.isAdmin) tabs.splice(2, 0, ['/desk/panel', 'Panels'])
   if (m.isAdmin) tabs.push(['/admin', 'Admin'])
   return (
     <div className="min-h-screen bg-white">
