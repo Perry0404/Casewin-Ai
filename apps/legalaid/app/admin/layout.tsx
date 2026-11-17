@@ -15,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           ['/admin/cases', 'All cases'],
           ['/admin/complaints', 'Complaints'],
           ['/admin/alerts', 'Alerts'],
+          ['/desk/panel', 'Panels'],
           ['/desk', 'Desk'],
         ]}
         user={user.email ?? ''}

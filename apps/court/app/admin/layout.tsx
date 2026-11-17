@@ -10,22 +10,26 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const staff = await getStaff()
   const db = createAdminClient()
   const n = (q: PromiseLike<{ count: number | null }>) => Promise.resolve(q).then((r) => r.count ?? 0)
-  const [contributed, courtDrafts, registrations, volunteers, orgs, statutes] = await Promise.all([
+  const [contributed, courtDrafts, registrations, volunteers, orgs, statutes, requests] = await Promise.all([
     n(db.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
     n(db.from('judgments').select('id', { count: 'exact', head: true }).eq('status', 'draft')),
     n(db.from('registrations').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
     n(db.from('la_members').select('user_id', { count: 'exact', head: true }).eq('status', 'pending').neq('role', 'coordinator')),
     n(db.from('la_organisations').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
     n(db.from('laws').select('id', { count: 'exact', head: true }).eq('needs_review', true)),
+    n(db.from('court_requests').select('id', { count: 'exact', head: true }).eq('status', 'new')),
   ])
-  const tabs: [string, string, number][] = [
+  // Grouped by product, so each admin task has one obvious home.
+  const tabs: [string, string, number, string?][] = [
     ['/admin', 'Inbox', 0],
-    ['/admin/submissions', 'Judgments', contributed + courtDrafts],
-    ['/admin/courts', 'Courts', 0],
-    ['/admin/registrations', 'People & access', registrations],
-    ['/admin/legal-aid', 'Legal Aid', volunteers + orgs],
-    ['/admin/laws', 'Statutes', statutes],
-    ['/admin/activity', 'Activity log', 0],
+    ['/admin/courts', 'Courts', requests, 'Court'],
+    ['/admin/registrations', 'People & access', registrations, 'Court'],
+    ['/admin/activity', 'Activity log', 0, 'Court'],
+    ['/admin/submissions', 'Judgments', contributed + courtDrafts, 'OpenLegal'],
+    ['/admin/laws', 'Statutes', statutes, 'OpenLegal'],
+    ['/admin/legal-aid', 'Volunteers & orgs', volunteers + orgs, 'Legal Aid'],
+    ['/admin/panels', 'Panels', 0, 'Legal Aid'],
+    ['/admin/admins', 'Admins', 0, 'Team'],
   ]
   return (
     <div className="min-h-screen bg-white">

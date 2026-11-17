@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/server'
 import { requirePlatformAdmin } from '@/lib/auth'
 import { slugify } from '@/lib/format'
+import { COURT_URL, LEGALAID_URL } from '@/lib/constants'
 
 const str = (f: FormData, k: string, n = 300) => String(f.get(k) ?? '').trim().slice(0, n)
 
@@ -292,4 +293,71 @@ export async function adminWithdrawJudgment(form: FormData) {
   }
   revalidatePath('/admin/submissions')
   redirect(`/admin/judgments/${j.id}?done=withdrawn`)
+}
+
+// ── Links that work once (coordinator set-up, admin invitations) ───────────────────────────
+// Only the sha256 is stored. The link is shown once to the admin who made it, via a
+// 2-minute httpOnly cookie, never in a URL.
+
+async function oneTimeToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(24))
+  const token = Buffer.from(bytes).toString('base64url')
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
+  return { token, hash: Buffer.from(digest).toString('hex') }
+}
+
+function showLink(path: string, label: string, link: string) {
+  cookies().set('linkhandover', JSON.stringify({ label, link }), { httpOnly: true, secure: true, sameSite: 'strict', maxAge: 120, path })
+}
+
+/** A new one-time set-up link for a Legal Aid panel coordinator (the old one stops working). */
+export async function newCoordinatorLink(form: FormData) {
+  await requirePlatformAdmin()
+  const db = createAdminClient()
+  const { data: c } = await db.from('la_members').select('user_id, full_name, role').eq('user_id', str(form, 'user_id')).maybeSingle()
+  if (!c || c.role !== 'coordinator') redirect('/admin/panels')
+  const { token, hash } = await oneTimeToken()
+  await db.from('la_members').update({ access_token_hash: hash, access_sent_at: new Date().toISOString() }).eq('user_id', c.user_id)
+  showLink('/admin/panels', c.full_name, `${LEGALAID_URL}/k/${token}`)
+  redirect('/admin/panels?made=1')
+}
+
+/** Make someone a platform admin. Existing account: at once. No account: a one-time invitation link. */
+export async function addAdmin(form: FormData) {
+  const me = await requirePlatformAdmin()
+  const email = str(form, 'email', 200).toLowerCase()
+  const fullName = str(form, 'full_name', 120) || null
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) redirect('/admin/admins?error=email')
+  const db = createAdminClient()
+  let userId: string | null = null
+  for (let page = 1; page < 50 && !userId; page++) {
+    const { data } = await db.auth.admin.listUsers({ page, perPage: 200 })
+    userId = data.users.find((u) => u.email?.toLowerCase() === email)?.id ?? null
+    if (data.users.length < 200) break
+  }
+  if (userId) {
+    await db.from('platform_admins').upsert({ user_id: userId, full_name: fullName, added_by: me.id }, { onConflict: 'user_id' })
+    revalidatePath('/admin/admins')
+    redirect('/admin/admins?done=added')
+  }
+  const { token, hash } = await oneTimeToken()
+  await db.from('admin_invites').insert({ email, full_name: fullName, token_hash: hash, created_by: me.id })
+  showLink('/admin/admins', fullName ?? email, `${COURT_URL}/invite/${token}`)
+  redirect('/admin/admins?done=invited')
+}
+
+export async function removeAdmin(form: FormData) {
+  const me = await requirePlatformAdmin()
+  const id = str(form, 'user_id')
+  if (id === me.id) redirect('/admin/admins?error=self')
+  await createAdminClient().from('platform_admins').delete().eq('user_id', id)
+  revalidatePath('/admin/admins')
+  redirect('/admin/admins')
+}
+
+export async function cancelInvite(form: FormData) {
+  await requirePlatformAdmin()
+  await createAdminClient().from('admin_invites').delete().eq('id', str(form, 'id')).is('used_at', null)
+  revalidatePath('/admin/admins')
+  redirect('/admin/admins')
 }

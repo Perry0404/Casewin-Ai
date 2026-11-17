@@ -73,6 +73,7 @@ export default async function Inbox() {
           <Row label="People waiting for a volunteer" n={waiting} href={`${LEGALAID_URL}/desk/board`} external />
           <Row label="Reports not yet verified" n={unverified} href={`${LEGALAID_URL}/admin/cases`} external />
           <Row label="People released so far" n={released} href={`${LEGALAID_URL}/impact`} external />
+          <Row label="Panels and their coordinators" n={null} href="/admin/panels" />
           <Recent items={(recentVols ?? []).map((v) => [v.full_name, v.role.replace('_', ' '), v.created_at, '/admin/legal-aid'])} />
         </Product>
         <Product name="OpenLegal Nigeria" host="openlegal.casewinai.com" accent="bg-[#3B5B9A]">
@@ -101,10 +102,20 @@ function HowItWorks() {
         'Approve e-filers (lawyers, litigants, agencies) and staff who registered themselves: People & access.',
         'Approve judgments before they go public, whether uploaded by a court or sent in by an OpenLegal contributor: Judgments.',
         'Verify Legal Aid volunteers and organisations, review held statutes, and read every court’s activity log.',
+        'Watch every Legal Aid panel (Panels), and add or remove admins (Admins).',
       ],
     ],
     [
       '2',
+      'Legal Aid panel coordinator',
+      'legalaid.casewinai.com/desk/panel · e.g. Legal Aid Council, Abia State',
+      [
+        'Signs in with their own email and password, set up from a one-time link. Sees only their state.',
+        'For each new case in their state: posts it to their lawyers’ WhatsApp group, records who took it, sends that lawyer the details, and records when the family was contacted. Their lawyers never need to sign in.',
+      ],
+    ],
+    [
+      '3',
       'Court registry',
       'court.casewinai.com/registry · one per court, for that court’s own staff',
       [
@@ -114,7 +125,7 @@ function HowItWorks() {
       ],
     ],
     [
-      '3',
+      '4',
       'Public and filers',
       'court.casewinai.com · openlegal.casewinai.com · legalaid.casewinai.com',
       [

@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Logo, cx } from './ui'
 
 /** Header for signed-in areas: logo, area name, tabs with counts, the user. */
-export default function AppBar({ area, tabs, user, extra }: { area: string; tabs: [string, string, number?][]; user: string; extra?: ReactNode }) {
+// A tab may name a group (4th item); a small label and divider start each new group.
+export default function AppBar({ area, tabs, user, extra }: { area: string; tabs: [string, string, number?, string?][]; user: string; extra?: ReactNode }) {
   const path = usePathname()
   const root = tabs[0]?.[0]
   return (
@@ -35,11 +36,15 @@ export default function AppBar({ area, tabs, user, extra }: { area: string; tabs
         </div>
       </div>
       <nav className="mx-auto mt-2 flex max-w-7xl gap-1 overflow-x-auto px-2 sm:px-4">
-        {tabs.map(([href, label, count]) => {
+        {tabs.map(([href, label, count, group], i) => {
           const active = href === root ? path === href : path.startsWith(href)
+          const startsGroup = Boolean(group) && group !== tabs[i - 1]?.[3]
           return (
+            <span key={href} className="flex shrink-0 items-center">
+              {startsGroup && (
+                <span className="ml-2 whitespace-nowrap border-l border-ink-200 pl-3 text-[11px] font-semibold uppercase tracking-wider text-ink-400">{group}</span>
+              )}
             <Link
-              key={href}
               href={href}
               className={cx(
                 'relative whitespace-nowrap px-3 py-2.5 text-[14px] transition-colors',
@@ -49,6 +54,7 @@ export default function AppBar({ area, tabs, user, extra }: { area: string; tabs
               {label}
               {count ? <span className="ml-1.5 rounded-sm bg-brass-500 px-1.5 py-px text-[11px] font-semibold text-white tabular-nums">{count}</span> : null}
             </Link>
+            </span>
           )
         })}
       </nav>
