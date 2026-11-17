@@ -6,7 +6,12 @@ import { alertVolunteer } from '@/lib/notify'
 export async function sweepOverdue() {
   const db = createAdminClient()
   const { data } = await db.from('la_cases').select('id, ref, assigned_to').eq('status', 'assigned').is('first_action_at', null).lt('first_action_due', new Date().toISOString())
+  // Panel lawyers work through their coordinator on WhatsApp; the coordinator follows up, not the sweep.
+  const ids = [...new Set((data ?? []).map((c) => c.assigned_to).filter(Boolean))] as string[]
+  const { data: panel } = ids.length ? await db.from('la_members').select('user_id').in('user_id', ids).eq('on_panel', true) : { data: [] }
+  const onPanel = new Set((panel ?? []).map((p) => p.user_id))
   for (const c of data ?? []) {
+    if (c.assigned_to && onPanel.has(c.assigned_to)) continue
     const { data: done } = await db
       .from('la_cases')
       .update({ assigned_to: null, assigned_org: null, assigned_at: null, first_action_due: null, status: 'new', updated_at: new Date().toISOString() })

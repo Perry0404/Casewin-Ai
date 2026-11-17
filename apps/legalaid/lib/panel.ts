@@ -81,18 +81,48 @@ export function welcomeMessage(o: { name: string; orgName: string; token: string
   ].join('\n')
 }
 
-export function caseAlertMessage(c: { id: string; ref: string; kind: string; state: string; lga: string | null; facility: string | null; created_at: string }, orgName: string) {
+/** For the panel's WhatsApp group: no names, no family numbers. */
+export function caseAlertMessage(c: { ref: string; kind: string; state: string; lga: string | null; facility: string | null; allegation?: string | null }, orgName: string) {
   const where = [c.facility, c.lga, c.state].filter(Boolean).join(', ')
   return [
-    `New legal aid request — ${orgName}`,
+    `*New legal aid case — ${orgName}*`,
     ``,
     `${KINDS[c.kind]?.short ?? 'Request'}${where ? ` · ${where}` : ''}`,
+    c.allegation ? `Alleged: ${c.allegation}` : null,
     ``,
-    `Tap to see the case and accept it. The first lawyer to accept takes it:`,
-    `${SITE}/desk/cases/${c.id}`,
+    `Who can take it? Reply here. The coordinator will send the full details to the lawyer who takes it.`,
     ``,
-    `Ref ${c.ref}. Please don't forward this message.`,
-  ].join('\n')
+    `Ref ${c.ref}`,
+  ]
+    .filter((l) => l !== null)
+    .join('\n')
+}
+
+type DetailCase = {
+  ref: string; kind: string; state: string; lga: string | null; facility: string | null; person_name: string; person_age: number | null; allegation: string | null
+  arrested_on: string | null; court_name: string | null; next_hearing_on: string | null; reporter_name: string | null; reporter_phone: string | null; reporter_relationship: string | null; safe_contact: string | null; safe_contact_note: string | null
+}
+
+/** Sent privately to the lawyer who took the case. */
+export function caseDetailsMessage(c: DetailCase, lawyer: string) {
+  const contact =
+    c.safe_contact === 'no_calls' || c.safe_contact === 'other_way'
+      ? `Do NOT call the family's number — it may not be safe.${c.safe_contact_note ? ` They said: ${c.safe_contact_note}` : ''} Ask the coordinator how to reach them.`
+      : `${c.reporter_name ?? 'Family'}${c.reporter_relationship ? ` (${c.reporter_relationship})` : ''}: ${c.reporter_phone ?? 'no number given'}${c.safe_contact === 'text_only' ? ' — text only, no calls' : ''}`
+  return [
+    `Thank you, ${lawyer.split(' ')[0]}. Case ${c.ref} is recorded to you.`,
+    ``,
+    `Person: ${c.person_name}${c.person_age ? `, ${c.person_age}` : ''}`,
+    `Matter: ${KINDS[c.kind]?.short ?? c.kind}${c.allegation ? ` — ${c.allegation}` : ''}`,
+    `Where: ${[c.facility, c.lga, c.state].filter(Boolean).join(', ')}`,
+    c.arrested_on ? `Arrested: ${c.arrested_on}` : null,
+    c.court_name ? `Court: ${c.court_name}${c.next_hearing_on ? `, next date ${c.next_hearing_on}` : ''}` : null,
+    `Contact: ${contact}`,
+    ``,
+    `Please contact them within 48 hours and tell me when you have. Keep these details private.`,
+  ]
+    .filter((l) => l !== null)
+    .join('\n')
 }
 
 export function waLink(phone: string | null, text: string) {
