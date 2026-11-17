@@ -11,5 +11,6 @@ export async function GET(req: NextRequest) {
   if (next && next.startsWith('/') && !next.startsWith('//') && next !== '/login' && !next.startsWith('/go')) return to(next)
   if (await isPlatformAdmin(user.id)) return to('/go/choose')
   const m = await getMember()
+  if (m?.status === 'approved' && m.role === 'coordinator' && m.org_id) return to('/desk/panel')
   return to(m?.status === 'approved' ? '/desk' : '/volunteer')
 }
