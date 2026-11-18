@@ -28,14 +28,14 @@ export default async function Panels({ searchParams }: { searchParams: { made?: 
   const made = searchParams.made ? readLink() : null
   const { data: coords } = await db.from('la_members').select('user_id, full_name, email, phone, org_id, access_token_hash, last_link_login_at').eq('role', 'coordinator').not('org_id', 'is', null)
   const orgIds = [...new Set((coords ?? []).map((c) => c.org_id as string))]
-  const { data: orgs } = orgIds.length ? await db.from('la_organisations').select('id, name, state, kind').in('id', orgIds).order('name') : { data: [] }
+  const { data: orgs } = orgIds.length ? await db.from('la_organisations').select('id, name, state, kind, states_covered').in('id', orgIds).order('name') : { data: [] }
   const now = Date.now()
 
   const panels = await Promise.all(
     (orgs ?? []).map(async (o) => {
       const [{ data: lawyers }, { data: waiting }, { data: cases }, { data: posts }] = await Promise.all([
         db.from('la_members').select('user_id, full_name').eq('org_id', o.id).eq('role', 'lawyer').eq('status', 'approved'),
-        db.from('la_cases').select('id').eq('state', o.state).eq('status', 'new'),
+        db.from('la_cases').select('id').in('state', o.states_covered?.length ? o.states_covered : [o.state]).eq('status', 'new'),
         db.from('la_cases').select('id, ref, status, assigned_to, first_action_at, first_action_due').eq('assigned_org', o.id),
         db.from('la_panel_alerts').select('case_id, created_at').eq('org_id', o.id).order('created_at', { ascending: false }).limit(20),
       ])
@@ -93,7 +93,7 @@ export default async function Panels({ searchParams }: { searchParams: { made?: 
                 {(
                   [
                     ['Lawyers', p.lawyers],
-                    [`Waiting in ${p.org.state}`, p.waiting],
+                    [(p.org.states_covered?.length ?? 0) > 1 ? `Waiting in their ${p.org.states_covered.length} states` : `Waiting in ${p.org.state}`, p.waiting],
                     ['Open with the panel', p.open],
                     ['Not contacted in 48 h', p.overdue],
                     ['Finished', p.done],

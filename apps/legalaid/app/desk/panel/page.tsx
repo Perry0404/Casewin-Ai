@@ -22,14 +22,16 @@ export default async function Panel({ searchParams }: { searchParams: { org?: st
   if (!orgId || !(m.isAdmin || (m.role === 'coordinator' && m.org_id === orgId))) redirect('/desk')
 
   const [{ data: org }, { data: lawyers }] = await Promise.all([
-    db.from('la_organisations').select('id, name, kind, state').eq('id', orgId).maybeSingle(),
+    db.from('la_organisations').select('id, name, kind, state, states_covered').eq('id', orgId).maybeSingle(),
     db.from('la_members').select('user_id, full_name, phone, whatsapp, status').eq('org_id', orgId).eq('role', 'lawyer').order('full_name'),
   ])
   if (!org) redirect('/desk')
   const active = (lawyers ?? []).filter((l) => l.status === 'approved')
+  const states: string[] = org.states_covered?.length ? org.states_covered : [org.state]
+  const area = states.length > 3 ? `your ${states.length} states` : states.join(', ')
   const ids = active.map((l) => l.user_id)
   const [{ data: waiting }, { data: held }] = await Promise.all([
-    db.from('la_cases').select('id, ref, kind, state, lga, facility, created_at').eq('status', 'new').eq('state', org.state).order('created_at').limit(50),
+    db.from('la_cases').select('id, ref, kind, state, lga, facility, created_at').eq('status', 'new').in('state', states).order('created_at').limit(50),
     db.from('la_cases').select('id, ref, kind, facility, assigned_to, assigned_at, first_action_at, first_action_due').eq('assigned_org', org.id).in('status', ['assigned', 'in_progress']).order('assigned_at', { ascending: false }),
   ])
   const caseIds = (waiting ?? []).map((c) => c.id)
@@ -109,7 +111,7 @@ export default async function Panel({ searchParams }: { searchParams: { org?: st
             })}
           </ul>
         ) : (
-          <p className="py-4 text-sm text-ink-500">Nobody in {org.state} is waiting for a lawyer right now. New reports appear here.</p>
+          <p className="py-4 text-sm text-ink-500">Nobody in {area} is waiting for a lawyer right now. New reports appear here.</p>
         )}
       </section>
 

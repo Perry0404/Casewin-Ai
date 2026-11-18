@@ -18,7 +18,7 @@ const firstName = (n: string) => n.split(/\s+/).slice(0, 2).join(' ')
 async function manager(orgId: string) {
   const m = await requireMember()
   if (!orgId || !(m.isAdmin || (m.role === 'coordinator' && m.org_id === orgId))) redirect('/desk')
-  const { data: org } = await createAdminClient().from('la_organisations').select('id, name, state').eq('id', orgId).maybeSingle()
+  const { data: org } = await createAdminClient().from('la_organisations').select('id, name, state, states_covered').eq('id', orgId).maybeSingle()
   if (!org) redirect('/desk')
   return { m, org }
 }
@@ -107,7 +107,7 @@ export async function addPanelLawyers(f: FormData) {
     }
     const { error: insErr } = await db.from('la_members').insert({
       user_id: u.user.id, org_id: org.id, role: 'lawyer', full_name: r.name, email: panelEmail(wa), phone: r.phones.join(' / '), whatsapp: wa,
-      state: org.state, states_covered: [org.state], status: 'approved', approved_at: new Date().toISOString(), reviewer_note: `Vouched for by ${org.name}`, on_panel: true, added_by: m.user_id,
+      state: org.state, states_covered: org.states_covered?.length ? org.states_covered : [org.state], status: 'approved', approved_at: new Date().toISOString(), reviewer_note: `Vouched for by ${org.name}`, on_panel: true, added_by: m.user_id,
     })
     if (insErr) {
       await db.auth.admin.deleteUser(u.user.id)
